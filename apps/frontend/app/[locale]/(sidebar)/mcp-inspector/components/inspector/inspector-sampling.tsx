@@ -58,11 +58,11 @@ const _CreateMessageResultSchema = z.object({
 
 interface InspectorSamplingProps {
   mcpServerUuid: string;
-  makeRequest: <T extends z.ZodType>(
+  makeRequest: (
     request: ClientRequest,
-    schema: T,
+    schema: any,
     options?: RequestOptions & { suppressToast?: boolean },
-  ) => Promise<z.output<T>>;
+  ) => Promise<any>;
   enabled?: boolean;
 }
 

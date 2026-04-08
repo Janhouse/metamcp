@@ -11,6 +11,7 @@ const issueCodeToTranslationKey: Record<string, string> = {
   required_error: "validation:required",
   invalid_type: "validation:invalidFormat",
   invalid_string: "validation:invalidFormat",
+  invalid_format: "validation:invalidFormat",
   too_small: "validation:minLength",
   too_big: "validation:maxLength",
   invalid_url: "validation:urlFormat",
@@ -59,25 +60,22 @@ export function translateZodIssue(
   // Handle specific issue codes with parameters
   switch (issue.code) {
     case "too_small":
-      if (issue.type === "string") {
+      if ("minimum" in issue) {
         return t("validation:minLength", { min: issue.minimum });
       }
       break;
     case "too_big":
-      if (issue.type === "string") {
+      if ("maximum" in issue) {
         return t("validation:maxLength", { max: issue.maximum });
       }
       break;
-    case "invalid_string":
-      if (issue.validation === "email") {
-        return t("validation:email");
-      }
-      if (issue.validation === "url") {
-        return t("validation:urlFormat");
+    case "invalid_format":
+      if ("format" in issue) {
+        if (issue.format === "email") return t("validation:email");
+        if (issue.format === "url") return t("validation:urlFormat");
       }
       break;
     case "custom":
-      // Handle custom validation messages
       if (issue.message && messageToTranslationKey[issue.message]) {
         return t(messageToTranslationKey[issue.message]!);
       }

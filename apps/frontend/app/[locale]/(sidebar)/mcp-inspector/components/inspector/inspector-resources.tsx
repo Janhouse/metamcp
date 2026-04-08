@@ -34,11 +34,11 @@ interface ResourceContent {
 }
 
 interface InspectorResourcesProps {
-  makeRequest: <T extends z.ZodType>(
+  makeRequest: (
     request: ClientRequest,
-    schema: T,
+    schema: any,
     options?: RequestOptions & { suppressToast?: boolean },
-  ) => Promise<z.output<T>>;
+  ) => Promise<any>;
   enabled?: boolean;
 }
 

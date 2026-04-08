@@ -29,11 +29,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTranslations } from "@/hooks/useTranslations";
 
 interface InspectorToolsProps {
-  makeRequest: <T extends z.ZodType>(
+  makeRequest: (
     request: ClientRequest,
-    schema: T,
+    schema: any,
     options?: RequestOptions & { suppressToast?: boolean },
-  ) => Promise<z.output<T>>;
+  ) => Promise<any>;
   enabled?: boolean;
 }
 
@@ -105,8 +105,7 @@ export function InspectorTools({
         );
         // Auto-select first tool if none selected
         if (!selectedTool && response.tools.length > 0) {
-          // @ts-expect-error TODO resolve MCP SDK Tool schema mismatch
-          setSelectedTool(response.tools[0]);
+          setSelectedTool(response.tools[0] ?? null);
         }
       } else {
         toast.info(t("inspector:toolsComponent.noToolsFound"));

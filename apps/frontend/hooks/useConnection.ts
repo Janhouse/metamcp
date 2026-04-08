@@ -127,7 +127,7 @@ export function useConnection({
   const makeRequest = useMemoizedFn(
     async <T extends z.ZodType>(
       request: ClientRequest,
-      schema: T,
+      schema: any,
       options?: RequestOptions & { suppressToast?: boolean },
     ): Promise<z.output<T>> => {
       if (!mcpClient) {
@@ -212,10 +212,10 @@ export function useConnection({
       };
 
       try {
-        const response = await makeRequest(request, CompleteResultSchema, {
+        const response = (await makeRequest(request, CompleteResultSchema, {
           signal,
           suppressToast: true,
-        });
+        })) as { completion: { values: string[]; hasMore?: boolean; total?: number } };
         return response?.completion.values || [];
       } catch (e: unknown) {
         // Disable completions silently if the server doesn't support them.
@@ -408,7 +408,7 @@ export function useConnection({
           };
         } else {
           switch (transportType) {
-            case McpServerTypeEnum.Enum.STDIO:
+            case McpServerTypeEnum.enum.STDIO:
               mcpProxyServerUrl = new URL(
                 `/mcp-proxy/server/stdio`,
                 getAppUrl(),
@@ -443,7 +443,7 @@ export function useConnection({
               };
               break;
 
-            case McpServerTypeEnum.Enum.SSE:
+            case McpServerTypeEnum.enum.SSE:
               mcpProxyServerUrl = new URL(`/mcp-proxy/server/sse`, getAppUrl());
               mcpProxyServerUrl.searchParams.append("url", url);
               transportOptions = {
@@ -472,7 +472,7 @@ export function useConnection({
               };
               break;
 
-            case McpServerTypeEnum.Enum.STREAMABLE_HTTP:
+            case McpServerTypeEnum.enum.STREAMABLE_HTTP:
               mcpProxyServerUrl = new URL(`/mcp-proxy/server/mcp`, getAppUrl());
               mcpProxyServerUrl.searchParams.append("url", url);
               transportOptions = {
@@ -542,7 +542,7 @@ export function useConnection({
         try {
           const transport = isMetaMCP
             ? new SSEClientTransport(mcpProxyServerUrl, transportOptions)
-            : transportType === McpServerTypeEnum.Enum.STREAMABLE_HTTP
+            : transportType === McpServerTypeEnum.enum.STREAMABLE_HTTP
               ? new StreamableHTTPClientTransport(mcpProxyServerUrl, {
                   sessionId: undefined,
                   ...transportOptions,
@@ -617,7 +617,7 @@ export function useConnection({
   const disconnect = useMemoizedFn(async () => {
     try {
       if (
-        transportType === McpServerTypeEnum.Enum.STREAMABLE_HTTP &&
+        transportType === McpServerTypeEnum.enum.STREAMABLE_HTTP &&
         clientTransport
       ) {
         await (

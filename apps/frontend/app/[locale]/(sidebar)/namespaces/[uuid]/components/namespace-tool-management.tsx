@@ -24,11 +24,11 @@ interface NamespaceToolManagementProps {
     status: string;
   }>;
   namespaceUuid: string;
-  makeRequest?: <T extends z.ZodType>(
+  makeRequest?: (
     request: ClientRequest,
-    schema: T,
+    schema: any,
     options?: { suppressToast?: boolean },
-  ) => Promise<z.output<T>>; // Optional makeRequest function for MetaMCP connections
+  ) => Promise<any>;
   sessionInitializing?: boolean; // Whether session initialization is in progress
 }
 
@@ -130,7 +130,7 @@ export function NamespaceToolManagement({
         );
 
         if (toolsListResponse && toolsListResponse.tools) {
-          const mcpToolsData = toolsListResponse.tools.map((tool) => ({
+          const mcpToolsData = toolsListResponse.tools.map((tool: any) => ({
             name: tool.name,
             description: tool.description || "",
             inputSchema: tool.inputSchema,
@@ -140,7 +140,7 @@ export function NamespaceToolManagement({
 
           // Automatically save tools to namespace mappings when autoSave is true (first load only)
           if (autoSave && toolsListResponse.tools.length > 0) {
-            const toolsForSubmission = toolsListResponse.tools.map((tool) => ({
+            const toolsForSubmission = toolsListResponse.tools.map((tool: any) => ({
               name: tool.name, // Keep the full "ServerName__toolName" format
               description: tool.description || "",
               inputSchema: tool.inputSchema,
@@ -214,11 +214,11 @@ export function NamespaceToolManagement({
   // Calculate counts
   const serverCount = servers.length;
   const activeServerCount = servers.filter(
-    (s) => s.status === ToolStatusEnum.Enum.ACTIVE,
+    (s) => s.status === ToolStatusEnum.enum.ACTIVE,
   ).length;
   const savedToolCount = namespaceTools.length;
   const activeToolCount = namespaceTools.filter(
-    (t) => t.status === ToolStatusEnum.Enum.ACTIVE,
+    (t) => t.status === ToolStatusEnum.enum.ACTIVE,
   ).length;
   const mcpToolCount = mcpTools.length;
 

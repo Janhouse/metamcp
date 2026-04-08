@@ -12,7 +12,7 @@ type TranslationFunction = (
  * Creates a Zod resolver that translates validation error messages
  */
 export function createTranslatedZodResolver<T extends ZodSchema>(
-  schema: T,
+  schema: any,
   t: TranslationFunction,
 ) {
   return (data: any) => {

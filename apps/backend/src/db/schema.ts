@@ -40,7 +40,7 @@ export const mcpServersTable = pgTable(
     description: text("description"),
     type: mcpServerTypeEnum("type")
       .notNull()
-      .default(McpServerTypeEnum.Enum.STDIO),
+      .default(McpServerTypeEnum.enum.STDIO),
     command: text("command"),
     args: text("args")
       .array()
@@ -53,7 +53,7 @@ export const mcpServersTable = pgTable(
     url: text("url"),
     error_status: mcpServerErrorStatusEnum("error_status")
       .notNull()
-      .default(McpServerErrorStatusEnum.Enum.NONE),
+      .default(McpServerErrorStatusEnum.enum.NONE),
     created_at: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -299,7 +299,7 @@ export const namespaceServerMappingsTable = pgTable(
       .references(() => mcpServersTable.uuid, { onDelete: "cascade" }),
     status: mcpServerStatusEnum("status")
       .notNull()
-      .default(McpServerStatusEnum.Enum.ACTIVE),
+      .default(McpServerStatusEnum.enum.ACTIVE),
     created_at: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -335,7 +335,7 @@ export const namespaceToolMappingsTable = pgTable(
       .references(() => mcpServersTable.uuid, { onDelete: "cascade" }),
     status: mcpServerStatusEnum("status")
       .notNull()
-      .default(McpServerStatusEnum.Enum.ACTIVE),
+      .default(McpServerStatusEnum.enum.ACTIVE),
     override_name: text("override_name"),
     override_title: text("override_title"),
     override_description: text("override_description"),

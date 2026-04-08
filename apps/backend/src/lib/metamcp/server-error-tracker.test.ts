@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Mock the dependencies before importing the module
 vi.mock("@repo/zod-types", () => ({
   McpServerErrorStatusEnum: {
-    Enum: { ERROR: "ERROR", NONE: "NONE" },
+    enum: { ERROR: "ERROR", NONE: "NONE" },
   },
 }));
 
