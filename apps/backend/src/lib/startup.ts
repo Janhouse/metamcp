@@ -39,11 +39,40 @@ export async function initializeOnStartup(): Promise<void> {
   }
 }
 
+const BATCH_SIZE = 5;
+const BATCH_DELAY_MS = 1000;
+
 /**
- * Startup function to initialize idle servers for all namespaces and all MCP servers
+ * Wait for the backend to be ready by polling the health endpoint.
+ */
+async function waitForBackendReady(maxWaitMs: number = 10000): Promise<boolean> {
+  const startTime = Date.now();
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      const response = await fetch("http://localhost:12009/health");
+      if (response.ok) return true;
+    } catch {
+      // Server not ready yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return false;
+}
+
+/**
+ * Startup function to initialize idle servers for all namespaces and all MCP servers.
+ * Uses batched warmup to prevent startup stampede.
  */
 export async function initializeIdleServers() {
   try {
+    // Wait for backend to be ready before initializing idle servers
+    const ready = await waitForBackendReady();
+    if (!ready) {
+      console.log(
+        "⚠️ Backend health check did not pass within timeout, proceeding anyway...",
+      );
+    }
+
     console.log(
       "Initializing idle servers for all namespaces and all MCP servers...",
     );
@@ -78,18 +107,37 @@ export async function initializeIdleServers() {
       `Successfully converted ${Object.keys(allServerParams).length} MCP servers to ServerParameters format`,
     );
 
-    // Initialize idle sessions for the underlying MCP server pool with ALL servers
+    // Initialize idle sessions in batches to prevent startup stampede
     if (Object.keys(allServerParams).length > 0) {
       const { mcpServerPool } = await import("./metamcp");
-      await mcpServerPool.ensureIdleSessions(allServerParams);
+      const entries = Object.entries(allServerParams);
+
+      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        const batch = Object.fromEntries(entries.slice(i, i + BATCH_SIZE));
+        await mcpServerPool.ensureIdleSessions(batch);
+        console.log(
+          `Initialized batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(entries.length / BATCH_SIZE)} MCP server idle sessions`,
+        );
+
+        if (i + BATCH_SIZE < entries.length) {
+          await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+        }
+      }
       console.log(
         "✅ Successfully initialized idle MCP server pool sessions for ALL servers",
       );
     }
 
-    // Ensure idle servers for all namespaces (MetaMCP server pool)
+    // Ensure idle servers for all namespaces in batches
     if (namespaceUuids.length > 0) {
-      await metaMcpServerPool.ensureIdleServers(namespaceUuids, true);
+      for (let i = 0; i < namespaceUuids.length; i += BATCH_SIZE) {
+        const batch = namespaceUuids.slice(i, i + BATCH_SIZE);
+        await metaMcpServerPool.ensureIdleServers(batch, true);
+
+        if (i + BATCH_SIZE < namespaceUuids.length) {
+          await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+        }
+      }
       console.log(
         "✅ Successfully initialized idle servers for all namespaces",
       );

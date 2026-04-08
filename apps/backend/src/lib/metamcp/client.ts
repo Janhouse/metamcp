@@ -163,7 +163,8 @@ export const connectMetaMcpClient = async (
   serverParams: ServerParameters,
   onProcessCrash?: (exitCode: number | null, signal: string | null) => void,
 ): Promise<ConnectedClient | undefined> => {
-  const waitFor = 5000;
+  const baseWaitMs = 2000;
+  const maxWaitMs = 15000;
 
   // Get max attempts from server error tracker instead of hardcoding
   const maxAttempts = await serverErrorTracker.getServerMaxAttempts(
@@ -227,6 +228,17 @@ export const connectMetaMcpClient = async (
 
       await client.connect(transport);
 
+      // Auto-clear ERROR state on successful reconnection
+      serverErrorTracker.resetServerAttempts(serverParams.uuid);
+      if (
+        await serverErrorTracker.isServerInErrorState(serverParams.uuid)
+      ) {
+        await serverErrorTracker.resetServerErrorState(serverParams.uuid);
+        logger.info(
+          `Auto-cleared ERROR state for server ${serverParams.name} (${serverParams.uuid}) after successful connection`,
+        );
+      }
+
       return {
         client,
         cleanup: async () => {
@@ -278,6 +290,10 @@ export const connectMetaMcpClient = async (
       count++;
       retry = count < maxAttempts;
       if (retry) {
+        const waitFor = Math.min(baseWaitMs * Math.pow(2, count - 1), maxWaitMs);
+        logger.info(
+          `Retrying connection to ${serverParams.name} in ${waitFor}ms (attempt ${count}/${maxAttempts})`,
+        );
         await sleep(waitFor);
       }
     }
