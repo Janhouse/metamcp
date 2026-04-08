@@ -28,7 +28,7 @@ const tokenBucketRateLimiter = () => {
       });
     } catch (err) {
       if (err instanceof RateLimitError) {
-        res.status(503).json({ error: err.message });
+        res.status(429).json({ error: err.message });
       } else {
         next(err);
       }
@@ -73,7 +73,7 @@ const rateLimiter = () => {
           });
         } catch (err) {
           if (err instanceof RateLimitError) {
-            res.status(503).json({ error: err.message });
+            res.status(429).json({ error: err.message });
           } else {
             next(err);
           }
