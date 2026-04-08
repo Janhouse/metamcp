@@ -1,4 +1,5 @@
 "use client";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import { ClientRequest } from "@modelcontextprotocol/sdk/types.js";
@@ -26,11 +27,7 @@ import { InspectorTools } from "./inspector/inspector-tools";
 
 interface InspectorProps {
   mcpServerUuid: string;
-  makeRequest: (
-    request: ClientRequest,
-    schema: any,
-    options?: RequestOptions & { suppressToast?: boolean },
-  ) => Promise<any>;
+  makeRequest: MakeRequestFn;
   serverCapabilities?: Record<string, unknown> | null;
 }
 

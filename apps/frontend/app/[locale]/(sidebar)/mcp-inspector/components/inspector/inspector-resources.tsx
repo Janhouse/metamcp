@@ -1,4 +1,5 @@
 "use client";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import {
@@ -34,11 +35,7 @@ interface ResourceContent {
 }
 
 interface InspectorResourcesProps {
-  makeRequest: (
-    request: ClientRequest,
-    schema: any,
-    options?: RequestOptions & { suppressToast?: boolean },
-  ) => Promise<any>;
+  makeRequest: MakeRequestFn;
   enabled?: boolean;
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import {
@@ -29,11 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTranslations } from "@/hooks/useTranslations";
 
 interface InspectorToolsProps {
-  makeRequest: (
-    request: ClientRequest,
-    schema: any,
-    options?: RequestOptions & { suppressToast?: boolean },
-  ) => Promise<any>;
+  makeRequest: MakeRequestFn;
   enabled?: boolean;
 }
 

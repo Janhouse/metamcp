@@ -61,11 +61,15 @@ export const createMetaMcpClient = (
       const stderrStream = (transport as ProcessManagedStdioTransport).stderr;
 
       stderrStream?.on("data", (chunk: Buffer) => {
-        metamcpLogStore.addLog(
-          serverParams.name,
-          "error",
-          chunk.toString().trim(),
-        );
+        const message = chunk.toString().trim();
+        // Detect log level from stderr content — MCP servers (especially
+        // Python) write INFO/DEBUG messages to stderr by default
+        const level = /\bERROR\b/i.test(message)
+          ? "error"
+          : /\bWARN(?:ING)?\b/i.test(message)
+            ? "warn"
+            : "info";
+        metamcpLogStore.addLog(serverParams.name, level, message);
       });
 
       stderrStream?.on("error", (error: Error) => {

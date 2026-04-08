@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import {
@@ -38,11 +39,7 @@ type PromptGetResponse = z.infer<typeof GetPromptResultSchema>;
 type PromptMessage = PromptGetResponse["messages"][0];
 
 interface InspectorPromptsProps {
-  makeRequest: (
-    request: ClientRequest,
-    schema: any,
-    options?: RequestOptions & { suppressToast?: boolean },
-  ) => Promise<any>;
+  makeRequest: MakeRequestFn;
   enabled?: boolean;
 }
 

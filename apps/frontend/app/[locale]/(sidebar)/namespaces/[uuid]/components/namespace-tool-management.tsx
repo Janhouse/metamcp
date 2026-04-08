@@ -1,4 +1,5 @@
 "use client";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 import {
   ClientRequest,
@@ -24,11 +25,7 @@ interface NamespaceToolManagementProps {
     status: string;
   }>;
   namespaceUuid: string;
-  makeRequest?: (
-    request: ClientRequest,
-    schema: any,
-    options?: { suppressToast?: boolean },
-  ) => Promise<any>;
+  makeRequest?: MakeRequestFn;
   sessionInitializing?: boolean; // Whether session initialization is in progress
 }
 

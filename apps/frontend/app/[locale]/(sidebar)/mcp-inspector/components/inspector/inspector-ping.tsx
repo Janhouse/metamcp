@@ -1,4 +1,5 @@
 "use client";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import {
@@ -23,11 +24,7 @@ interface PingHistory {
 }
 
 interface InspectorPingProps {
-  makeRequest: (
-    request: ClientRequest,
-    schema: any,
-    options?: RequestOptions & { suppressToast?: boolean },
-  ) => Promise<any>;
+  makeRequest: MakeRequestFn;
 }
 
 export function InspectorPing({ makeRequest }: InspectorPingProps) {

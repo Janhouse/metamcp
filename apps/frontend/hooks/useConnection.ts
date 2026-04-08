@@ -125,11 +125,13 @@ export function useConnection({
   });
 
   const makeRequest = useMemoizedFn(
-    async <T extends z.ZodType>(
+    async (
       request: ClientRequest,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       schema: any,
       options?: RequestOptions & { suppressToast?: boolean },
-    ): Promise<z.output<T>> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ): Promise<any> => {
       if (!mcpClient) {
         throw new Error("MCP client not connected");
       }

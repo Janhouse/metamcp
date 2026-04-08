@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
 FROM base AS deps
 WORKDIR /app
 
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy root package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
