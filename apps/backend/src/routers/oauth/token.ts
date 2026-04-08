@@ -3,14 +3,270 @@ import express from "express";
 import logger from "@/utils/logger";
 
 import { oauthRepository } from "../../db/repositories";
-import { generateSecureAccessToken, rateLimitToken } from "./utils";
+import {
+  generateSecureAccessToken,
+  generateSecureRefreshToken,
+  rateLimitToken,
+} from "./utils";
 
 const tokenRouter = express.Router();
 
 /**
+ * Issue a new access token + refresh token pair and store in the database.
+ */
+async function issueTokenPair(
+  clientId: string,
+  userId: string,
+  scope: string,
+) {
+  const accessToken = generateSecureAccessToken();
+  const refreshToken = generateSecureRefreshToken();
+  const expiresIn = 3600; // 1 hour
+  const refreshExpiresIn = 7 * 24 * 3600; // 7 days
+
+  await oauthRepository.setAccessToken(accessToken, {
+    client_id: clientId,
+    user_id: userId,
+    scope,
+    expires_at: Date.now() + expiresIn * 1000,
+    refresh_token: refreshToken,
+    refresh_token_expires_at: Date.now() + refreshExpiresIn * 1000,
+  });
+
+  return { accessToken, refreshToken, expiresIn, scope };
+}
+
+/**
+ * Handle authorization_code grant type
+ */
+async function handleAuthorizationCodeGrant(
+  req: express.Request,
+  res: express.Response,
+) {
+  const { code, redirect_uri, client_id, code_verifier } = req.body;
+
+  // Validate authorization code
+  if (!code) {
+    return res.status(400).json({
+      error: "invalid_request",
+      error_description: "Missing authorization code",
+    });
+  }
+
+  // Look up the authorization code
+  const codeData = await oauthRepository.getAuthCode(code);
+  if (!codeData) {
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description: "Invalid or expired authorization code",
+    });
+  }
+
+  // Check if code has expired (10 minutes)
+  if (Date.now() > codeData.expires_at.getTime()) {
+    await oauthRepository.deleteAuthCode(code);
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description: "Authorization code has expired",
+    });
+  }
+
+  // Validate client_id and redirect_uri match the original request
+  if (codeData.client_id !== client_id) {
+    return res.status(400).json({
+      error: "invalid_client",
+      error_description: "Client ID does not match",
+    });
+  }
+
+  if (codeData.redirect_uri !== redirect_uri) {
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description: "Redirect URI does not match",
+    });
+  }
+
+  // Validate client_id against registered clients
+  const clientData = await oauthRepository.getClient(client_id);
+  if (!clientData) {
+    return res.status(400).json({
+      error: "invalid_client",
+      error_description: "Client not found or not registered",
+    });
+  }
+
+  // Validate client authentication based on registered auth method
+  if (clientData.token_endpoint_auth_method === "client_secret_basic") {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Basic ")) {
+      return res.status(401).json({
+        error: "invalid_client",
+        error_description: "Client authentication required via Basic auth",
+      });
+    }
+
+    const credentials = Buffer.from(
+      authHeader.substring(6),
+      "base64",
+    ).toString();
+    const [authClientId, authClientSecret] = credentials.split(":");
+
+    if (
+      authClientId !== client_id ||
+      authClientSecret !== clientData.client_secret
+    ) {
+      return res.status(401).json({
+        error: "invalid_client",
+        error_description: "Invalid client credentials",
+      });
+    }
+  } else if (clientData.token_endpoint_auth_method === "client_secret_post") {
+    const { client_secret } = req.body;
+    if (!client_secret || client_secret !== clientData.client_secret) {
+      return res.status(401).json({
+        error: "invalid_client",
+        error_description: "Invalid client secret",
+      });
+    }
+  }
+  // For "none" auth method, no additional validation needed
+
+  // OAuth 2.1 Security: PKCE is mandatory for all clients
+  if (!codeData.code_challenge) {
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description:
+        "Authorization code was not issued with PKCE challenge",
+    });
+  }
+
+  if (!code_verifier) {
+    return res.status(400).json({
+      error: "invalid_request",
+      error_description: "PKCE code verifier is required",
+    });
+  }
+
+  // Verify code challenge
+  const crypto = await import("crypto");
+  let challengeFromVerifier: string;
+
+  if (codeData.code_challenge_method === "S256") {
+    const hash = crypto.createHash("sha256").update(code_verifier).digest();
+    challengeFromVerifier = hash.toString("base64url");
+  } else if (codeData.code_challenge_method === "plain") {
+    challengeFromVerifier = code_verifier;
+  } else {
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description: "Unsupported code challenge method",
+    });
+  }
+
+  if (challengeFromVerifier !== codeData.code_challenge) {
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description: "PKCE verification failed",
+    });
+  }
+
+  // Code is valid, delete it (authorization codes are single-use)
+  await oauthRepository.deleteAuthCode(code);
+
+  // Issue token pair
+  const result = await issueTokenPair(
+    codeData.client_id,
+    codeData.user_id,
+    codeData.scope,
+  );
+
+  res.json({
+    access_token: result.accessToken,
+    token_type: "Bearer",
+    expires_in: result.expiresIn,
+    scope: result.scope,
+    refresh_token: result.refreshToken,
+  });
+}
+
+/**
+ * Handle refresh_token grant type (RFC 6749 Section 6)
+ * Implements token rotation: old refresh token is single-use.
+ */
+async function handleRefreshTokenGrant(
+  req: express.Request,
+  res: express.Response,
+) {
+  const { refresh_token, client_id } = req.body;
+
+  if (!refresh_token) {
+    return res.status(400).json({
+      error: "invalid_request",
+      error_description: "Missing refresh_token parameter",
+    });
+  }
+
+  if (!client_id) {
+    return res.status(400).json({
+      error: "invalid_request",
+      error_description: "Missing client_id parameter",
+    });
+  }
+
+  // Look up the token row by refresh token
+  const tokenData =
+    await oauthRepository.getAccessTokenByRefreshToken(refresh_token);
+  if (!tokenData) {
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description: "Invalid or already-used refresh token",
+    });
+  }
+
+  // Check refresh token expiry
+  if (
+    tokenData.refresh_token_expires_at &&
+    Date.now() > tokenData.refresh_token_expires_at.getTime()
+  ) {
+    // Clean up the expired row
+    await oauthRepository.deleteAccessTokenByRefreshToken(refresh_token);
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description: "Refresh token has expired",
+    });
+  }
+
+  // Validate client_id matches
+  if (tokenData.client_id !== client_id) {
+    return res.status(400).json({
+      error: "invalid_client",
+      error_description: "Client ID does not match the refresh token",
+    });
+  }
+
+  // Token rotation: delete the old row before issuing a new pair
+  await oauthRepository.deleteAccessTokenByRefreshToken(refresh_token);
+
+  // Issue new token pair
+  const result = await issueTokenPair(
+    tokenData.client_id,
+    tokenData.user_id,
+    tokenData.scope,
+  );
+
+  res.json({
+    access_token: result.accessToken,
+    token_type: "Bearer",
+    expires_in: result.expiresIn,
+    scope: result.scope,
+    refresh_token: result.refreshToken,
+  });
+}
+
+/**
  * OAuth 2.0 Token Endpoint
  * Handles token exchange requests from MCP clients
- * Implements proper PKCE verification and code validation
+ * Supports authorization_code and refresh_token grant types
  */
 tokenRouter.post("/oauth/token", rateLimitToken, async (req, res) => {
   try {
@@ -29,165 +285,19 @@ tokenRouter.post("/oauth/token", rateLimitToken, async (req, res) => {
       });
     }
 
-    const { grant_type, code, redirect_uri, client_id, code_verifier } =
-      req.body;
+    const { grant_type } = req.body;
 
-    // Validate grant type
-    if (grant_type !== "authorization_code") {
-      return res.status(400).json({
-        error: "unsupported_grant_type",
-        error_description: "Only 'authorization_code' grant type is supported",
-      });
-    }
-
-    // Validate authorization code
-    if (!code) {
-      return res.status(400).json({
-        error: "invalid_request",
-        error_description: "Missing authorization code",
-      });
-    }
-
-    // Look up the authorization code
-    const codeData = await oauthRepository.getAuthCode(code);
-    if (!codeData) {
-      return res.status(400).json({
-        error: "invalid_grant",
-        error_description: "Invalid or expired authorization code",
-      });
-    }
-
-    // Check if code has expired (10 minutes)
-    if (Date.now() > codeData.expires_at.getTime()) {
-      await oauthRepository.deleteAuthCode(code);
-      return res.status(400).json({
-        error: "invalid_grant",
-        error_description: "Authorization code has expired",
-      });
-    }
-
-    // Validate client_id and redirect_uri match the original request
-    if (codeData.client_id !== client_id) {
-      return res.status(400).json({
-        error: "invalid_client",
-        error_description: "Client ID does not match",
-      });
-    }
-
-    if (codeData.redirect_uri !== redirect_uri) {
-      return res.status(400).json({
-        error: "invalid_grant",
-        error_description: "Redirect URI does not match",
-      });
-    }
-
-    // Validate client_id against registered clients
-    // Note: Client should have been registered either explicitly via /oauth/register
-    // or auto-registered during the /oauth/authorize flow
-    const clientData = await oauthRepository.getClient(client_id);
-    if (!clientData) {
-      return res.status(400).json({
-        error: "invalid_client",
-        error_description: "Client not found or not registered",
-      });
-    }
-
-    // Validate client authentication based on registered auth method
-    if (clientData.token_endpoint_auth_method === "client_secret_basic") {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith("Basic ")) {
-        return res.status(401).json({
-          error: "invalid_client",
-          error_description: "Client authentication required via Basic auth",
-        });
-      }
-
-      const credentials = Buffer.from(
-        authHeader.substring(6),
-        "base64",
-      ).toString();
-      const [authClientId, authClientSecret] = credentials.split(":");
-
-      if (
-        authClientId !== client_id ||
-        authClientSecret !== clientData.client_secret
-      ) {
-        return res.status(401).json({
-          error: "invalid_client",
-          error_description: "Invalid client credentials",
-        });
-      }
-    } else if (clientData.token_endpoint_auth_method === "client_secret_post") {
-      const { client_secret } = req.body;
-      if (!client_secret || client_secret !== clientData.client_secret) {
-        return res.status(401).json({
-          error: "invalid_client",
-          error_description: "Invalid client secret",
-        });
-      }
-    }
-    // For "none" auth method, no additional validation needed
-
-    // OAuth 2.1 Security: PKCE is mandatory for all clients
-    if (!codeData.code_challenge) {
-      return res.status(400).json({
-        error: "invalid_grant",
-        error_description:
-          "Authorization code was not issued with PKCE challenge",
-      });
-    }
-
-    if (!code_verifier) {
-      return res.status(400).json({
-        error: "invalid_request",
-        error_description: "PKCE code verifier is required",
-      });
-    }
-
-    // Verify code challenge
-    const crypto = await import("crypto");
-    let challengeFromVerifier: string;
-
-    if (codeData.code_challenge_method === "S256") {
-      const hash = crypto.createHash("sha256").update(code_verifier).digest();
-      challengeFromVerifier = hash.toString("base64url");
-    } else if (codeData.code_challenge_method === "plain") {
-      challengeFromVerifier = code_verifier;
+    if (grant_type === "authorization_code") {
+      return await handleAuthorizationCodeGrant(req, res);
+    } else if (grant_type === "refresh_token") {
+      return await handleRefreshTokenGrant(req, res);
     } else {
       return res.status(400).json({
-        error: "invalid_grant",
-        error_description: "Unsupported code challenge method",
+        error: "unsupported_grant_type",
+        error_description:
+          "Only 'authorization_code' and 'refresh_token' grant types are supported",
       });
     }
-
-    if (challengeFromVerifier !== codeData.code_challenge) {
-      return res.status(400).json({
-        error: "invalid_grant",
-        error_description: "PKCE verification failed",
-      });
-    }
-
-    // Code is valid, delete it (authorization codes are single-use)
-    await oauthRepository.deleteAuthCode(code);
-
-    // Generate access token
-    const accessToken = generateSecureAccessToken();
-    const expiresIn = 3600; // 1 hour
-
-    // Store access token data
-    await oauthRepository.setAccessToken(accessToken, {
-      client_id: codeData.client_id,
-      user_id: codeData.user_id,
-      scope: codeData.scope,
-      expires_at: Date.now() + expiresIn * 1000,
-    });
-
-    res.json({
-      access_token: accessToken,
-      token_type: "Bearer",
-      expires_in: expiresIn,
-      scope: codeData.scope,
-    });
   } catch (error) {
     logger.error("Error in OAuth token endpoint:", error);
     res.status(500).json({
@@ -220,7 +330,31 @@ tokenRouter.post("/oauth/introspect", async (req, res) => {
       });
     }
 
-    // Check if token exists and is valid
+    // Handle refresh token introspection
+    if (token.startsWith("mcp_refresh_")) {
+      const tokenData =
+        await oauthRepository.getAccessTokenByRefreshToken(token);
+
+      if (
+        !tokenData ||
+        !tokenData.refresh_token_expires_at ||
+        Date.now() > tokenData.refresh_token_expires_at.getTime()
+      ) {
+        return res.json({ active: false });
+      }
+
+      return res.json({
+        active: true,
+        scope: tokenData.scope,
+        client_id: tokenData.client_id,
+        token_type: "refresh_token",
+        exp: Math.floor(tokenData.refresh_token_expires_at.getTime() / 1000),
+        iat: Math.floor(tokenData.created_at.getTime() / 1000),
+        sub: tokenData.user_id,
+      });
+    }
+
+    // Handle access token introspection
     const tokenData = await oauthRepository.getAccessToken(token);
 
     if (!tokenData || !token.startsWith("mcp_token_")) {
@@ -241,10 +375,10 @@ tokenRouter.post("/oauth/introspect", async (req, res) => {
     res.json({
       active: true,
       scope: tokenData.scope,
-      client_id: "mcp_client", // In production, store and return actual client_id
+      client_id: tokenData.client_id,
       token_type: "Bearer",
       exp: Math.floor(tokenData.expires_at.getTime() / 1000),
-      iat: Math.floor((tokenData.expires_at.getTime() - 3600 * 1000) / 1000), // Issued 1 hour before expiry
+      iat: Math.floor(tokenData.created_at.getTime() / 1000),
       sub: tokenData.user_id,
     });
   } catch (error) {
@@ -258,7 +392,7 @@ tokenRouter.post("/oauth/introspect", async (req, res) => {
 
 /**
  * OAuth 2.0 Token Revocation Endpoint
- * Allows clients to revoke access tokens
+ * Allows clients to revoke access tokens and refresh tokens
  */
 tokenRouter.post("/oauth/revoke", async (req, res) => {
   try {
@@ -280,11 +414,13 @@ tokenRouter.post("/oauth/revoke", async (req, res) => {
     }
 
     // Revoke the token by removing it from storage
-    if (await oauthRepository.getAccessToken(token)) {
+    if (token.startsWith("mcp_refresh_")) {
+      // Refresh token revocation — deletes the entire row
+      await oauthRepository.deleteAccessTokenByRefreshToken(token);
+    } else if (await oauthRepository.getAccessToken(token)) {
       await oauthRepository.deleteAccessToken(token);
-    } else {
-      // RFC 7009 specifies that the endpoint should return success even if token doesn't exist
     }
+    // RFC 7009: return success even if token doesn't exist
 
     // RFC 7009 specifies that revocation endpoint should return 200 OK
     res.status(200).send();

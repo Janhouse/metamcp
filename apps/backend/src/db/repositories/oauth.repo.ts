@@ -6,7 +6,7 @@ import {
   OAuthClient,
   OAuthClientCreateInput,
 } from "@repo/zod-types";
-import { eq, lt } from "drizzle-orm";
+import { and, eq, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "../index";
 import {
@@ -94,7 +94,30 @@ export class OAuthRepository {
       user_id: data.user_id,
       scope: data.scope,
       expires_at: new Date(data.expires_at),
+      refresh_token: data.refresh_token ?? null,
+      refresh_token_expires_at: data.refresh_token_expires_at
+        ? new Date(data.refresh_token_expires_at)
+        : null,
     });
+  }
+
+  async getAccessTokenByRefreshToken(
+    refreshToken: string,
+  ): Promise<OAuthAccessToken | null> {
+    const result = await db
+      .select()
+      .from(oauthAccessTokensTable)
+      .where(eq(oauthAccessTokensTable.refresh_token, refreshToken))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async deleteAccessTokenByRefreshToken(
+    refreshToken: string,
+  ): Promise<void> {
+    await db
+      .delete(oauthAccessTokensTable)
+      .where(eq(oauthAccessTokensTable.refresh_token, refreshToken));
   }
 
   async deleteAccessToken(token: string): Promise<void> {
@@ -111,9 +134,19 @@ export class OAuthRepository {
       db
         .delete(oauthAuthorizationCodesTable)
         .where(lt(oauthAuthorizationCodesTable.expires_at, now)),
+      // Only delete access token rows where access token is expired AND
+      // refresh token is also expired or doesn't exist
       db
         .delete(oauthAccessTokensTable)
-        .where(lt(oauthAccessTokensTable.expires_at, now)),
+        .where(
+          and(
+            lt(oauthAccessTokensTable.expires_at, now),
+            or(
+              lt(oauthAccessTokensTable.refresh_token_expires_at, now),
+              isNull(oauthAccessTokensTable.refresh_token_expires_at),
+            ),
+          ),
+        ),
     ]);
   }
 }

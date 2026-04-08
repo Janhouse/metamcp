@@ -58,6 +58,8 @@ export const OAuthAccessTokenSchema = z.object({
   user_id: z.string(),
   scope: z.string(),
   expires_at: z.date(),
+  refresh_token: z.string().nullable(),
+  refresh_token_expires_at: z.date().nullable(),
   created_at: z.date(),
 });
 
@@ -97,6 +99,8 @@ export const OAuthAccessTokenCreateInputSchema = z.object({
   user_id: z.string(),
   scope: z.string(),
   expires_at: z.number(), // timestamp
+  refresh_token: z.string().nullable().optional(),
+  refresh_token_expires_at: z.number().nullable().optional(), // timestamp
 });
 
 // Base OAuth Session schema - client_information can be nullable since DB has default {}
