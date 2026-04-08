@@ -47,6 +47,10 @@ export class McpServerPool {
   // Maximum total connections (idle + active) to prevent runaway process spawning
   private readonly maxTotalConnections: number;
 
+  // Generation counter per serverUuid to detect stale async idle session creation
+  // Only incremented, never deleted, to prevent false matches via ?? 0 default
+  private idleSessionGenerations: Map<string, number> = new Map();
+
   private constructor(
     defaultIdleCount: number = 1,
     maxTotalConnections: number = 100,
@@ -112,6 +116,17 @@ export class McpServerPool {
     const newClient = await this.createNewConnection(params, namespaceUuid);
     if (!newClient) {
       return undefined;
+    }
+
+    // Post-await re-check: a concurrent call may have populated this slot
+    if (this.activeSessions[sessionId]?.[serverUuid]) {
+      newClient.cleanup().catch((error) => {
+        logger.error(
+          `Error cleaning up duplicate connection for ${serverUuid}:`,
+          error,
+        );
+      });
+      return this.activeSessions[sessionId][serverUuid];
     }
 
     this.activeSessions[sessionId][serverUuid] = newClient;
@@ -197,15 +212,30 @@ export class McpServerPool {
     params: ServerParameters,
     namespaceUuid?: string,
   ): Promise<void> {
-    // Don't create if we already have an idle session for this server
-    if (this.idleSessions[serverUuid]) {
+    // Don't create if we already have an idle session or are already creating one
+    if (
+      this.idleSessions[serverUuid] ||
+      this.creatingIdleSessions.has(serverUuid)
+    ) {
       return;
     }
 
-    const newClient = await this.createNewConnection(params, namespaceUuid);
-    if (newClient) {
-      this.idleSessions[serverUuid] = newClient;
-      logger.info(`Created idle session for server ${serverUuid}`);
+    this.creatingIdleSessions.add(serverUuid);
+    try {
+      const newClient = await this.createNewConnection(params, namespaceUuid);
+      if (newClient && !this.idleSessions[serverUuid]) {
+        this.idleSessions[serverUuid] = newClient;
+        logger.info(`Created idle session for server ${serverUuid}`);
+      } else if (newClient) {
+        newClient.cleanup().catch((error) => {
+          logger.error(
+            `Error cleaning up extra idle session for ${serverUuid}:`,
+            error,
+          );
+        });
+      }
+    } finally {
+      this.creatingIdleSessions.delete(serverUuid);
     }
   }
 
@@ -225,12 +255,32 @@ export class McpServerPool {
       return;
     }
 
+    // Capture generation before async work to detect invalidation during await
+    const gen = this.idleSessionGenerations.get(serverUuid) ?? 0;
+
     // Mark that we're creating an idle session for this server
     this.creatingIdleSessions.add(serverUuid);
 
     // Create the session in the background (fire and forget)
     this.createNewConnection(params, namespaceUuid)
       .then((newClient) => {
+        const currentGen = this.idleSessionGenerations.get(serverUuid) ?? 0;
+        if (currentGen !== gen) {
+          // Generation changed — session was invalidated during creation
+          if (newClient) {
+            logger.info(
+              `Discarding stale idle session for server ${serverUuid} (gen ${gen} → ${currentGen})`,
+            );
+            newClient.cleanup().catch((error) => {
+              logger.error(
+                `Error cleaning up stale idle session for ${serverUuid}:`,
+                error,
+              );
+            });
+          }
+          return;
+        }
+
         if (newClient && !this.idleSessions[serverUuid]) {
           this.idleSessions[serverUuid] = newClient;
           logger.info(
@@ -259,8 +309,11 @@ export class McpServerPool {
         );
       })
       .finally(() => {
-        // Remove from creating set
-        this.creatingIdleSessions.delete(serverUuid);
+        // Only remove from creating set if generation hasn't changed
+        const currentGen = this.idleSessionGenerations.get(serverUuid) ?? 0;
+        if (currentGen === gen) {
+          this.creatingIdleSessions.delete(serverUuid);
+        }
       });
   }
 
@@ -327,6 +380,14 @@ export class McpServerPool {
    * Cleanup all sessions
    */
   async cleanupAll(): Promise<void> {
+    // Bump generations for all known servers before any async cleanup
+    for (const serverUuid of Object.keys(this.idleSessions)) {
+      this.idleSessionGenerations.set(
+        serverUuid,
+        (this.idleSessionGenerations.get(serverUuid) ?? 0) + 1,
+      );
+    }
+
     // Cleanup all active sessions
     const activeSessionIds = Object.keys(this.activeSessions);
     await Promise.allSettled(
@@ -448,6 +509,12 @@ export class McpServerPool {
   ): Promise<void> {
     logger.info(`Invalidating idle session for server ${serverUuid}`);
 
+    // Bump generation before async work to invalidate any in-flight creation
+    this.idleSessionGenerations.set(
+      serverUuid,
+      (this.idleSessionGenerations.get(serverUuid) ?? 0) + 1,
+    );
+
     // Update server params cache
     this.serverParamsCache[serverUuid] = params;
 
@@ -495,6 +562,12 @@ export class McpServerPool {
    */
   async cleanupIdleSession(serverUuid: string): Promise<void> {
     logger.info(`Cleaning up idle session for server ${serverUuid}`);
+
+    // Bump generation before async work to invalidate any in-flight creation
+    this.idleSessionGenerations.set(
+      serverUuid,
+      (this.idleSessionGenerations.get(serverUuid) ?? 0) + 1,
+    );
 
     // Cleanup existing idle session if it exists
     const existingIdleSession = this.idleSessions[serverUuid];
@@ -586,6 +659,12 @@ export class McpServerPool {
    * Clean up all sessions for a specific server
    */
   private async cleanupServerSessions(serverUuid: string): Promise<void> {
+    // Bump generation before async work to invalidate any in-flight creation
+    this.idleSessionGenerations.set(
+      serverUuid,
+      (this.idleSessionGenerations.get(serverUuid) ?? 0) + 1,
+    );
+
     // Clean up idle session
     const idleSession = this.idleSessions[serverUuid];
     if (idleSession) {

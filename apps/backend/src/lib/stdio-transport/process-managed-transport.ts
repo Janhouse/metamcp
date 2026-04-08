@@ -182,6 +182,9 @@ export class ProcessManagedStdioTransport implements Transport {
       });
 
       this._process.on("spawn", () => {
+        logger.info(
+          `Spawned process PID ${this._process?.pid} for command: ${this._serverParams.command}`,
+        );
         resolve();
       });
 
@@ -259,16 +262,42 @@ export class ProcessManagedStdioTransport implements Transport {
 
   async close(): Promise<void> {
     this._isCleanup = true;
-    this._abortController.abort();
 
-    // Kill the entire process group to ensure full cleanup
-    if (this._process?.pid) {
-      try {
-        process.kill(-this._process.pid, "SIGTERM");
-      } catch (error) {
-        // Process might already be terminated, ignore errors
-        logger.warn("Failed to kill process group:", error);
-      }
+    const pid = this._process?.pid;
+    if (pid) {
+      this._abortController.abort();
+
+      await new Promise<void>((resolve) => {
+        // Register close listener BEFORE sending SIGTERM to prevent race
+        // where a fast-exiting child emits "close" before listener is attached
+        const onClose = () => {
+          clearTimeout(killTimer);
+          resolve();
+        };
+        this._process?.on("close", onClose);
+
+        // Send SIGTERM to the entire process group
+        try {
+          process.kill(-pid, "SIGTERM");
+          logger.info(`Sent SIGTERM to process group -${pid}`);
+        } catch {
+          // Process already dead
+          resolve();
+          return;
+        }
+
+        // Escalate to SIGKILL after 5 seconds if still alive
+        const killTimer = setTimeout(() => {
+          try {
+            process.kill(-pid, "SIGKILL");
+            logger.warn(`Escalated to SIGKILL for process group -${pid}`);
+          } catch {
+            // Already dead
+          }
+          // Give SIGKILL a moment to take effect
+          setTimeout(resolve, 500);
+        }, 5000);
+      });
     }
 
     this._process = undefined;
