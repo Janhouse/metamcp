@@ -38,7 +38,7 @@
     "nanoid": "^5.1.7",
     "pg": "^8.20.0",
     "shell-quote": "^1.8.3",
-    "spawn-rx": "^5.1.2",
+    "spawn-rx": "^6.0.0",
     "zod": "^3.25.64"
   },
   "devDependencies": {
@@ -51,9 +51,9 @@
     "@types/pg": "^8.20.0",
     "@types/shell-quote": "^1.7.5",
     "@vitest/coverage-v8": "^4.1.3",
-    "dotenv-cli": "^8.0.0",
+    "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^9.28.0",
+    "eslint": "^10.2.0",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.0.0",

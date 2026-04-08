@@ -48,9 +48,9 @@ COPY . .
 # Build all packages and apps
 RUN pnpm build
 
-RUN sed -i -e "s/30000/600000/" \
-    "node_modules/.pnpm/next@15.5.12_react-dom@19.1.2_react@19.1.2__react@19.1.2/node_modules/next/dist/server/lib/router-utils/proxy-request.js" \
-    "node_modules/.pnpm/next@15.5.12_react-dom@19.1.2_react@19.1.2__react@19.1.2/node_modules/next/dist/esm/server/lib/router-utils/proxy-request.js"
+# Patch Next.js proxy timeout (find the correct path regardless of version)
+RUN find node_modules/.pnpm -path "*/next/dist/server/lib/router-utils/proxy-request.js" -exec sed -i -e "s/30000/600000/" {} + 2>/dev/null || true
+RUN find node_modules/.pnpm -path "*/next/dist/esm/server/lib/router-utils/proxy-request.js" -exec sed -i -e "s/30000/600000/" {} + 2>/dev/null || true
 
 # Production runner stage
 FROM base AS runner
@@ -90,7 +90,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./
 RUN pnpm install --prod
 
 # Install drizzle-kit locally in backend for migrations
-RUN cd apps/backend && pnpm add drizzle-kit@0.31.1
+RUN cd apps/backend && pnpm add drizzle-kit@0.31.10
 
 # Copy startup script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./

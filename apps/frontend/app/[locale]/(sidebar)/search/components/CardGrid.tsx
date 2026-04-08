@@ -4,7 +4,7 @@ import {
   createServerFormSchema,
   McpServerTypeEnum,
 } from "@repo/zod-types";
-import { Github, Plus } from "lucide-react";
+import { ExternalLink, Plus } from "lucide-react";
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -614,7 +614,7 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Github className="w-4 h-4 mr-2" />
+                    <ExternalLink className="w-4 h-4 mr-2" />
                     {t("search:card.github")}
                   </Link>
                 </Button>
