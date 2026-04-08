@@ -38,7 +38,7 @@
     "nanoid": "^5.1.7",
     "pg": "^8.20.0",
     "shell-quote": "^1.8.3",
-    "spawn-rx": "^6.0.0",
+    "spawn-rx": "^5.1.2",
     "zod": "^3.25.64"
   },
   "devDependencies": {

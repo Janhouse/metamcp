@@ -72,8 +72,8 @@ importers:
         specifier: ^1.8.3
         version: 1.8.3
       spawn-rx:
-        specifier: ^6.0.0
-        version: 6.0.0
+        specifier: ^5.1.2
+        version: 5.1.2
       zod:
         specifier: ^3.25.64
         version: 3.25.64
@@ -3422,10 +3422,6 @@ packages:
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
-  lru-cache@11.3.3:
-    resolution: {integrity: sha512-JvNw9Y81y33E+BEYPr0U7omo+U9AySnsMsEiXgwT6yqd31VQWTLNQqmT4ou5eqPFUrTfIDFta2wKhB1hyohtAQ==}
-    engines: {node: 20 || >=22}
-
   lucide-react@1.7.0:
     resolution: {integrity: sha512-yI7BeItCLZJTXikmK4KNUGCKoGzSvbKlfCvw44bU4fXAL6v3gYS4uHD1jzsLkfwODYwI6Drw5Tu9Z5ulDe0TSg==}
     peerDependencies:
@@ -4046,8 +4042,8 @@ packages:
   space-separated-tokens@1.1.5:
     resolution: {integrity: sha512-q/JSVd1Lptzhf5bkYm4ob4iWPjx0KiRe3sRFBNrVqbJkFaBm5vbbowy1mymoPNLRa52+oadOhJ+K49wsSeSjTA==}
 
-  spawn-rx@6.0.0:
-    resolution: {integrity: sha512-eGIWeP/77orCn1BqGnC8l6+Gqb+ZrKEs++XXKBMFHxIxUwKz8xHp+5anI2WPgjXFW5e/H2KjFJi3iBTNZGpXZw==}
+  spawn-rx@5.1.2:
+    resolution: {integrity: sha512-/y7tJKALVZ1lPzeZZB9jYnmtrL7d0N2zkorii5a7r7dhHkWIuLTzZpZzMJLK1dmYRgX/NCc4iarTO3F7BS2c/A==}
 
   split2@4.2.0:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
@@ -7275,8 +7271,6 @@ snapshots:
 
   lru-cache@10.4.3: {}
 
-  lru-cache@11.3.3: {}
-
   lucide-react@1.7.0(react@19.2.5):
     dependencies:
       react: 19.2.5
@@ -7951,10 +7945,9 @@ snapshots:
 
   space-separated-tokens@1.1.5: {}
 
-  spawn-rx@6.0.0:
+  spawn-rx@5.1.2:
     dependencies:
       debug: 4.4.3
-      lru-cache: 11.3.3
       rxjs: 7.8.2
     transitivePeerDependencies:
       - supports-color
