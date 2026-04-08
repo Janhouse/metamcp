@@ -261,11 +261,15 @@ export const connectMetaMcpClient = async (
         },
       };
     } catch (error) {
+      // Log connection failures as warnings for expected cases (401/404 from
+      // external servers during warmup), errors only for unexpected failures
+      const errorCode = (error as any)?.code;
+      const isExpected = errorCode === 401 || errorCode === 404;
       metamcpLogStore.addLog(
         "client",
-        "error",
-        `Error connecting to MetaMCP client (attempt ${count + 1}/${maxAttempts})`,
-        error,
+        isExpected ? "warn" : "error",
+        `${isExpected ? "Cannot connect" : "Error connecting"} to MetaMCP client ${serverParams.name} (attempt ${count + 1}/${maxAttempts})${isExpected ? ` [${errorCode}]` : ""}`,
+        isExpected ? undefined : error,
       );
 
       // CRITICAL FIX: Clean up transport/process on connection failure

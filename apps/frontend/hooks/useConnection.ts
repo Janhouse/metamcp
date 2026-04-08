@@ -1,4 +1,12 @@
-import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
+// Dynamically imported to avoid sessionStorage reference during SSR
+// import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
+let authModule: typeof import("@modelcontextprotocol/sdk/client/auth.js") | null = null;
+async function getAuth() {
+  if (!authModule) {
+    authModule = await import("@modelcontextprotocol/sdk/client/auth.js");
+  }
+  return authModule.auth;
+}
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import {
   SSEClientTransport,
@@ -302,7 +310,8 @@ export function useConnection({
       sessionStorage.setItem(SESSION_KEYS.SERVER_URL, url || "");
       sessionStorage.setItem(SESSION_KEYS.MCP_SERVER_UUID, mcpServerUuid);
 
-      const result = await auth(authProvider, {
+      const authFn = await getAuth();
+      const result = await authFn(authProvider, {
         serverUrl: url || "",
       });
       return result === "AUTHORIZED";

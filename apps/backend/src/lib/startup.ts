@@ -94,9 +94,16 @@ export async function initializeIdleServers() {
     const allDbServers = await mcpServersRepository.findAll();
     console.log(`Found ${allDbServers.length} total MCP servers in database`);
 
-    // Convert all database servers to ServerParameters format
+    // Convert STDIO servers to ServerParameters format for warmup.
+    // Skip SSE/STREAMABLE_HTTP servers — they point to external URLs that
+    // may require OAuth or may not be available during startup.
     const allServerParams: Record<string, ServerParameters> = {};
+    let skippedRemote = 0;
     for (const dbServer of allDbServers) {
+      if (dbServer.type !== "STDIO") {
+        skippedRemote++;
+        continue;
+      }
       const serverParams = await convertDbServerToParams(dbServer);
       if (serverParams) {
         allServerParams[dbServer.uuid] = serverParams;
@@ -104,7 +111,7 @@ export async function initializeIdleServers() {
     }
 
     console.log(
-      `Successfully converted ${Object.keys(allServerParams).length} MCP servers to ServerParameters format`,
+      `Warming up ${Object.keys(allServerParams).length} STDIO servers (skipped ${skippedRemote} remote SSE/HTTP servers)`,
     );
 
     // Initialize idle sessions in batches to prevent startup stampede
