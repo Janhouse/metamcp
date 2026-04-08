@@ -26,6 +26,7 @@ import {
   createToolOverridesCallToolMiddleware,
   createToolOverridesListToolsMiddleware,
 } from "../../../lib/metamcp/metamcp-middleware/tool-overrides.functional";
+import { createToolName } from "../../../lib/metamcp/tool-name-parser";
 import { sanitizeName } from "../../../lib/metamcp/utils";
 
 // Original List Tools Handler (adapted from metamcp-proxy.ts)
@@ -79,7 +80,7 @@ export const createOriginalListToolsHandler = (
 
           const toolsWithSource =
             result.tools?.map((tool) => {
-              const toolName = `${sanitizeName(serverName)}__${tool.name}`;
+              const toolName = createToolName(sanitizeName(serverName), tool.name);
               return {
                 ...tool,
                 name: toolName,

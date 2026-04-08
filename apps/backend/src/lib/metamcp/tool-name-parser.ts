@@ -54,6 +54,21 @@ export function parseToolName(toolName: string): ParsedToolName | null {
  * createToolName("Hacker-News", "get_stories")
  * // → "Hacker-News__get_stories"
  */
+const MAX_TOOL_NAME_LENGTH = 64;
+
 export function createToolName(serverName: string, toolName: string): string {
-  return `${serverName}__${toolName}`;
+  const fullName = `${serverName}__${toolName}`;
+  if (fullName.length <= MAX_TOOL_NAME_LENGTH) {
+    return fullName;
+  }
+
+  // Truncate the server prefix to fit, keeping the tool name intact
+  const overhead = 2; // "__" separator
+  const maxPrefixLength = MAX_TOOL_NAME_LENGTH - toolName.length - overhead;
+  if (maxPrefixLength >= 1) {
+    return `${serverName.substring(0, maxPrefixLength)}__${toolName}`;
+  }
+
+  // Tool name itself is too long — truncate the full name
+  return fullName.substring(0, MAX_TOOL_NAME_LENGTH);
 }
