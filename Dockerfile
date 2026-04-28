@@ -11,6 +11,18 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Go (for running Go-based MCP servers via `go run`)
+ARG TARGETARCH
+ENV GO_VERSION=1.23.4
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz" -o /tmp/go.tar.gz \
+    && tar -C /usr/local -xzf /tmp/go.tar.gz \
+    && rm /tmp/go.tar.gz
+ENV GOPATH=/go
+ENV GOCACHE=/go/.cache
+ENV PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"
+RUN mkdir -p "${GOPATH}/bin" "${GOPATH}/src" "${GOPATH}/pkg" "${GOCACHE}" \
+    && chmod -R 777 /go
+
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
