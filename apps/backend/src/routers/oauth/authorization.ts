@@ -5,6 +5,7 @@ import logger from "@/utils/logger";
 import { auth } from "../../auth";
 import { oauthRepository } from "../../db/repositories";
 import {
+  escapeHtml,
   generateSecureAuthCode,
   getBaseUrl,
   type OAuthParams,
@@ -243,23 +244,25 @@ authorizationRouter.get("/oauth/callback", async (req, res) => {
           // This is likely a development/testing scenario where the client redirect_uri
           // points back to our callback. Instead of redirecting, show a success page.
 
+          // Escape all interpolated values — `state` is request-controlled and
+          // must never be reflected into the HTML body unescaped.
           return res.send(`
             <html>
               <head><title>OAuth Authorization Successful</title></head>
               <body>
                 <h1>Authorization Successful</h1>
-                <p>Authorization code: <code>${code}</code></p>
-                <p>State: <code>${state || "none"}</code></p>
+                <p>Authorization code: <code>${escapeHtml(code)}</code></p>
+                <p>State: <code>${escapeHtml(state || "none")}</code></p>
                 <p>You can now exchange this code for an access token using the token endpoint.</p>
                 <pre>
-POST ${baseUrl}/oauth/token
+POST ${escapeHtml(baseUrl)}/oauth/token
 Content-Type: application/json
 
 {
   "grant_type": "authorization_code",
-  "code": "${code}",
-  "client_id": "${codeData.client_id}",
-  "redirect_uri": "${codeData.redirect_uri}"
+  "code": "${escapeHtml(code)}",
+  "client_id": "${escapeHtml(codeData.client_id)}",
+  "redirect_uri": "${escapeHtml(codeData.redirect_uri)}"
 }
                 </pre>
               </body>
