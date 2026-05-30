@@ -56,3 +56,18 @@ export async function canManageResource(
   }
   return usersRepository.isAdmin(requesterId);
 }
+
+/**
+ * Authorization check for reading/using an existing resource (as opposed to
+ * managing it). Public resources (`user_id = null`) are usable by everyone;
+ * private resources only by their owner or an admin. Used to gate which
+ * namespace a caller may open a proxy session against.
+ */
+export async function canAccessResource(
+  resourceUserId: string | null,
+  requesterId: string,
+): Promise<boolean> {
+  if (resourceUserId === null) return true; // public → usable by all
+  if (resourceUserId === requesterId) return true;
+  return usersRepository.isAdmin(requesterId);
+}

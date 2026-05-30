@@ -8,7 +8,11 @@ vi.mock("../db/repositories/users.repo", () => ({
   },
 }));
 
-import { canManageResource, resolveOwnerUserId } from "./authz";
+import {
+  canAccessResource,
+  canManageResource,
+  resolveOwnerUserId,
+} from "./authz";
 
 describe("resolveOwnerUserId", () => {
   beforeEach(() => {
@@ -77,5 +81,30 @@ describe("canManageResource", () => {
     await expect(canManageResource("someone-else", "admin")).resolves.toBe(
       true,
     );
+  });
+});
+
+describe("canAccessResource (read/use)", () => {
+  beforeEach(() => {
+    isAdmin.mockReset();
+  });
+
+  it("allows anyone to use a public resource without an admin check", async () => {
+    await expect(canAccessResource(null, "anyone")).resolves.toBe(true);
+    expect(isAdmin).not.toHaveBeenCalled();
+  });
+
+  it("allows the owner", async () => {
+    await expect(canAccessResource("me", "me")).resolves.toBe(true);
+  });
+
+  it("denies a non-owner non-admin on a private resource", async () => {
+    isAdmin.mockResolvedValue(false);
+    await expect(canAccessResource("someone", "me")).resolves.toBe(false);
+  });
+
+  it("allows an admin on a private resource", async () => {
+    isAdmin.mockResolvedValue(true);
+    await expect(canAccessResource("someone", "admin")).resolves.toBe(true);
   });
 });
