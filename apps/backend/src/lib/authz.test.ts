@@ -8,7 +8,7 @@ vi.mock("../db/repositories/users.repo", () => ({
   },
 }));
 
-import { resolveOwnerUserId } from "./authz";
+import { canManageResource, resolveOwnerUserId } from "./authz";
 
 describe("resolveOwnerUserId", () => {
   beforeEach(() => {
@@ -48,5 +48,34 @@ describe("resolveOwnerUserId", () => {
   it("lets an admin create a public (user_id=null) resource", async () => {
     isAdmin.mockResolvedValue(true);
     await expect(resolveOwnerUserId(null, "admin")).resolves.toBeNull();
+  });
+});
+
+describe("canManageResource", () => {
+  beforeEach(() => {
+    isAdmin.mockReset();
+  });
+
+  it("allows the owner without an admin check", async () => {
+    await expect(canManageResource("me", "me")).resolves.toBe(true);
+    expect(isAdmin).not.toHaveBeenCalled();
+  });
+
+  it("denies a non-owner non-admin", async () => {
+    isAdmin.mockResolvedValue(false);
+    await expect(canManageResource("someone-else", "me")).resolves.toBe(false);
+  });
+
+  it("denies a non-admin managing a public (null-owner) resource", async () => {
+    isAdmin.mockResolvedValue(false);
+    await expect(canManageResource(null, "me")).resolves.toBe(false);
+  });
+
+  it("allows an admin to manage any resource, including public", async () => {
+    isAdmin.mockResolvedValue(true);
+    await expect(canManageResource(null, "admin")).resolves.toBe(true);
+    await expect(canManageResource("someone-else", "admin")).resolves.toBe(
+      true,
+    );
   });
 });

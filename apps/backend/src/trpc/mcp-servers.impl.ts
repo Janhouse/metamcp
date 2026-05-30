@@ -19,7 +19,7 @@ import {
   namespaceMappingsRepository,
 } from "../db/repositories";
 import { McpServersSerializer } from "../db/serializers";
-import { resolveOwnerUserId } from "../lib/authz";
+import { canManageResource, resolveOwnerUserId } from "../lib/authz";
 import { mcpServerPool } from "../lib/metamcp/mcp-server-pool";
 import { clearOverrideCache } from "../lib/metamcp/metamcp-middleware/tool-overrides.functional";
 import { metaMcpServerPool } from "../lib/metamcp/metamcp-server-pool";
@@ -256,8 +256,9 @@ export const mcpServersImplementations = {
         };
       }
 
-      // Only server owner can delete their own servers, only admin can delete public servers
-      if (server.user_id && server.user_id !== userId) {
+      // Only the server owner (or an admin) may delete it. Public servers are
+      // not world-deletable: they require admin.
+      if (!(await canManageResource(server.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only delete servers you own",
@@ -351,8 +352,9 @@ export const mcpServersImplementations = {
         };
       }
 
-      // Only server owner can update their own servers, only admin can update public servers
-      if (server.user_id && server.user_id !== userId) {
+      // Only the server owner (or an admin) may update it. Public servers are
+      // not world-writable: they require admin.
+      if (!(await canManageResource(server.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only update servers you own",

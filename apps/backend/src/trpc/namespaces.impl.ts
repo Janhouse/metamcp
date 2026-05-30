@@ -28,7 +28,7 @@ import {
   toolsRepository,
 } from "../db/repositories";
 import { NamespacesSerializer } from "../db/serializers";
-import { resolveOwnerUserId } from "../lib/authz";
+import { canManageResource, resolveOwnerUserId } from "../lib/authz";
 import {
   clearOverrideCache,
   mapOverrideNameToOriginal,
@@ -258,8 +258,9 @@ export const namespacesImplementations = {
         };
       }
 
-      // Check if user owns this namespace (only owners can delete, protect public namespaces)
-      if (existingNamespace.user_id && existingNamespace.user_id !== userId) {
+      // Only the namespace owner (or an admin) may delete it. Public namespaces
+      // require admin.
+      if (!(await canManageResource(existingNamespace.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only delete namespaces you own",
@@ -328,8 +329,9 @@ export const namespacesImplementations = {
         };
       }
 
-      // Check if user owns this namespace (only owners can update)
-      if (existingNamespace.user_id && existingNamespace.user_id !== userId) {
+      // Only the namespace owner (or an admin) may update it. Public namespaces
+      // require admin.
+      if (!(await canManageResource(existingNamespace.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only update namespaces you own",

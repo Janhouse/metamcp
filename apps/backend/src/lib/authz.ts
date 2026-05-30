@@ -37,3 +37,22 @@ export async function resolveOwnerUserId(
   // Non-admins cannot reassign ownership: scope to the fallback.
   return fallback;
 }
+
+/**
+ * Authorization check for mutating/deleting an existing resource.
+ *
+ * A caller may manage a resource only if they own it, or they are an admin.
+ * In particular, public/shared resources (`user_id = null`) are NOT
+ * world-writable: only an admin may modify or delete them. This closes the
+ * "any authenticated user can update/delete public servers, namespaces,
+ * endpoints and API keys" issue.
+ */
+export async function canManageResource(
+  resourceUserId: string | null,
+  requesterId: string,
+): Promise<boolean> {
+  if (resourceUserId !== null && resourceUserId === requesterId) {
+    return true;
+  }
+  return usersRepository.isAdmin(requesterId);
+}

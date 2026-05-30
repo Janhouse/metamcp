@@ -13,7 +13,7 @@ import { z } from "zod";
 
 import logger from "@/utils/logger";
 
-import { ApiKeysRepository } from "../db/repositories";
+import { ApiKeysRepository, usersRepository } from "../db/repositories";
 import { ApiKeysSerializer } from "../db/serializers";
 import { resolveOwnerUserId } from "../lib/authz";
 
@@ -65,10 +65,16 @@ export const apiKeysImplementations = {
     userId: string,
   ): Promise<z.infer<typeof UpdateApiKeyResponseSchema>> => {
     try {
-      const result = await apiKeysRepository.update(input.uuid, userId, {
-        name: input.name,
-        is_active: input.is_active,
-      });
+      const isAdmin = await usersRepository.isAdmin(userId);
+      const result = await apiKeysRepository.update(
+        input.uuid,
+        userId,
+        {
+          name: input.name,
+          is_active: input.is_active,
+        },
+        isAdmin,
+      );
 
       return ApiKeysSerializer.serializeApiKey(result);
     } catch (error) {
@@ -84,7 +90,8 @@ export const apiKeysImplementations = {
     userId: string,
   ): Promise<z.infer<typeof DeleteApiKeyResponseSchema>> => {
     try {
-      await apiKeysRepository.delete(input.uuid, userId);
+      const isAdmin = await usersRepository.isAdmin(userId);
+      await apiKeysRepository.delete(input.uuid, userId, isAdmin);
 
       return {
         success: true,

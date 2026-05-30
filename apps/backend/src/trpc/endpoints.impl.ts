@@ -18,7 +18,7 @@ import {
   namespacesRepository,
 } from "../db/repositories";
 import { EndpointsSerializer } from "../db/serializers";
-import { resolveOwnerUserId } from "../lib/authz";
+import { canManageResource, resolveOwnerUserId } from "../lib/authz";
 
 const apiKeysRepository = new ApiKeysRepository();
 
@@ -240,8 +240,9 @@ export const endpointsImplementations = {
         };
       }
 
-      // Check if user owns this endpoint (only owners can delete, protect public endpoints)
-      if (existingEndpoint.user_id && existingEndpoint.user_id !== userId) {
+      // Only the endpoint owner (or an admin) may delete it. Public endpoints
+      // require admin.
+      if (!(await canManageResource(existingEndpoint.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only delete endpoints you own",
@@ -289,8 +290,9 @@ export const endpointsImplementations = {
         };
       }
 
-      // Check if user owns this endpoint (only owners can update)
-      if (existingEndpoint.user_id && existingEndpoint.user_id !== userId) {
+      // Only the endpoint owner (or an admin) may update it. Public endpoints
+      // require admin.
+      if (!(await canManageResource(existingEndpoint.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only update endpoints you own",

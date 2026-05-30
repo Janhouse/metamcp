@@ -196,19 +196,26 @@ export class ApiKeysRepository {
     };
   }
 
-  async update(uuid: string, userId: string, input: ApiKeyUpdateInput) {
+  async update(
+    uuid: string,
+    userId: string,
+    input: ApiKeyUpdateInput,
+    isAdmin = false,
+  ) {
+    // Owner-only unless admin. Public keys (user_id IS NULL) are NOT editable
+    // by arbitrary users — only an admin may manage them.
+    const ownershipConditions = [eq(apiKeysTable.uuid, uuid)];
+    if (!isAdmin) {
+      ownershipConditions.push(eq(apiKeysTable.user_id, userId));
+    }
+
     const [updatedApiKey] = await db
       .update(apiKeysTable)
       .set({
         ...(input.name && { name: input.name }),
         ...(input.is_active !== undefined && { is_active: input.is_active }),
       })
-      .where(
-        and(
-          eq(apiKeysTable.uuid, uuid),
-          or(eq(apiKeysTable.user_id, userId), isNull(apiKeysTable.user_id)),
-        ),
-      )
+      .where(and(...ownershipConditions))
       .returning({
         uuid: apiKeysTable.uuid,
         name: apiKeysTable.name,
@@ -224,15 +231,17 @@ export class ApiKeysRepository {
     return updatedApiKey;
   }
 
-  async delete(uuid: string, userId: string) {
+  async delete(uuid: string, userId: string, isAdmin = false) {
+    // Owner-only unless admin. Public keys (user_id IS NULL) are NOT deletable
+    // by arbitrary users — only an admin may manage them.
+    const ownershipConditions = [eq(apiKeysTable.uuid, uuid)];
+    if (!isAdmin) {
+      ownershipConditions.push(eq(apiKeysTable.user_id, userId));
+    }
+
     const [deletedApiKey] = await db
       .delete(apiKeysTable)
-      .where(
-        and(
-          eq(apiKeysTable.uuid, uuid),
-          or(eq(apiKeysTable.user_id, userId), isNull(apiKeysTable.user_id)),
-        ),
-      )
+      .where(and(...ownershipConditions))
       .returning({
         uuid: apiKeysTable.uuid,
         name: apiKeysTable.name,
