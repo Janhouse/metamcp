@@ -88,54 +88,76 @@ export function escapeHtml(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
+/** Loopback hosts may use http (native/dev clients); everything else must https. */
+function isLoopbackHost(hostname: string): boolean {
+  return (
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+  );
+}
+
 /**
- * Validate redirect URI according to OAuth 2.1 security requirements
- * Prevents open redirect vulnerabilities
+ * Internal/reserved network targets that should never be a (non-loopback)
+ * redirect destination — cloud metadata, private and link-local ranges.
+ */
+function isReservedHost(hostname: string): boolean {
+  if (hostname === "0.0.0.0") return true;
+  if (hostname.startsWith("169.254.")) return true; // link-local / cloud metadata
+  if (hostname.startsWith("10.")) return true;
+  if (hostname.startsWith("192.168.")) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true; // 172.16–172.31
+  if (hostname.startsWith("127.")) return true; // loopback handled separately
+  // IPv6 unique-local (fc00::/7) and link-local (fe80::/10)
+  if (/^f[cd]/.test(hostname) || hostname.startsWith("fe80")) return true;
+  return false;
+}
+
+/**
+ * Validate redirect URI according to OAuth 2.1 security requirements.
+ * Hardening is applied unconditionally (not gated on NODE_ENV): only http(s)
+ * schemes, https required except for loopback, no URL fragment, and
+ * private/reserved hosts blocked for non-loopback targets.
  */
 export function validateRedirectUri(
   uri: string,
   allowedHosts?: string[],
 ): boolean {
+  let parsedUri: URL;
   try {
-    const parsedUri = new URL(uri);
-
-    // Only allow secure schemes (no custom: schemes)
-    if (!["https:", "http:"].includes(parsedUri.protocol)) {
-      return false;
-    }
-
-    // For production, only allow HTTPS
-    if (
-      process.env.NODE_ENV === "production" &&
-      parsedUri.protocol !== "https:"
-    ) {
-      return false;
-    }
-
-    // Prevent localhost/private IPs in production
-    if (process.env.NODE_ENV === "production") {
-      const hostname = parsedUri.hostname.toLowerCase();
-      if (
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        hostname === "::1" ||
-        hostname.startsWith("192.168.") ||
-        hostname.startsWith("10.") ||
-        hostname.startsWith("172.")
-      ) {
-        return false;
-      }
-    }
-
-    // Check against allowed hosts if provided
-    if (allowedHosts && allowedHosts.length > 0) {
-      return allowedHosts.includes(parsedUri.hostname);
-    }
-
-    return true;
+    parsedUri = new URL(uri);
   } catch {
     return false;
   }
+
+  // Only http/https — blocks javascript:, data:, file:, custom schemes.
+  if (parsedUri.protocol !== "https:" && parsedUri.protocol !== "http:") {
+    return false;
+  }
+
+  // RFC 6749 §3.1.2: the redirect URI must not include a fragment.
+  if (parsedUri.hash) {
+    return false;
+  }
+
+  // Strip IPv6 brackets for comparison (URL.hostname yields e.g. "[::1]").
+  const hostname = parsedUri.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const loopback = isLoopbackHost(hostname);
+
+  // http is only allowed for loopback; all other hosts must use https.
+  if (parsedUri.protocol === "http:" && !loopback) {
+    return false;
+  }
+
+  // Block internal/reserved targets for non-loopback hosts.
+  if (!loopback && isReservedHost(hostname)) {
+    return false;
+  }
+
+  // Check against allowed hosts if provided
+  if (allowedHosts && allowedHosts.length > 0) {
+    return allowedHosts.includes(parsedUri.hostname);
+  }
+
+  return true;
 }
 
 /**
