@@ -156,9 +156,9 @@ export async function convertDbServerToParams(
  * @returns Environment object with resolved values
  */
 export function resolveEnvVariables(
-  envObject: Record<string, any>,
-): Record<string, any> {
-  const resolved: Record<string, any> = {};
+  envObject: Record<string, unknown>,
+): Record<string, unknown> {
+  const resolved: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(envObject)) {
     if (

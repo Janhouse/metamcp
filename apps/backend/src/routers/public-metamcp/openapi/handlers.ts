@@ -80,7 +80,10 @@ export const createOriginalListToolsHandler = (
 
           const toolsWithSource =
             result.tools?.map((tool) => {
-              const toolName = createToolName(sanitizeName(serverName), tool.name);
+              const toolName = createToolName(
+                sanitizeName(serverName),
+                tool.name,
+              );
               return {
                 ...tool,
                 name: toolName,

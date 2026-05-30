@@ -50,7 +50,7 @@
       "dependsOn": ["^lint:fix"]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^build", "^check-types"]
     },
     "dev": {
       "cache": false,

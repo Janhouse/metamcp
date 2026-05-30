@@ -1,11 +1,5 @@
 "use client";
-import { MakeRequestFn } from "@/lib/mcp-types";
-
-import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import {
-  ClientRequest,
-  EmptyResultSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { EmptyResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { Activity, CheckCircle, Clock, XCircle, Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -13,6 +7,7 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/hooks/useTranslations";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 interface PingHistory {
   id: string;

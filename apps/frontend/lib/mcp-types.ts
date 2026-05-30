@@ -10,9 +10,10 @@ import type { ClientRequest } from "@modelcontextprotocol/sdk/types.js";
  * it), using `unknown` here is safe — the return type is determined by the
  * schema at runtime, not compile time.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export type MakeRequestFn = (
   request: ClientRequest,
   schema: any,
   options?: RequestOptions & { suppressToast?: boolean },
 ) => Promise<any>;
+/* eslint-enable @typescript-eslint/no-explicit-any */

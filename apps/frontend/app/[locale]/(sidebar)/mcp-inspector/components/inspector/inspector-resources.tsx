@@ -1,9 +1,5 @@
 "use client";
-import { MakeRequestFn } from "@/lib/mcp-types";
-
-import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import {
-  ClientRequest,
   ListResourcesResultSchema,
   ListResourceTemplatesResultSchema,
   ReadResourceResultSchema,
@@ -26,6 +22,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { CodeBlock } from "@/components/ui/code-block";
 import { useTranslations } from "@/hooks/useTranslations";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 interface ResourceContent {
   uri: string;

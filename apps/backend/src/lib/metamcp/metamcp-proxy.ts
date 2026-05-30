@@ -67,7 +67,10 @@ async function filterOutOverrideTools(
       try {
         // Check if this tool name is actually an override name for an existing tool
         // by using the existing mapOverrideNameToOriginal function
-        const fullToolName = createToolName(sanitizeName(serverName), tool.name);
+        const fullToolName = createToolName(
+          sanitizeName(serverName),
+          tool.name,
+        );
         const originalName = await mapOverrideNameToOriginal(
           fullToolName,
           namespaceUuid,
@@ -290,7 +293,10 @@ export const createServer = async (
 
           // Use original tools for client response (middleware will be applied later)
           const toolsWithSource = allServerTools.map((tool) => {
-            const toolName = createToolName(sanitizeName(serverName), tool.name);
+            const toolName = createToolName(
+              sanitizeName(serverName),
+              tool.name,
+            );
             toolToClient[toolName] = session;
             toolToServerUuid[toolName] = mcpServerUuid;
 
@@ -616,7 +622,10 @@ export const createServer = async (
 
           if (result.prompts) {
             const promptsWithSource = result.prompts.map((prompt) => {
-              const promptName = createToolName(sanitizeName(serverName), prompt.name);
+              const promptName = createToolName(
+                sanitizeName(serverName),
+                prompt.name,
+              );
               promptToClient[promptName] = session;
               return {
                 ...prompt,

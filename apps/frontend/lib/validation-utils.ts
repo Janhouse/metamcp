@@ -3,7 +3,7 @@ import { ZodError, ZodIssue } from "zod";
 // Type for translation function
 type TranslationFunction = (
   key: string,
-  params?: Record<string, any>,
+  params?: Record<string, string | number>,
 ) => string;
 
 // Map of Zod issue codes to translation keys
@@ -61,12 +61,12 @@ export function translateZodIssue(
   switch (issue.code) {
     case "too_small":
       if ("minimum" in issue) {
-        return t("validation:minLength", { min: issue.minimum });
+        return t("validation:minLength", { min: Number(issue.minimum) });
       }
       break;
     case "too_big":
       if ("maximum" in issue) {
-        return t("validation:maxLength", { max: issue.maximum });
+        return t("validation:maxLength", { max: Number(issue.maximum) });
       }
       break;
     case "invalid_format":

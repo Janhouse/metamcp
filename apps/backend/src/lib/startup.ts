@@ -45,7 +45,9 @@ const BATCH_DELAY_MS = 1000;
 /**
  * Wait for the backend to be ready by polling the health endpoint.
  */
-async function waitForBackendReady(maxWaitMs: number = 10000): Promise<boolean> {
+async function waitForBackendReady(
+  maxWaitMs: number = 10000,
+): Promise<boolean> {
   const startTime = Date.now();
   while (Date.now() - startTime < maxWaitMs) {
     try {

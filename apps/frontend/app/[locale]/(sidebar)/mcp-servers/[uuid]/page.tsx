@@ -156,8 +156,8 @@ export default function McpServerDetailPage({
     },
     enabled: Boolean(
       server &&
-        !isLoading &&
-        server.error_status !== McpServerErrorStatusEnum.enum.ERROR,
+      !isLoading &&
+      server.error_status !== McpServerErrorStatusEnum.enum.ERROR,
     ),
   });
 

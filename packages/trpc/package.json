@@ -7,6 +7,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup",
+    "check-types": "tsc --noEmit",
     "dev": "tsup --watch",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
@@ -14,15 +15,15 @@
   },
   "dependencies": {
     "@repo/zod-types": "workspace:*",
-    "@trpc/server": "^11.16.0",
-    "zod": "^4.3.6"
+    "@trpc/server": "^11.17.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "eslint": "^10.2.0",
+    "eslint": "^9.39.4",
     "tsup": "^8.5.1",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   },
   "exports": {
     ".": {

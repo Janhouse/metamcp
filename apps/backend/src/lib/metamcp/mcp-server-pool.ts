@@ -38,8 +38,9 @@ export class McpServerPool {
   // Session cleanup timer
   private cleanupTimer: NodeJS.Timeout | null = null;
 
-  // Background idle sessions by namespace: namespaceUuid -> any
-  private backgroundIdleSessionsByNamespace: Map<string, any> = new Map();
+  // Background idle sessions by namespace: namespaceUuid -> Map<userId|key, status>
+  private backgroundIdleSessionsByNamespace: Map<string, Map<string, string>> =
+    new Map();
 
   // Default number of idle sessions per server UUID
   private readonly defaultIdleCount: number;
@@ -484,7 +485,7 @@ export class McpServerPool {
   /**
    * Get background idle sessions by namespace
    */
-  getBackgroundIdleSessionsByNamespace(): Map<string, any> {
+  getBackgroundIdleSessionsByNamespace(): Map<string, Map<string, string>> {
     return this.backgroundIdleSessionsByNamespace;
   }
 
@@ -493,7 +494,7 @@ export class McpServerPool {
    */
   setBackgroundIdleSessionsByNamespace(
     namespaceUuid: string,
-    options: any,
+    options: Map<string, string>,
   ): void {
     this.backgroundIdleSessionsByNamespace.set(namespaceUuid, options);
   }
