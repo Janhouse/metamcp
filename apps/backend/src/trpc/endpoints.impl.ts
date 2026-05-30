@@ -18,6 +18,7 @@ import {
   namespacesRepository,
 } from "../db/repositories";
 import { EndpointsSerializer } from "../db/serializers";
+import { resolveOwnerUserId } from "../lib/authz";
 
 const apiKeysRepository = new ApiKeysRepository();
 
@@ -36,9 +37,9 @@ export const endpointsImplementations = {
         };
       }
 
-      // Determine user ownership based on input.user_id or default to current user
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : userId;
+      // Owner is the authenticated caller. Only admins may create an endpoint
+      // for another user or a public (user_id = null) endpoint.
+      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId);
       const isPublicEndpoint = effectiveUserId === null;
 
       // Validate namespace accessibility and relationship rules

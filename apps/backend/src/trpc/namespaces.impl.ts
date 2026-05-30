@@ -28,6 +28,7 @@ import {
   toolsRepository,
 } from "../db/repositories";
 import { NamespacesSerializer } from "../db/serializers";
+import { resolveOwnerUserId } from "../lib/authz";
 import {
   clearOverrideCache,
   mapOverrideNameToOriginal,
@@ -40,9 +41,9 @@ export const namespacesImplementations = {
     userId: string,
   ): Promise<z.infer<typeof CreateNamespaceResponseSchema>> => {
     try {
-      // Determine user ownership based on input.user_id or default to current user
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : userId;
+      // Owner is the authenticated caller. Only admins may create a namespace
+      // for another user or a public (user_id = null) namespace.
+      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId);
       const isPublicNamespace = effectiveUserId === null;
 
       // Validate server accessibility and relationship rules
@@ -335,9 +336,13 @@ export const namespacesImplementations = {
         };
       }
 
-      // Determine the effective ownership for validation (use input.user_id if provided, otherwise existing)
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : existingNamespace.user_id;
+      // Keep existing ownership; only admins may reassign the namespace to
+      // another user or to public.
+      const effectiveUserId = await resolveOwnerUserId(
+        input.user_id,
+        userId,
+        existingNamespace.user_id,
+      );
       const isPublicNamespace = effectiveUserId === null;
 
       // Validate server accessibility and relationship rules if servers are being updated
@@ -383,7 +388,7 @@ export const namespacesImplementations = {
         uuid: input.uuid,
         name: input.name,
         description: input.description,
-        user_id: input.user_id,
+        user_id: effectiveUserId,
         mcpServerUuids: input.mcpServerUuids,
       });
 

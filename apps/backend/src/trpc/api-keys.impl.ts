@@ -15,6 +15,7 @@ import logger from "@/utils/logger";
 
 import { ApiKeysRepository } from "../db/repositories";
 import { ApiKeysSerializer } from "../db/serializers";
+import { resolveOwnerUserId } from "../lib/authz";
 
 const apiKeysRepository = new ApiKeysRepository();
 
@@ -24,8 +25,10 @@ export const apiKeysImplementations = {
     userId: string,
   ): Promise<z.infer<typeof CreateApiKeyResponseSchema>> => {
     try {
-      // Use input.user_id if provided, otherwise default to current user (private)
-      const apiKeyUserId = input.user_id !== undefined ? input.user_id : userId;
+      // Owner is the authenticated caller. Only admins may create a key for
+      // another user or a public (user_id = null) key; non-admins always get a
+      // key scoped to themselves regardless of the supplied user_id.
+      const apiKeyUserId = await resolveOwnerUserId(input.user_id, userId);
 
       const result = await apiKeysRepository.create({
         name: input.name,

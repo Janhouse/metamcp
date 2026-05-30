@@ -19,6 +19,7 @@ import {
   namespaceMappingsRepository,
 } from "../db/repositories";
 import { McpServersSerializer } from "../db/serializers";
+import { resolveOwnerUserId } from "../lib/authz";
 import { mcpServerPool } from "../lib/metamcp/mcp-server-pool";
 import { clearOverrideCache } from "../lib/metamcp/metamcp-middleware/tool-overrides.functional";
 import { metaMcpServerPool } from "../lib/metamcp/metamcp-server-pool";
@@ -31,9 +32,9 @@ export const mcpServersImplementations = {
     userId: string,
   ): Promise<z.infer<typeof CreateMcpServerResponseSchema>> => {
     try {
-      // Determine user ownership based on input.user_id or default to current user
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : userId;
+      // Owner is the authenticated caller. Only admins may create a server for
+      // another user or a public (user_id = null) server.
+      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId);
 
       const createdServer = await mcpServersRepository.create({
         ...input,
@@ -358,9 +359,13 @@ export const mcpServersImplementations = {
         };
       }
 
-      // Determine user ownership based on input.user_id or keep existing ownership
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : server.user_id;
+      // Keep existing ownership; only admins may reassign a server to another
+      // user or to public. Non-admins cannot change ownership.
+      const effectiveUserId = await resolveOwnerUserId(
+        input.user_id,
+        userId,
+        server.user_id,
+      );
 
       const updatedServer = await mcpServersRepository.update({
         ...input,
