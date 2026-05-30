@@ -9,6 +9,7 @@ import {
 } from "@/middleware/api-key-oauth.middleware";
 import { lookupEndpoint } from "@/middleware/lookup-endpoint-middleware";
 import { rateLimitMiddleware } from "@/middleware/rate-limit.middleware";
+import { sendSafeError } from "@/utils/http-errors";
 import logger from "@/utils/logger";
 
 import { metaMcpServerPool } from "../../lib/metamcp/metamcp-server-pool";
@@ -102,7 +103,7 @@ streamableHttpRouter.get(
       }
     } catch (error) {
       logger.error("Error in public endpoint /mcp route:", error);
-      res.status(500).json(error);
+      sendSafeError(res, 500, "Internal server error");
     }
   },
 );

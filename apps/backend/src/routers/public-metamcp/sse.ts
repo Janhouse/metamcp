@@ -8,6 +8,7 @@ import {
 } from "@/middleware/api-key-oauth.middleware";
 import { lookupEndpoint } from "@/middleware/lookup-endpoint-middleware";
 import { rateLimitMiddleware } from "@/middleware/rate-limit.middleware";
+import { sendSafeError } from "@/utils/http-errors";
 import logger from "@/utils/logger";
 
 import { metaMcpServerPool } from "../../lib/metamcp/metamcp-server-pool";
@@ -98,7 +99,7 @@ sseRouter.get(
       await mcpServerInstance.server.connect(webAppTransport);
     } catch (error) {
       logger.error("Error in public endpoint /sse route:", error);
-      res.status(500).json(error);
+      sendSafeError(res, 500, "Internal server error");
     }
   },
 );
@@ -128,7 +129,7 @@ sseRouter.post(
       await transport.handlePostMessage(req, res);
     } catch (error) {
       logger.error("Error in public endpoint /message route:", error);
-      res.status(500).json(error);
+      sendSafeError(res, 500, "Internal server error");
     }
   },
 );
