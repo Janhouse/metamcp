@@ -5,17 +5,18 @@ import { genericOAuth, GenericOAuthConfig } from "better-auth/plugins";
 import { db } from "./db/index";
 import * as schema from "./db/schema";
 import { configService } from "./lib/config.service";
+import { assertSecureAuthSecret } from "./lib/secret-validation";
 import logger from "./utils/logger";
 
-// Provide default values for development
-if (!process.env.BETTER_AUTH_SECRET) {
-  throw new Error("BETTER_AUTH_SECRET environment variable is required");
-}
+// Refuse to start with a missing, default, or weak auth secret — otherwise
+// session cookies and tokens are forgeable by anyone who knows the default.
+const BETTER_AUTH_SECRET = assertSecureAuthSecret(
+  process.env.BETTER_AUTH_SECRET,
+);
 if (!process.env.APP_URL) {
   throw new Error("APP_URL environment variable is required");
 }
 
-const BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET;
 const BETTER_AUTH_URL = process.env.APP_URL;
 
 // Helper function to create basic auth middleware
