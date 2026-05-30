@@ -50,9 +50,15 @@ export const apiKeysImplementations = {
   ): Promise<z.infer<typeof ListApiKeysResponseSchema>> => {
     try {
       const apiKeys = await apiKeysRepository.findAccessibleToUser(userId);
+      const isAdmin = await usersRepository.isAdmin(userId);
 
       return {
-        apiKeys: ApiKeysSerializer.serializeApiKeyList(apiKeys),
+        // Mask the secret of any key the requester does not own (public/shared
+        // keys are admin-managed); owners and admins see full values.
+        apiKeys: ApiKeysSerializer.serializeApiKeyList(apiKeys, {
+          requesterId: userId,
+          isAdmin,
+        }),
       };
     } catch (error) {
       logger.error("Error fetching API keys:", error);
