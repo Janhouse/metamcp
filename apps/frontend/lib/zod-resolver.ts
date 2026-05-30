@@ -5,17 +5,18 @@ import { translateZodError } from "./validation-utils";
 // Type for translation function
 type TranslationFunction = (
   key: string,
-  params?: Record<string, any>,
+  params?: Record<string, string | number>,
 ) => string;
 
 /**
  * Creates a Zod resolver that translates validation error messages
  */
-export function createTranslatedZodResolver<T extends ZodSchema>(
-  schema: any,
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function createTranslatedZodResolver<S extends ZodSchema<any>>(
+  schema: S,
   t: TranslationFunction,
 ) {
-  return (data: any) => {
+  return (data: unknown) => {
     try {
       // Parse the data with the schema
       const result = schema.parse(data);

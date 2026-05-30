@@ -112,9 +112,7 @@ export class OAuthRepository {
     return result[0] || null;
   }
 
-  async deleteAccessTokenByRefreshToken(
-    refreshToken: string,
-  ): Promise<void> {
+  async deleteAccessTokenByRefreshToken(refreshToken: string): Promise<void> {
     await db
       .delete(oauthAccessTokensTable)
       .where(eq(oauthAccessTokensTable.refresh_token, refreshToken));

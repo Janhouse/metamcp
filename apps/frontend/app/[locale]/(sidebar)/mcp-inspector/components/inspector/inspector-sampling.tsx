@@ -1,8 +1,4 @@
 "use client";
-import { MakeRequestFn } from "@/lib/mcp-types";
-
-import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import { ClientRequest } from "@modelcontextprotocol/sdk/types.js";
 import { ActivitySquare, AlertTriangle, Brain, Settings } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 interface SamplingMessage {
   role: "user" | "assistant" | "system";

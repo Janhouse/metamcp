@@ -106,22 +106,16 @@ describe("RateLimiting", () => {
     // Simulate a request with endpoint1 config
     // Since there are no background idle sessions, these should pass through
     let called1 = false;
-    await rateLimiting.onRequest(
-      { req: { endpoint: endpoint1 } },
-      async () => {
-        called1 = true;
-      },
-    );
+    await rateLimiting.onRequest({ req: { endpoint: endpoint1 } }, async () => {
+      called1 = true;
+    });
     expect(called1).toBe(true);
 
     // Simulate a request with endpoint2 config
     let called2 = false;
-    await rateLimiting.onRequest(
-      { req: { endpoint: endpoint2 } },
-      async () => {
-        called2 = true;
-      },
-    );
+    await rateLimiting.onRequest({ req: { endpoint: endpoint2 } }, async () => {
+      called2 = true;
+    });
     expect(called2).toBe(true);
 
     // The key assertion: RateLimiting instance should NOT have maxRate/maxRateSeconds

@@ -14,11 +14,7 @@ const tokenRouter = express.Router();
 /**
  * Issue a new access token + refresh token pair and store in the database.
  */
-async function issueTokenPair(
-  clientId: string,
-  userId: string,
-  scope: string,
-) {
+async function issueTokenPair(clientId: string, userId: string, scope: string) {
   const accessToken = generateSecureAccessToken();
   const refreshToken = generateSecureRefreshToken();
   const expiresIn = 3600; // 1 hour

@@ -90,11 +90,15 @@ describe("ServerErrorTracker", () => {
       // With fallbackMaxAttempts=3, first 2 crashes should not trigger ERROR
       await tracker.recordServerCrash("server-1", 1, null);
       expect(tracker.getServerAttempts("server-1")).toBe(1);
-      expect(mcpServersRepository.updateServerErrorStatus).not.toHaveBeenCalled();
+      expect(
+        mcpServersRepository.updateServerErrorStatus,
+      ).not.toHaveBeenCalled();
 
       await tracker.recordServerCrash("server-1", 1, null);
       expect(tracker.getServerAttempts("server-1")).toBe(2);
-      expect(mcpServersRepository.updateServerErrorStatus).not.toHaveBeenCalled();
+      expect(
+        mcpServersRepository.updateServerErrorStatus,
+      ).not.toHaveBeenCalled();
     });
 
     it("should mark server as ERROR when reaching max attempts", async () => {
@@ -103,10 +107,12 @@ describe("ServerErrorTracker", () => {
       await tracker.recordServerCrash("server-1", 1, null);
 
       expect(tracker.getServerAttempts("server-1")).toBe(3);
-      expect(mcpServersRepository.updateServerErrorStatus).toHaveBeenCalledWith({
-        serverUuid: "server-1",
-        errorStatus: "ERROR",
-      });
+      expect(mcpServersRepository.updateServerErrorStatus).toHaveBeenCalledWith(
+        {
+          serverUuid: "server-1",
+          errorStatus: "ERROR",
+        },
+      );
     });
 
     it("should track different servers independently", async () => {
@@ -126,10 +132,12 @@ describe("ServerErrorTracker", () => {
       await tracker.resetServerErrorState("server-1");
 
       expect(tracker.getServerAttempts("server-1")).toBe(0);
-      expect(mcpServersRepository.updateServerErrorStatus).toHaveBeenCalledWith({
-        serverUuid: "server-1",
-        errorStatus: "NONE",
-      });
+      expect(mcpServersRepository.updateServerErrorStatus).toHaveBeenCalledWith(
+        {
+          serverUuid: "server-1",
+          errorStatus: "NONE",
+        },
+      );
     });
   });
 });

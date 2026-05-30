@@ -1,11 +1,13 @@
 // rateLimiting.ts
 // Rate limiting for protecting MCP servers from abuse
 
+import { Request } from "express";
+
 import logger from "../utils/logger";
 import { mcpServerPool } from "./metamcp/mcp-server-pool";
 
-type Context = Record<string, any>;
-type CallNext = (context: Context) => Promise<any>;
+type Context = { req: Request };
+type CallNext = (context: Context) => Promise<unknown>;
 
 export class RateLimitError extends Error {
   public code: number;
@@ -98,10 +100,13 @@ export class RateLimiting {
 
   constructor() {
     this.limiters = new Map();
-    this.cleanupInterval = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
+    this.cleanupInterval = setInterval(
+      () => this.cleanup(),
+      CLEANUP_INTERVAL_MS,
+    );
   }
 
-  onRequest(context: Context, callNext: CallNext): Promise<any> {
+  onRequest(context: Context, callNext: CallNext): Promise<unknown> {
     const { endpoint } = context.req;
     const { user_id, namespace_uuid } = endpoint;
     const maxRate = endpoint.max_rate ?? 0;
@@ -158,15 +163,18 @@ export class SlidingWindowRateLimiting {
 
   constructor() {
     this.limiters = new Map();
-    this.cleanupInterval = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
+    this.cleanupInterval = setInterval(
+      () => this.cleanup(),
+      CLEANUP_INTERVAL_MS,
+    );
   }
 
-  onRequest(context: Context, callNext: CallNext): Promise<any> {
+  onRequest(context: Context, callNext: CallNext): Promise<unknown> {
     const { endpoint, socket, headers } = context.req;
     const { namespace_uuid } = endpoint;
     const clientMaxRate = endpoint.client_max_rate;
     const clientMaxRateSeconds = endpoint.client_max_rate_seconds;
-    const clientMaxRateStrategy =
+    const _clientMaxRateStrategy =
       endpoint.client_max_rate_strategy === ""
         ? "ip"
         : endpoint.client_max_rate_strategy;
@@ -227,7 +235,7 @@ export class SlidingWindowRateLimiting {
     return callNext(context);
   }
 
-  onResponse(context: Context, callNext: CallNext): Promise<any> {
+  onResponse(context: Context, callNext: CallNext): Promise<unknown> {
     return callNext(context);
   }
 

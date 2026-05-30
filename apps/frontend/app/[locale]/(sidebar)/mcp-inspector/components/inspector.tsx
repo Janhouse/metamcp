@@ -1,8 +1,4 @@
 "use client";
-import { MakeRequestFn } from "@/lib/mcp-types";
-
-import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import { ClientRequest } from "@modelcontextprotocol/sdk/types.js";
 import {
   ActivitySquare,
   FileText,
@@ -13,10 +9,10 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
-import { z } from "zod";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslations } from "@/hooks/useTranslations";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 import { InspectorPing } from "./inspector/inspector-ping";
 import { InspectorPrompts } from "./inspector/inspector-prompts";

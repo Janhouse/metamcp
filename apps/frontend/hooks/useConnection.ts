@@ -1,6 +1,8 @@
 // Dynamically imported to avoid sessionStorage reference during SSR
 // import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
-let authModule: typeof import("@modelcontextprotocol/sdk/client/auth.js") | null = null;
+let authModule:
+  | typeof import("@modelcontextprotocol/sdk/client/auth.js")
+  | null = null;
 async function getAuth() {
   if (!authModule) {
     authModule = await import("@modelcontextprotocol/sdk/client/auth.js");
@@ -44,7 +46,6 @@ import { McpServerType, McpServerTypeEnum } from "@repo/zod-types";
 import { useMemoizedFn } from "ahooks";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import { SESSION_KEYS } from "@/lib/constants";
 
@@ -225,7 +226,9 @@ export function useConnection({
         const response = (await makeRequest(request, CompleteResultSchema, {
           signal,
           suppressToast: true,
-        })) as { completion: { values: string[]; hasMore?: boolean; total?: number } };
+        })) as {
+          completion: { values: string[]; hasMore?: boolean; total?: number };
+        };
         return response?.completion.values || [];
       } catch (e: unknown) {
         // Disable completions silently if the server doesn't support them.
@@ -286,15 +289,15 @@ export function useConnection({
   const is401Error = useMemoizedFn((error: unknown): boolean => {
     return Boolean(
       (error instanceof SseError && error.code === 401) ||
-        (error instanceof Error && error.message.includes("401")) ||
-        (error instanceof Error && error.message.includes("Unauthorized")) ||
-        // Handle fetch errors that might come from streamable HTTP
-        (error instanceof TypeError && error.message.includes("401")) ||
-        // Handle response errors
-        (error &&
-          typeof error === "object" &&
-          "status" in error &&
-          (error as { status: number }).status === 401),
+      (error instanceof Error && error.message.includes("401")) ||
+      (error instanceof Error && error.message.includes("Unauthorized")) ||
+      // Handle fetch errors that might come from streamable HTTP
+      (error instanceof TypeError && error.message.includes("401")) ||
+      // Handle response errors
+      (error &&
+        typeof error === "object" &&
+        "status" in error &&
+        (error as { status: number }).status === 401),
     );
   });
 

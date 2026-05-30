@@ -1,10 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
-import { MakeRequestFn } from "@/lib/mcp-types";
-
-import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import {
-  ClientRequest,
   GetPromptResultSchema,
   ListPromptsResultSchema,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -23,6 +19,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "@/hooks/useTranslations";
+import { MakeRequestFn } from "@/lib/mcp-types";
 
 interface Prompt {
   name: string;
@@ -227,18 +224,19 @@ export function InspectorPrompts({
                 URI: {message.content.resource?.uri}
               </div>
               {"text" in (message.content.resource ?? {}) &&
-              (message.content.resource as any)?.text ? (
+              (message.content.resource as { text?: string })?.text ? (
                 <div className="mt-1 text-sm">
-                  {String((message.content.resource as any).text)}
+                  {String((message.content.resource as { text?: string }).text)}
                 </div>
               ) : null}
               {"blob" in (message.content.resource ?? {}) &&
-              (message.content.resource as any)?.blob ? (
+              (message.content.resource as { blob?: string })?.blob ? (
                 <div className="mt-1 text-xs">
                   [
                   {t("inspector:promptsComponent.binaryData", {
-                    length: String((message.content.resource as any).blob)
-                      .length,
+                    length: String(
+                      (message.content.resource as { blob?: string }).blob,
+                    ).length,
                   })}
                   ]
                 </div>

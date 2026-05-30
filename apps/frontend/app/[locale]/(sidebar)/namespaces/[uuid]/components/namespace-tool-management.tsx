@@ -1,6 +1,4 @@
 "use client";
-import { MakeRequestFn } from "@/lib/mcp-types";
-
 import {
   ClientRequest,
   ListToolsResultSchema,
@@ -9,11 +7,11 @@ import { ToolStatusEnum } from "@repo/zod-types";
 import { AlertTriangle, Database, RefreshCw, Wrench } from "lucide-react";
 import React, { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import { ToolManagementSkeleton } from "@/components/skeletons/tool-management-skeleton";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/hooks/useTranslations";
+import { MakeRequestFn } from "@/lib/mcp-types";
 import { trpc } from "@/lib/trpc";
 
 import { EnhancedNamespaceToolsTable } from "./enhanced-namespace-tools-table";
@@ -127,21 +125,33 @@ export function NamespaceToolManagement({
         );
 
         if (toolsListResponse && toolsListResponse.tools) {
-          const mcpToolsData = toolsListResponse.tools.map((tool: any) => ({
-            name: tool.name,
-            description: tool.description || "",
-            inputSchema: tool.inputSchema,
-          }));
+          const mcpToolsData = toolsListResponse.tools.map(
+            (tool: {
+              name: string;
+              description?: string;
+              inputSchema: unknown;
+            }) => ({
+              name: tool.name,
+              description: tool.description || "",
+              inputSchema: tool.inputSchema,
+            }),
+          );
 
           setMcpTools(mcpToolsData);
 
           // Automatically save tools to namespace mappings when autoSave is true (first load only)
           if (autoSave && toolsListResponse.tools.length > 0) {
-            const toolsForSubmission = toolsListResponse.tools.map((tool: any) => ({
-              name: tool.name, // Keep the full "ServerName__toolName" format
-              description: tool.description || "",
-              inputSchema: tool.inputSchema,
-            }));
+            const toolsForSubmission = toolsListResponse.tools.map(
+              (tool: {
+                name: string;
+                description?: string;
+                inputSchema: unknown;
+              }) => ({
+                name: tool.name, // Keep the full "ServerName__toolName" format
+                description: tool.description || "",
+                inputSchema: tool.inputSchema,
+              }),
+            );
 
             // Set auto-saving flag for better user feedback
             setIsAutoSaving(true);

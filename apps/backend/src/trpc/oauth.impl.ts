@@ -8,7 +8,10 @@ import { z } from "zod";
 
 import logger from "@/utils/logger";
 
-import { mcpServersRepository, oauthSessionsRepository } from "../db/repositories";
+import {
+  mcpServersRepository,
+  oauthSessionsRepository,
+} from "../db/repositories";
 import { OAuthSessionsSerializer } from "../db/serializers";
 
 /**

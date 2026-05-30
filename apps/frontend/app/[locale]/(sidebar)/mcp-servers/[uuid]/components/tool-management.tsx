@@ -1,19 +1,13 @@
 "use client";
-import { MakeRequestFn } from "@/lib/mcp-types";
-
-import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import {
-  ClientRequest,
-  ListToolsResultSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { ListToolsResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { Tool } from "@repo/zod-types";
 import { AlertTriangle, Database, RefreshCw, Wrench } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/hooks/useTranslations";
+import { MakeRequestFn } from "@/lib/mcp-types";
 import { trpc } from "@/lib/trpc";
 
 import { UnifiedToolsTable } from "./tools-data-table";
@@ -91,10 +85,10 @@ export function ToolManagement({
       const allTools: MCPTool[] = [];
       let cursor: string | undefined = undefined;
       let hasMore = true;
-      let pageCount = 0;
+      let _pageCount = 0;
 
       while (hasMore) {
-        pageCount++;
+        _pageCount++;
 
         const response = (await makeRequest(
           {
