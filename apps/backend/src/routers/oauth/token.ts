@@ -7,6 +7,7 @@ import {
   generateSecureAccessToken,
   generateSecureRefreshToken,
   rateLimitToken,
+  safeCompare,
 } from "./utils";
 
 const tokenRouter = express.Router();
@@ -109,7 +110,7 @@ async function handleAuthorizationCodeGrant(
 
     if (
       authClientId !== client_id ||
-      authClientSecret !== clientData.client_secret
+      !safeCompare(authClientSecret, clientData.client_secret)
     ) {
       return res.status(401).json({
         error: "invalid_client",
@@ -118,7 +119,7 @@ async function handleAuthorizationCodeGrant(
     }
   } else if (clientData.token_endpoint_auth_method === "client_secret_post") {
     const { client_secret } = req.body;
-    if (!client_secret || client_secret !== clientData.client_secret) {
+    if (!safeCompare(client_secret, clientData.client_secret)) {
       return res.status(401).json({
         error: "invalid_client",
         error_description: "Invalid client secret",

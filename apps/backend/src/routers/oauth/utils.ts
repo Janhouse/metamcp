@@ -1,7 +1,23 @@
-import { createHash, randomBytes } from "crypto";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import express from "express";
 
 import logger from "@/utils/logger";
+
+/**
+ * Constant-time string comparison. Returns false for non-strings or
+ * length-mismatched inputs without leaking timing about the contents. Used for
+ * comparing client secrets so an attacker cannot recover them byte-by-byte.
+ */
+export function safeCompare(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const ab = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 // OAuth 2.0 Authorization Parameters interface
 export interface OAuthParams {

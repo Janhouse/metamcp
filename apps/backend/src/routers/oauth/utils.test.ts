@@ -1,6 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { escapeHtml } from "./utils";
+import { escapeHtml, safeCompare } from "./utils";
+
+describe("safeCompare", () => {
+  it("returns true for identical strings", () => {
+    expect(safeCompare("mcp_secret_abc", "mcp_secret_abc")).toBe(true);
+  });
+  it("returns false for differing strings", () => {
+    expect(safeCompare("mcp_secret_abc", "mcp_secret_abd")).toBe(false);
+  });
+  it("returns false for length mismatch", () => {
+    expect(safeCompare("short", "longer-value")).toBe(false);
+  });
+  it("returns false for null/undefined inputs", () => {
+    expect(safeCompare(undefined, "x")).toBe(false);
+    expect(safeCompare("x", null)).toBe(false);
+    expect(safeCompare(null, null)).toBe(false);
+  });
+});
 
 describe("escapeHtml", () => {
   it("escapes HTML metacharacters", () => {
