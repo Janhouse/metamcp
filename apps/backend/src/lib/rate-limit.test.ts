@@ -13,10 +13,39 @@ vi.mock("./metamcp/mcp-server-pool", () => ({
 import {
   RateLimitError,
   RateLimiting,
+  refillRatePerSecond,
   SlidingWindowRateLimiter,
   SlidingWindowRateLimiting,
   TokenBucketRateLimiter,
 } from "./rate-limit";
+
+describe("refillRatePerSecond", () => {
+  it("derives a per-second rate from requests-per-window", () => {
+    expect(refillRatePerSecond(60, 60)).toBe(1);
+    expect(refillRatePerSecond(100, 10)).toBe(10);
+    expect(refillRatePerSecond(30, 60)).toBe(0.5);
+  });
+
+  it("does not divide by zero when the window is zero", () => {
+    expect(refillRatePerSecond(5, 0)).toBe(5);
+  });
+
+  it("refills the bucket at the configured rate, not the window length", () => {
+    vi.useFakeTimers();
+    try {
+      // 2 requests / 2 seconds → 1 token/sec (NOT 2 tokens/sec).
+      const limiter = new TokenBucketRateLimiter(2, refillRatePerSecond(2, 2));
+      expect(limiter.consume()).toBe(true);
+      expect(limiter.consume()).toBe(true);
+      expect(limiter.consume()).toBe(false); // exhausted
+      vi.advanceTimersByTime(1000); // +1s → +1 token
+      expect(limiter.consume()).toBe(true);
+      expect(limiter.consume()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
 
 describe("TokenBucketRateLimiter", () => {
   it("should allow requests within capacity", () => {

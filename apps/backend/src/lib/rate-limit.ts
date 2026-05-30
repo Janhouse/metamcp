@@ -20,6 +20,19 @@ export class RateLimitError extends Error {
 }
 
 /**
+ * Convert an endpoint's "maxRate requests per maxRateSeconds" configuration to
+ * the token bucket's per-second refill rate. Previously the window-seconds
+ * value was passed directly as the refill rate, making the limit far too
+ * permissive (e.g. 60/60s refilled 60 tokens/second instead of 1).
+ */
+export function refillRatePerSecond(
+  maxRate: number,
+  maxRateSeconds: number,
+): number {
+  return maxRateSeconds > 0 ? maxRate / maxRateSeconds : maxRate;
+}
+
+/**
  * Token bucket implementation for rate limiting.
  */
 export class TokenBucketRateLimiter {
@@ -127,7 +140,10 @@ export class RateLimiting {
           if (!limiter) {
             this.limiters.set(
               namespace_uuid,
-              new TokenBucketRateLimiter(maxRate, maxRateSeconds),
+              new TokenBucketRateLimiter(
+                maxRate,
+                refillRatePerSecond(maxRate, maxRateSeconds),
+              ),
             );
             limiter = this.limiters.get(namespace_uuid);
           }
