@@ -65,12 +65,13 @@ authorizationRouter.get("/oauth/authorize", rateLimitAuth, async (req, res) => {
       });
     }
 
-    // Validate PKCE method (OAuth 2.1 recommends S256)
-    if (code_challenge_method !== "S256" && code_challenge_method !== "plain") {
+    // OAuth 2.1: require S256. "plain" is rejected — it offers no protection
+    // against an attacker who can observe the (attacker-chosen) challenge.
+    if (code_challenge_method !== "S256") {
       return res.status(400).json({
         error: "invalid_request",
         error_description:
-          "Unsupported code_challenge_method. Supported: S256, plain",
+          "Unsupported code_challenge_method. Only S256 is supported.",
       });
     }
 

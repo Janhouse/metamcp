@@ -150,12 +150,13 @@ async function handleAuthorizationCodeGrant(
   if (codeData.code_challenge_method === "S256") {
     const hash = crypto.createHash("sha256").update(code_verifier).digest();
     challengeFromVerifier = hash.toString("base64url");
-  } else if (codeData.code_challenge_method === "plain") {
-    challengeFromVerifier = code_verifier;
   } else {
+    // Only S256 is accepted (OAuth 2.1). "plain" — and anything else — is
+    // rejected rather than silently trusting the verifier as the challenge.
     return res.status(400).json({
       error: "invalid_grant",
-      error_description: "Unsupported code challenge method",
+      error_description:
+        "Unsupported code challenge method. Only S256 is supported.",
     });
   }
 
