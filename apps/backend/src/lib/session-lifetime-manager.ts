@@ -113,6 +113,8 @@ export class SessionLifetimeManagerImpl<
     cleanupCallback: (sessionId: string, session: T) => Promise<void>,
     intervalMs: number = 5 * 60 * 1000, // Default: 5 minutes
   ): void {
+    // Clear any existing timer first so repeated calls don't leak intervals.
+    this.stopCleanupTimer();
     this.cleanupTimer = setInterval(async () => {
       await this.cleanupExpiredSessions(cleanupCallback);
     }, intervalMs);
