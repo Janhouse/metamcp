@@ -13,6 +13,11 @@ vi.mock("../../db/repositories", () => ({
     deleteAuthCode: vi.fn((code: string) => {
       codeStore.delete(code);
     }),
+    consumeAuthCode: vi.fn((code: string) => {
+      const v = codeStore.get(code) ?? null;
+      codeStore.delete(code);
+      return v;
+    }),
     getClient: vi.fn(() => ({
       client_id: "client-1",
       token_endpoint_auth_method: "none",
@@ -96,5 +101,18 @@ describe("token endpoint PKCE enforcement", () => {
     seedCode("S256", "verifier-123");
     const res = await exchange("wrong-verifier");
     expect(res.status).toBe(400);
+  });
+
+  it("rejects reuse of an already-consumed authorization code", async () => {
+    seedCode("S256", "verifier-123");
+    const first = await exchange("verifier-123");
+    expect(first.status).toBe(200);
+    // Second exchange of the same code must fail (single-use, atomic consume).
+    const second = await exchange("verifier-123");
+    expect(second.status).toBe(400);
+    const body = (await second.json()) as { error_description?: string };
+    expect(body.error_description).toMatch(
+      /already been used|expired|invalid/i,
+    );
   });
 });
