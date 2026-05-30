@@ -13,10 +13,13 @@ import {
   oauthSessionsRepository,
 } from "../db/repositories";
 import { OAuthSessionsSerializer } from "../db/serializers";
+import { canManageResource } from "../lib/authz";
 
 /**
- * Verify that the authenticated user owns the MCP server.
- * Servers with user_id === null are public and accessible to all.
+ * Verify the caller may access the MCP server's OAuth session (which holds the
+ * upstream tokens and PKCE verifier). Only the server owner or an admin may —
+ * a public server's session is NOT readable/writable by every user, otherwise
+ * one tenant could read or overwrite another's upstream credentials.
  */
 async function assertServerOwnership(
   userId: string,
@@ -26,8 +29,7 @@ async function assertServerOwnership(
   if (!server) {
     throw new Error("MCP server not found");
   }
-  // Public servers (user_id is null) are accessible to all authenticated users
-  if (server.user_id !== null && server.user_id !== userId) {
+  if (!(await canManageResource(server.user_id, userId))) {
     throw new Error("Access denied: you do not own this MCP server");
   }
 }
