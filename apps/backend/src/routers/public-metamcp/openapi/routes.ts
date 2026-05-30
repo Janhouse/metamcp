@@ -5,6 +5,7 @@ import {
   ApiKeyAuthenticatedRequest,
   authenticateApiKey,
 } from "@/middleware/api-key-oauth.middleware";
+import { rateLimitMiddleware } from "@/middleware/rate-limit.middleware";
 import logger from "@/utils/logger";
 
 import { metaMcpServerPool } from "../../../lib/metamcp/metamcp-server-pool";
@@ -80,6 +81,7 @@ openApiRouter.get(
   "/:endpoint_name/api/openapi.json",
   lookupEndpoint,
   authenticateApiKey,
+  rateLimitMiddleware,
   async (req, res) => {
     const { namespaceUuid, endpointName } = req as ApiKeyAuthenticatedRequest;
 
@@ -132,6 +134,7 @@ openApiRouter.post(
   express.json(),
   lookupEndpoint,
   authenticateApiKey,
+  rateLimitMiddleware,
   async (req, res) => {
     await executeToolWithMiddleware(
       req as ToolExecutionRequest,
@@ -146,6 +149,7 @@ openApiRouter.get(
   "/:endpoint_name/api/:tool_name",
   lookupEndpoint,
   authenticateApiKey,
+  rateLimitMiddleware,
   async (req, res) => {
     await executeToolWithMiddleware(req as ToolExecutionRequest, res, {});
   },
