@@ -26,6 +26,7 @@ import {
   namespaceMappingsRepository,
   namespacesRepository,
   toolsRepository,
+  usersRepository,
 } from "../db/repositories";
 import { NamespacesSerializer } from "../db/serializers";
 import { canManageResource, resolveOwnerUserId } from "../lib/authz";
@@ -176,10 +177,13 @@ export const namespacesImplementations = {
         };
       }
 
+      const isAdmin = await usersRepository.isAdmin(userId);
       return {
         success: true as const,
+        // Redact secrets on any contained server the requester does not own.
         data: NamespacesSerializer.serializeNamespaceWithServers(
           namespaceWithServers,
+          { requesterId: userId, isAdmin },
         ),
         message: "Namespace retrieved successfully",
       };

@@ -27,7 +27,9 @@ export class NamespacesSerializer {
 
   static serializeNamespaceWithServers(
     dbNamespace: DatabaseNamespaceWithServers,
+    options: { requesterId?: string; isAdmin?: boolean } = {},
   ): NamespaceWithServers {
+    const { requesterId, isAdmin = false } = options;
     return {
       uuid: dbNamespace.uuid,
       name: dbNamespace.name,
@@ -35,22 +37,31 @@ export class NamespacesSerializer {
       created_at: dbNamespace.created_at.toISOString(),
       updated_at: dbNamespace.updated_at.toISOString(),
       user_id: dbNamespace.user_id,
-      servers: dbNamespace.servers.map((server) => ({
-        uuid: server.uuid,
-        name: server.name,
-        description: server.description,
-        type: server.type,
-        command: server.command,
-        args: server.args || [],
-        url: server.url,
-        env: server.env || {},
-        bearerToken: server.bearerToken,
-        headers: server.headers || {},
-        error_status: server.error_status,
-        created_at: server.created_at.toISOString(),
-        user_id: server.user_id,
-        status: server.status,
-      })),
+      servers: dbNamespace.servers.map((server) => {
+        // Only the server's owner (or an admin) may see its secrets. A shared
+        // namespace can include servers owned by others/public — never leak
+        // their bearerToken/env/headers to a non-owner.
+        const redact = !(
+          isAdmin ||
+          (server.user_id !== null && server.user_id === requesterId)
+        );
+        return {
+          uuid: server.uuid,
+          name: server.name,
+          description: server.description,
+          type: server.type,
+          command: server.command,
+          args: server.args || [],
+          url: server.url,
+          env: redact ? {} : server.env || {},
+          bearerToken: redact ? undefined : server.bearerToken,
+          headers: redact ? {} : server.headers || {},
+          error_status: server.error_status,
+          created_at: server.created_at.toISOString(),
+          user_id: server.user_id,
+          status: server.status,
+        };
+      }),
     };
   }
 

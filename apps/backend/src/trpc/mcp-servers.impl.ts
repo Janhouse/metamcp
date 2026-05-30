@@ -17,6 +17,7 @@ import logger from "@/utils/logger";
 import {
   mcpServersRepository,
   namespaceMappingsRepository,
+  usersRepository,
 } from "../db/repositories";
 import { McpServersSerializer } from "../db/serializers";
 import { canManageResource, resolveOwnerUserId } from "../lib/authz";
@@ -88,10 +89,16 @@ export const mcpServersImplementations = {
       // Find servers accessible to user (public + user's own)
       const servers =
         await mcpServersRepository.findAllAccessibleToUser(userId);
+      const isAdmin = await usersRepository.isAdmin(userId);
 
       return {
         success: true as const,
-        data: McpServersSerializer.serializeMcpServerList(servers),
+        // Redact secrets (bearerToken/env/headers) on servers the requester
+        // does not own — public servers must not leak their credentials.
+        data: McpServersSerializer.serializeMcpServerList(servers, {
+          requesterId: userId,
+          isAdmin,
+        }),
         message: "MCP servers retrieved successfully",
       };
     } catch (error) {
@@ -225,9 +232,20 @@ export const mcpServersImplementations = {
         };
       }
 
+      // Owner/admin can see secrets; for a public server viewed by a
+      // non-owner, redact bearerToken/env/headers.
+      const isAdmin = await usersRepository.isAdmin(userId);
+      const redactSecrets = !McpServersSerializer.canSeeSecrets(
+        server.user_id,
+        userId,
+        isAdmin,
+      );
+
       return {
         success: true as const,
-        data: McpServersSerializer.serializeMcpServer(server),
+        data: McpServersSerializer.serializeMcpServer(server, {
+          redactSecrets,
+        }),
         message: "MCP server retrieved successfully",
       };
     } catch (error) {
