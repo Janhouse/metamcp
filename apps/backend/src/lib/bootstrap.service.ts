@@ -442,6 +442,9 @@ async function ensureUser(
       .set({
         name,
         emailVerified: true,
+        // Bootstrapped users are operators of the instance and are granted the
+        // admin role so they can manage public/shared resources and app config.
+        role: "admin",
         updatedAt: new Date(),
       })
       .where(eq(usersTable.id, user.id));

@@ -148,6 +148,11 @@ export const usersTable = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
+  // Authorization role. "user" is the safe default; "admin" is required to
+  // assign resources to other users, manage public (shared) resources, and
+  // change application-wide configuration. Declared with input:false in
+  // auth.ts additionalFields so a client can never set it at sign-up.
+  role: text("role").notNull().default("user"),
   image: text("image"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

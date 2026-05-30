@@ -118,6 +118,14 @@ export const auth = betterAuth({
         type: "boolean",
         defaultValue: false,
       },
+      // Authorization role surfaced into the session user. input:false ensures
+      // a client cannot set/escalate its own role during sign-up or update;
+      // roles are assigned server-side only (bootstrap / admin tooling).
+      role: {
+        type: "string",
+        defaultValue: "user",
+        input: false,
+      },
     },
   },
   advanced: {

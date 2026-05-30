@@ -35,3 +35,18 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
     },
   });
 });
+
+// Create an admin procedure that requires the authenticated user to hold the
+// "admin" role. Fails closed: a missing/unknown role is treated as non-admin.
+// Used to gate application-wide configuration and management of shared/public
+// resources in a multi-user deployment.
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user?.role !== "admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This action requires administrator privileges",
+    });
+  }
+
+  return next({ ctx });
+});
