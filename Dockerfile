@@ -96,13 +96,27 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/backend/drizzle.config.ts ./
 COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-lock.yaml ./
 COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./
 
-# Install production dependencies only
-RUN pnpm install --prod
+# The minimumReleaseAge supply-chain cooldown is a lockfile-generation concern;
+# in the image we only install already-locked production deps, so drop it here.
+# Otherwise pnpm tries to "re-mature" pinned versions and fails when a recently
+# bumped dep (e.g. a turbo platform binary) is younger than the window.
+RUN sed -i '/minimumReleaseAge/d' pnpm-workspace.yaml
 
-# Install drizzle-kit locally in backend for migrations
-RUN cd apps/backend && pnpm add drizzle-kit@0.31.10
+# drizzle-kit is a backend devDependency but is needed at runtime for DB
+# migrations. Promote it to a runtime dependency BEFORE pruning, while the
+# copied node_modules still contains devDependencies — running `pnpm add`
+# against the full modules dir avoids ERR_PNPM_INCLUDED_DEPS_CONFLICT.
+RUN cd apps/backend && pnpm add drizzle-kit@0.31.10 --config.confirm-modules-purge=false
+
+# Prune to production-only. --frozen-lockfile installs exactly the locked
+# versions with no re-resolution (so the minimumReleaseAge cooldown can't
+# apply), and --config.confirm-modules-purge=false stops pnpm 10 from aborting
+# on the node_modules purge in a non-TTY build. drizzle-kit is kept because it
+# is now a regular dependency.
+RUN pnpm install --prod --frozen-lockfile --config.confirm-modules-purge=false
 
 # Copy startup script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
