@@ -33,6 +33,26 @@ export function refillRatePerSecond(
 }
 
 /**
+ * Derive the per-client rate-limit key. The default "ip" strategy uses the
+ * trusted req.ip (which honours the app's `trust proxy` setting), NOT a raw
+ * client-controlled header that could be rotated to bypass the limit. Only an
+ * explicit "header" strategy keys on a request header (trusted gateway setups).
+ */
+export function deriveRateLimitKey(
+  strategy: string,
+  headerKey: string,
+  headers: Record<string, string | string[] | undefined>,
+  ip: string | undefined,
+  socketRemoteAddress: string | undefined,
+): string | undefined {
+  if (strategy === "header") {
+    const h = headers[headerKey];
+    return (Array.isArray(h) ? h[0] : h) || ip || socketRemoteAddress;
+  }
+  return ip || socketRemoteAddress;
+}
+
+/**
  * Token bucket implementation for rate limiting.
  */
 export class TokenBucketRateLimiter {
@@ -186,11 +206,11 @@ export class SlidingWindowRateLimiting {
   }
 
   onRequest(context: Context, callNext: CallNext): Promise<unknown> {
-    const { endpoint, socket, headers } = context.req;
+    const { endpoint, socket, headers, ip } = context.req;
     const { namespace_uuid } = endpoint;
     const clientMaxRate = endpoint.client_max_rate;
     const clientMaxRateSeconds = endpoint.client_max_rate_seconds;
-    const _clientMaxRateStrategy =
+    const clientMaxRateStrategy =
       endpoint.client_max_rate_strategy === ""
         ? "ip"
         : endpoint.client_max_rate_strategy;
@@ -201,7 +221,13 @@ export class SlidingWindowRateLimiting {
 
     const backgroundIdleSessions =
       mcpServerPool.getBackgroundIdleSessionsByNamespace();
-    const key = headers[clientMaxRateStrategyKey] || socket.remoteAddress;
+    const key = deriveRateLimitKey(
+      clientMaxRateStrategy,
+      clientMaxRateStrategyKey,
+      headers,
+      ip,
+      socket?.remoteAddress,
+    );
 
     let limiter = this.limiters.get(key);
 

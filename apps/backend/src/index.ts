@@ -7,8 +7,16 @@ import oauthRouter from "./routers/oauth";
 import publicEndpointsRouter from "./routers/public-metamcp";
 import trpcRouter from "./routers/trpc";
 import logger from "./utils/logger";
+import { parseTrustProxy } from "./utils/trust-proxy";
 
 const app = express();
+
+// Configure how many proxy hops to trust so req.ip reflects the real client
+// (used for rate limiting). Defaults to false (trust nobody); set TRUST_PROXY=1
+// (or a subnet/preset) when running behind a reverse proxy such as the bundled
+// nginx / Next.js. Without it, forwarded headers are either untrusted or
+// spoofable.
+app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
 
 // Global JSON middleware for non-proxy routes
 app.use((req, res, next) => {

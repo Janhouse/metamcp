@@ -11,6 +11,7 @@ vi.mock("./metamcp/mcp-server-pool", () => ({
 }));
 
 import {
+  deriveRateLimitKey,
   RateLimitError,
   RateLimiting,
   refillRatePerSecond,
@@ -18,6 +19,49 @@ import {
   SlidingWindowRateLimiting,
   TokenBucketRateLimiter,
 } from "./rate-limit";
+
+describe("deriveRateLimitKey", () => {
+  it("uses the trusted req.ip for the default 'ip' strategy, ignoring headers", () => {
+    const key = deriveRateLimitKey(
+      "ip",
+      "x-forwarded-for",
+      { "x-forwarded-for": "1.2.3.4" }, // attacker-controlled, must be ignored
+      "5.6.7.8",
+      "9.9.9.9",
+    );
+    expect(key).toBe("5.6.7.8");
+  });
+
+  it("falls back to the socket address when req.ip is absent (ip strategy)", () => {
+    expect(
+      deriveRateLimitKey("ip", "x-forwarded-for", {}, undefined, "9.9.9.9"),
+    ).toBe("9.9.9.9");
+  });
+
+  it("uses the configured header only for the explicit 'header' strategy", () => {
+    expect(
+      deriveRateLimitKey(
+        "header",
+        "x-api-key",
+        { "x-api-key": "k1" },
+        "ip",
+        "s",
+      ),
+    ).toBe("k1");
+  });
+
+  it("takes the first value for an array-valued header", () => {
+    expect(
+      deriveRateLimitKey("header", "x-fwd", { "x-fwd": ["a", "b"] }, "ip", "s"),
+    ).toBe("a");
+  });
+
+  it("header strategy falls back to ip when the header is missing", () => {
+    expect(deriveRateLimitKey("header", "x-fwd", {}, "5.6.7.8", "s")).toBe(
+      "5.6.7.8",
+    );
+  });
+});
 
 describe("refillRatePerSecond", () => {
   it("derives a per-second rate from requests-per-window", () => {
