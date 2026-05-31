@@ -13,6 +13,10 @@ import { config as baseConfig } from "./base.js";
  * @type {import("eslint").Linter.Config[]}
  * */
 export const nextJsConfig = [
+  // Never lint build output. Without this, `eslint .` walks the entire .next/
+  // directory (thousands of generated JS bundles), making frontend lint take
+  // minutes. node_modules is already ignored by ESLint's flat-config defaults.
+  { ignores: ["**/.next/**", "**/coverage/**"] },
   ...baseConfig,
   js.configs.recommended,
   eslintConfigPrettier,
