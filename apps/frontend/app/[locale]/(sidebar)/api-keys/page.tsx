@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/table";
 import { useTranslations } from "@/hooks/useTranslations";
 import { trpc } from "@/lib/trpc";
+import { copyToClipboard as copyTextToClipboard } from "@/lib/utils";
 import { createTranslatedZodResolver } from "@/lib/zod-resolver";
 
 type CreateApiKeyFormData = z.infer<typeof CreateApiKeyFormSchema>;
@@ -110,7 +111,7 @@ export default function ApiKeysPage() {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+    void copyTextToClipboard(text);
     toast.success(t("api-keys:copyToClipboard"));
   };
 

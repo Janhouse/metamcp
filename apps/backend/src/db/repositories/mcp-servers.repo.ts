@@ -248,6 +248,26 @@ export class McpServersRepository {
 
     return updatedServer;
   }
+
+  /**
+   * Clear the persisted ERROR state on all servers (back to NONE). The error
+   * status is sticky in the DB, and connectMetaMcpClient refuses to connect a
+   * server already marked ERROR — so a server that errored before a restart
+   * stays permanently stuck even though the underlying problem may be gone.
+   * Resetting on startup gives every server a fresh connection attempt.
+   * Returns the number of rows reset.
+   */
+  async resetAllErrorStatus(): Promise<number> {
+    const reset = await db
+      .update(mcpServersTable)
+      .set({ error_status: McpServerErrorStatusEnum.enum.NONE })
+      .where(
+        eq(mcpServersTable.error_status, McpServerErrorStatusEnum.enum.ERROR),
+      )
+      .returning({ uuid: mcpServersTable.uuid });
+
+    return reset.length;
+  }
 }
 
 export const mcpServersRepository = new McpServersRepository();

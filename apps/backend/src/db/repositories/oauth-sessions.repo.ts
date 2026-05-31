@@ -57,22 +57,39 @@ export class OAuthSessionsRepository {
   }
 
   async upsert(input: OAuthSessionUpdateInput): Promise<DatabaseOAuthSession> {
-    // Check if session exists
-    const existingSession = await this.findByMcpServerUuid(
-      input.mcp_server_uuid,
-    );
+    // Atomic upsert via the unique constraint on mcp_server_uuid. The previous
+    // find-then-create/update was a TOCTOU race: two concurrent OAuth flows for
+    // the same server (e.g. a double-fired auto-connect) could both miss the
+    // existing row and both insert, or interleave writes, corrupting the stored
+    // client_information/code_verifier and causing client-id/verifier mismatch
+    // at token exchange. ON CONFLICT DO UPDATE makes it a single statement.
+    const onlyProvided = {
+      ...(input.client_information && {
+        client_information: input.client_information,
+      }),
+      ...(input.tokens && { tokens: input.tokens }),
+      ...(input.code_verifier && { code_verifier: input.code_verifier }),
+    };
 
-    if (existingSession) {
-      // Update existing session
-      const updatedSession = await this.update(input);
-      if (!updatedSession) {
-        throw new Error("Failed to update OAuth session");
-      }
-      return updatedSession;
-    } else {
-      // Create new session
-      return await this.create(input);
+    const [session] = await db
+      .insert(oauthSessionsTable)
+      .values({
+        mcp_server_uuid: input.mcp_server_uuid,
+        ...onlyProvided,
+      })
+      .onConflictDoUpdate({
+        target: oauthSessionsTable.mcp_server_uuid,
+        set: {
+          ...onlyProvided,
+          updated_at: sql`NOW()`,
+        },
+      })
+      .returning();
+
+    if (!session) {
+      throw new Error("Failed to upsert OAuth session");
     }
+    return session;
   }
 
   async deleteByMcpServerUuid(

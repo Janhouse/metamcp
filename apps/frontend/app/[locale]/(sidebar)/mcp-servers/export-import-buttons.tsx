@@ -21,6 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslations } from "@/hooks/useTranslations";
 import { trpc } from "@/lib/trpc";
+import { copyToClipboard } from "@/lib/utils";
 
 export function ExportImportButtons() {
   const { t } = useTranslations();
@@ -160,7 +161,7 @@ export function ExportImportButtons() {
   const copyExportJson = () => {
     const exportData = generateExportJson();
     const jsonString = JSON.stringify(exportData, null, 2);
-    navigator.clipboard.writeText(jsonString).then(() => {
+    copyToClipboard(jsonString).then(() => {
       toast.success(t("mcp-servers:export.copiedToClipboard"), {
         description: t("mcp-servers:export.copiedDescription"),
       });

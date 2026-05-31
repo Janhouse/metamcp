@@ -53,6 +53,7 @@ import {
 import { useTranslations } from "@/hooks/useTranslations";
 import { getAppUrl } from "@/lib/env";
 import { trpc } from "@/lib/trpc";
+import { copyToClipboard } from "@/lib/utils";
 
 interface EndpointsListProps {
   onRefresh?: () => void;
@@ -162,7 +163,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                   className="h-2 w-2 p-0 hover:bg-muted"
                   onClick={() => {
                     const url = `${getAppUrl()}/metamcp/${endpoint.name}/sse`;
-                    navigator.clipboard.writeText(url);
+                    copyToClipboard(url);
                     toast.success(t("endpoints:list.sseUrlCopied"));
                   }}
                 >
@@ -179,7 +180,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                   className="h-2 w-2 p-0 hover:bg-muted"
                   onClick={() => {
                     const url = `${getAppUrl()}/metamcp/${endpoint.name}/mcp`;
-                    navigator.clipboard.writeText(url);
+                    copyToClipboard(url);
                     toast.success(t("endpoints:list.shttpUrlCopied"));
                   }}
                 >
@@ -196,7 +197,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                   className="h-2 w-2 p-0 hover:bg-muted"
                   onClick={() => {
                     const url = `${getAppUrl()}/metamcp/${endpoint.name}/api`;
-                    navigator.clipboard.writeText(url);
+                    copyToClipboard(url);
                     toast.success(t("endpoints:list.openApiUrlCopied"));
                   }}
                 >
@@ -213,7 +214,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                   className="h-2 w-2 p-0 hover:bg-muted"
                   onClick={() => {
                     const url = `${getAppUrl()}/metamcp/${endpoint.name}/api/openapi.json`;
-                    navigator.clipboard.writeText(url);
+                    copyToClipboard(url);
                     toast.success(t("endpoints:list.openApiSchemaUrlCopied"));
                   }}
                 >
@@ -306,25 +307,25 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
 
         const copyFullSseUrl = () => {
           const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/sse`;
-          navigator.clipboard.writeText(baseUrl);
+          copyToClipboard(baseUrl);
           toast.success(t("endpoints:list.sseUrlCopied"));
         };
 
         const copyFullShttpUrl = () => {
           const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/mcp`;
-          navigator.clipboard.writeText(baseUrl);
+          copyToClipboard(baseUrl);
           toast.success(t("endpoints:list.shttpUrlCopied"));
         };
 
         const copyFullApiUrl = () => {
           const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api`;
-          navigator.clipboard.writeText(baseUrl);
+          copyToClipboard(baseUrl);
           toast.success(t("endpoints:list.openApiUrlCopied"));
         };
 
         const copyFullOpenApiSchemaUrl = () => {
           const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api/openapi.json`;
-          navigator.clipboard.writeText(baseUrl);
+          copyToClipboard(baseUrl);
           toast.success(t("endpoints:list.openApiSchemaUrlCopied"));
         };
 
@@ -337,28 +338,28 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
         const copyFullSseUrlWithApiKey = () => {
           const apiKey = getApiKey();
           const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/sse?api_key=${apiKey}`;
-          navigator.clipboard.writeText(baseUrl);
+          copyToClipboard(baseUrl);
           toast.success(t("endpoints:list.sseUrlWithApiKeyCopied"));
         };
 
         const copyFullShttpUrlWithApiKey = () => {
           const apiKey = getApiKey();
           const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/mcp?api_key=${apiKey}`;
-          navigator.clipboard.writeText(baseUrl);
+          copyToClipboard(baseUrl);
           toast.success(t("endpoints:list.shttpUrlWithApiKeyCopied"));
         };
 
         const copyFullApiUrlWithApiKey = () => {
           const apiKey = getApiKey();
           const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api?api_key=${apiKey}`;
-          navigator.clipboard.writeText(baseUrl);
+          copyToClipboard(baseUrl);
           toast.success(t("endpoints:list.openApiUrlWithApiKeyCopied"));
         };
 
         const copyFullOpenApiSchemaUrlWithApiKey = () => {
           const apiKey = getApiKey();
           const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api/openapi.json?api_key=${apiKey}`;
-          navigator.clipboard.writeText(baseUrl);
+          copyToClipboard(baseUrl);
           toast.success(t("endpoints:list.openApiSchemaUrlWithApiKeyCopied"));
         };
 
@@ -375,9 +376,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                 <Edit className="mr-2 h-4 w-4" />
                 {t("endpoints:list.editEndpoint")}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(endpoint.uuid)}
-              >
+              <DropdownMenuItem onClick={() => copyToClipboard(endpoint.uuid)}>
                 <Copy className="mr-2 h-4 w-4" />
                 {t("endpoints:list.copyEndpointUuid")}
               </DropdownMenuItem>

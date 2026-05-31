@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/table";
 import { useTranslations } from "@/hooks/useTranslations";
 import { trpc } from "@/lib/trpc";
+import { copyToClipboard } from "@/lib/utils";
 
 interface McpServersListProps {
   onRefresh?: () => void;
@@ -359,7 +360,7 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
           };
 
           const serverJson = JSON.stringify(exportFormat, null, 2);
-          navigator.clipboard.writeText(serverJson);
+          copyToClipboard(serverJson);
         };
 
         const handleInspect = () => {
@@ -391,9 +392,7 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(server.uuid)}
-              >
+              <DropdownMenuItem onClick={() => copyToClipboard(server.uuid)}>
                 <Copy className="mr-2 h-4 w-4" />
                 {t("mcp-servers:list.copyServerUuid")}
               </DropdownMenuItem>
