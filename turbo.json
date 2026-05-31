@@ -53,6 +53,9 @@
     "check-types": {
       "dependsOn": ["^build", "^check-types"]
     },
+    "test": {
+      "dependsOn": ["^build"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
