@@ -22,6 +22,20 @@ export async function initializeOnStartup(): Promise<void> {
   const enableEnvBootstrap = parseBool(process.env.BOOTSTRAP_ENABLE, true);
   const failHard = parseBool(process.env.BOOTSTRAP_FAIL_HARD, false);
 
+  // Clear sticky ERROR state from before this restart so previously-failed
+  // servers get a fresh connection attempt (otherwise they stay permanently
+  // stuck because connectMetaMcpClient refuses servers already marked ERROR).
+  try {
+    const resetCount = await mcpServersRepository.resetAllErrorStatus();
+    if (resetCount > 0) {
+      console.log(
+        `✓ Reset error status for ${resetCount} MCP server(s) on startup`,
+      );
+    }
+  } catch (err) {
+    console.error("❌ Error resetting MCP server error status (ignored):", err);
+  }
+
   if (enableEnvBootstrap) {
     try {
       await initializeEnvironmentConfiguration();
