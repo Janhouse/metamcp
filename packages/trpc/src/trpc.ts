@@ -1,21 +1,21 @@
-import { initTRPC, TRPCError } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server"
 
 // Create context interface that can be extended by backend
 export interface BaseContext {
   // Auth data that can be added by backend implementations
   // Using generic types so backends can use their own User/Session types
-  user?: any;
-  session?: any;
+  user?: any
+  session?: any
 }
 
 // Initialize tRPC with base context
-const t = initTRPC.context<BaseContext>().create();
+const t = initTRPC.context<BaseContext>().create()
 
 // Export router and procedure helpers
-export const router = t.router;
-export const publicProcedure = t.procedure;
-export const createTRPCRouter = t.router;
-export const baseProcedure = t.procedure;
+export const router = t.router
+export const publicProcedure = t.procedure
+export const createTRPCRouter = t.router
+export const baseProcedure = t.procedure
 
 // Create a protected procedure that requires authentication
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
@@ -23,7 +23,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "You must be logged in to access this resource",
-    });
+    })
   }
 
   return next({
@@ -33,8 +33,8 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
       user: ctx.user,
       session: ctx.session,
     },
-  });
-});
+  })
+})
 
 // Create an admin procedure that requires the authenticated user to hold the
 // "admin" role. Fails closed: a missing/unknown role is treated as non-admin.
@@ -45,8 +45,8 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "This action requires administrator privileges",
-    });
+    })
   }
 
-  return next({ ctx });
-});
+  return next({ ctx })
+})

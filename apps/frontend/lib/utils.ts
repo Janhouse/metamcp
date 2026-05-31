@@ -1,8 +1,8 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 /**
@@ -21,24 +21,24 @@ export async function copyToClipboard(text: string): Promise<void> {
     typeof window !== "undefined" &&
     window.isSecureContext
   ) {
-    await navigator.clipboard.writeText(text);
-    return;
+    await navigator.clipboard.writeText(text)
+    return
   }
 
   // Fallback for insecure contexts.
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.top = "-9999px";
-  document.body.appendChild(textarea);
-  textarea.select();
+  const textarea = document.createElement("textarea")
+  textarea.value = text
+  textarea.setAttribute("readonly", "")
+  textarea.style.position = "fixed"
+  textarea.style.top = "-9999px"
+  document.body.appendChild(textarea)
+  textarea.select()
   try {
-    const ok = document.execCommand("copy");
+    const ok = document.execCommand("copy")
     if (!ok) {
-      throw new Error("Clipboard copy command was rejected");
+      throw new Error("Clipboard copy command was rejected")
     }
   } finally {
-    document.body.removeChild(textarea);
+    document.body.removeChild(textarea)
   }
 }

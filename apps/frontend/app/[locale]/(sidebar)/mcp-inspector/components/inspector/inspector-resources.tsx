@@ -1,11 +1,11 @@
-"use client";
+"use client"
 import {
   ListResourcesResultSchema,
   ListResourceTemplatesResultSchema,
   ReadResourceResultSchema,
-  Resource,
-  ResourceTemplate,
-} from "@modelcontextprotocol/sdk/types.js";
+  type Resource,
+  type ResourceTemplate,
+} from "@modelcontextprotocol/sdk/types.js"
 import {
   AlertTriangle,
   ChevronDown,
@@ -14,61 +14,61 @@ import {
   FileText,
   Plus,
   RefreshCw,
-} from "lucide-react";
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod";
+} from "lucide-react"
+import { useCallback, useState } from "react"
+import { toast } from "sonner"
+import { z } from "zod"
 
-import { Button } from "@/components/ui/button";
-import { CodeBlock } from "@/components/ui/code-block";
-import { useTranslations } from "@/hooks/useTranslations";
-import { MakeRequestFn } from "@/lib/mcp-types";
+import { Button } from "@/components/ui/button"
+import { CodeBlock } from "@/components/ui/code-block"
+import { useTranslations } from "@/hooks/useTranslations"
+import type { MakeRequestFn } from "@/lib/mcp-types"
 
 interface ResourceContent {
-  uri: string;
-  mimeType?: string;
-  text?: string;
-  blob?: string;
+  uri: string
+  mimeType?: string
+  text?: string
+  blob?: string
 }
 
 interface InspectorResourcesProps {
-  makeRequest: MakeRequestFn;
-  enabled?: boolean;
+  makeRequest: MakeRequestFn
+  enabled?: boolean
 }
 
 export function InspectorResources({
   makeRequest,
   enabled = true,
 }: InspectorResourcesProps) {
-  const { t } = useTranslations();
-  const [resources, setResources] = useState<Resource[]>([]);
+  const { t } = useTranslations()
+  const [resources, setResources] = useState<Resource[]>([])
   const [resourceTemplates, setResourceTemplates] = useState<
     ResourceTemplate[]
-  >([]);
-  const [loading, setLoading] = useState(false);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
+  >([])
+  const [loading, setLoading] = useState(false)
+  const [templatesLoading, setTemplatesLoading] = useState(false)
   const [selectedResource, setSelectedResource] = useState<Resource | null>(
     null,
-  );
+  )
   const [resourceContent, setResourceContent] =
-    useState<ResourceContent | null>(null);
-  const [reading, setReading] = useState(false);
-  const [expandedResource, setExpandedResource] = useState<string | null>(null);
+    useState<ResourceContent | null>(null)
+  const [reading, setReading] = useState(false)
+  const [expandedResource, setExpandedResource] = useState<string | null>(null)
   const [nextResourceCursor, setNextResourceCursor] = useState<
     string | undefined
-  >();
+  >()
   const [nextTemplateCursor, setNextTemplateCursor] = useState<
     string | undefined
-  >();
+  >()
   const [resourceSubscriptions, setResourceSubscriptions] = useState<
     Set<string>
-  >(new Set());
+  >(new Set())
 
   const fetchResources = useCallback(
     async (cursor?: string) => {
-      if (!enabled) return;
+      if (!enabled) return
 
-      setLoading(true);
+      setLoading(true)
       try {
         const response = await makeRequest(
           {
@@ -77,41 +77,41 @@ export function InspectorResources({
           },
           ListResourcesResultSchema,
           { suppressToast: true },
-        );
+        )
 
         if (cursor) {
           // Append to existing resources if we're fetching more
-          setResources((prev) => [...prev, ...(response.resources || [])]);
+          setResources((prev) => [...prev, ...(response.resources || [])])
         } else {
           // Replace resources if this is the first fetch
-          setResources(response.resources || []);
+          setResources(response.resources || [])
         }
 
-        setNextResourceCursor(response.nextCursor);
+        setNextResourceCursor(response.nextCursor)
 
         if (response.resources && response.resources.length === 0 && !cursor) {
-          toast.info(t("inspector:resourcesComponent.noResourcesFound"));
+          toast.info(t("inspector:resourcesComponent.noResourcesFound"))
         }
       } catch (error) {
-        console.error("Error fetching resources:", error);
+        console.error("Error fetching resources:", error)
         toast.error(t("inspector:resourcesComponent.fetchResourcesError"), {
           description: error instanceof Error ? error.message : String(error),
-        });
+        })
         if (!cursor) {
-          setResources([]);
+          setResources([])
         }
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     },
     [makeRequest, enabled, t],
-  );
+  )
 
   const fetchResourceTemplates = useCallback(
     async (cursor?: string) => {
-      if (!enabled) return;
+      if (!enabled) return
 
-      setTemplatesLoading(true);
+      setTemplatesLoading(true)
       try {
         const response = await makeRequest(
           {
@@ -120,58 +120,56 @@ export function InspectorResources({
           },
           ListResourceTemplatesResultSchema,
           { suppressToast: true },
-        );
+        )
 
         if (cursor) {
           // Append to existing templates if we're fetching more
           setResourceTemplates((prev) => [
             ...prev,
             ...(response.resourceTemplates || []),
-          ]);
+          ])
         } else {
           // Replace templates if this is the first fetch
-          setResourceTemplates(response.resourceTemplates || []);
+          setResourceTemplates(response.resourceTemplates || [])
         }
 
-        setNextTemplateCursor(response.nextCursor);
+        setNextTemplateCursor(response.nextCursor)
 
         if (
           response.resourceTemplates &&
           response.resourceTemplates.length === 0 &&
           !cursor
         ) {
-          toast.info(
-            t("inspector:resourcesComponent.noResourceTemplatesFound"),
-          );
+          toast.info(t("inspector:resourcesComponent.noResourceTemplatesFound"))
         }
       } catch (error) {
-        console.error("Error fetching resource templates:", error);
+        console.error("Error fetching resource templates:", error)
         // Templates are optional, so don't show error toast for missing capability
         if (!cursor) {
-          setResourceTemplates([]);
+          setResourceTemplates([])
         }
       } finally {
-        setTemplatesLoading(false);
+        setTemplatesLoading(false)
       }
     },
     [makeRequest, enabled, t],
-  );
+  )
 
   const clearResources = () => {
-    setResources([]);
-    setSelectedResource(null);
-    setResourceContent(null);
-    setNextResourceCursor(undefined);
-  };
+    setResources([])
+    setSelectedResource(null)
+    setResourceContent(null)
+    setNextResourceCursor(undefined)
+  }
 
   const clearResourceTemplates = () => {
-    setResourceTemplates([]);
-    setNextTemplateCursor(undefined);
-  };
+    setResourceTemplates([])
+    setNextTemplateCursor(undefined)
+  }
 
   const handleResourceRead = async (resource: Resource) => {
-    setReading(true);
-    setResourceContent(null);
+    setReading(true)
+    setResourceContent(null)
 
     try {
       const response = await makeRequest(
@@ -183,20 +181,20 @@ export function InspectorResources({
         },
         ReadResourceResultSchema,
         { suppressToast: true },
-      );
+      )
 
       if (response?.contents && response.contents.length > 0) {
-        setResourceContent(response.contents[0]!);
+        setResourceContent(response.contents[0]!)
         toast.success(
           t("inspector:resourcesComponent.resourceReadSuccess", {
             resourceName: resource.name || resource.uri,
           }),
-        );
+        )
       } else {
-        toast.error(t("inspector:resourcesComponent.noContentFound"));
+        toast.error(t("inspector:resourcesComponent.noContentFound"))
       }
     } catch (error) {
-      console.error("Error reading resource:", error);
+      console.error("Error reading resource:", error)
       toast.error(
         t("inspector:resourcesComponent.resourceReadError", {
           resourceName: resource.name || resource.uri,
@@ -204,14 +202,14 @@ export function InspectorResources({
         {
           description: error instanceof Error ? error.message : String(error),
         },
-      );
+      )
     } finally {
-      setReading(false);
+      setReading(false)
     }
-  };
+  }
 
   const subscribeToResource = async (uri: string) => {
-    if (resourceSubscriptions.has(uri)) return;
+    if (resourceSubscriptions.has(uri)) return
 
     try {
       await makeRequest(
@@ -221,25 +219,23 @@ export function InspectorResources({
         },
         z.object({}),
         { suppressToast: true },
-      );
+      )
 
-      const newSubscriptions = new Set(resourceSubscriptions);
-      newSubscriptions.add(uri);
-      setResourceSubscriptions(newSubscriptions);
+      const newSubscriptions = new Set(resourceSubscriptions)
+      newSubscriptions.add(uri)
+      setResourceSubscriptions(newSubscriptions)
 
-      toast.success(
-        t("inspector:resourcesComponent.subscribeSuccess", { uri }),
-      );
+      toast.success(t("inspector:resourcesComponent.subscribeSuccess", { uri }))
     } catch (error) {
-      console.error("Error subscribing to resource:", error);
+      console.error("Error subscribing to resource:", error)
       toast.error(t("inspector:resourcesComponent.subscribeError", { uri }), {
         description: error instanceof Error ? error.message : String(error),
-      });
+      })
     }
-  };
+  }
 
   const unsubscribeFromResource = async (uri: string) => {
-    if (!resourceSubscriptions.has(uri)) return;
+    if (!resourceSubscriptions.has(uri)) return
 
     try {
       await makeRequest(
@@ -249,37 +245,37 @@ export function InspectorResources({
         },
         z.object({}),
         { suppressToast: true },
-      );
+      )
 
-      const newSubscriptions = new Set(resourceSubscriptions);
-      newSubscriptions.delete(uri);
-      setResourceSubscriptions(newSubscriptions);
+      const newSubscriptions = new Set(resourceSubscriptions)
+      newSubscriptions.delete(uri)
+      setResourceSubscriptions(newSubscriptions)
 
       toast.success(
         t("inspector:resourcesComponent.unsubscribeSuccess", { uri }),
-      );
+      )
     } catch (error) {
-      console.error("Error unsubscribing from resource:", error);
+      console.error("Error unsubscribing from resource:", error)
       toast.error(t("inspector:resourcesComponent.unsubscribeError", { uri }), {
         description: error instanceof Error ? error.message : String(error),
-      });
+      })
     }
-  };
+  }
 
   const formatResourceContent = (content: ResourceContent) => {
     if (content.text) {
-      return content.text;
+      return content.text
     } else if (content.blob) {
       return t("inspector:resourcesComponent.binaryContent", {
         length: content.blob.length,
-      });
+      })
     }
-    return t("inspector:resourcesComponent.noContentAvailable");
-  };
+    return t("inspector:resourcesComponent.noContentAvailable")
+  }
 
   const getResourceDisplayName = (resource: Resource) => {
-    return resource.name || resource.uri.split("/").pop() || resource.uri;
-  };
+    return resource.name || resource.uri.split("/").pop() || resource.uri
+  }
 
   if (!enabled) {
     return (
@@ -292,7 +288,7 @@ export function InspectorResources({
           {t("inspector:resourcesComponent.resourcesNotSupportedDesc")}
         </p>
       </div>
-    );
+    )
   }
 
   return (
@@ -429,8 +425,8 @@ export function InspectorResources({
                       : "hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                   onClick={() => {
-                    setSelectedResource(resource);
-                    setExpandedResource(resource.uri);
+                    setSelectedResource(resource)
+                    setExpandedResource(resource.uri)
                   }}
                 >
                   <div className="flex items-center justify-between">
@@ -454,13 +450,14 @@ export function InspectorResources({
                         </span>
                       )}
                       <button
+                        type="button"
                         onClick={(e) => {
-                          e.stopPropagation();
+                          e.stopPropagation()
                           setExpandedResource(
                             expandedResource === resource.uri
                               ? null
                               : resource.uri,
-                          );
+                          )
                         }}
                       >
                         {expandedResource === resource.uri ? (
@@ -490,8 +487,8 @@ export function InspectorResources({
                         <Button
                           size="sm"
                           onClick={(e) => {
-                            e.stopPropagation();
-                            handleResourceRead(resource);
+                            e.stopPropagation()
+                            handleResourceRead(resource)
                           }}
                           disabled={reading}
                         >
@@ -503,8 +500,8 @@ export function InspectorResources({
                             size="sm"
                             variant="outline"
                             onClick={(e) => {
-                              e.stopPropagation();
-                              subscribeToResource(resource.uri);
+                              e.stopPropagation()
+                              subscribeToResource(resource.uri)
                             }}
                           >
                             {t("inspector:resourcesComponent.subscribe")}
@@ -514,8 +511,8 @@ export function InspectorResources({
                             size="sm"
                             variant="outline"
                             onClick={(e) => {
-                              e.stopPropagation();
-                              unsubscribeFromResource(resource.uri);
+                              e.stopPropagation()
+                              unsubscribeFromResource(resource.uri)
                             }}
                           >
                             {t("inspector:resourcesComponent.unsubscribe")}
@@ -592,5 +589,5 @@ export function InspectorResources({
         </div>
       </div>
     </div>
-  );
+  )
 }

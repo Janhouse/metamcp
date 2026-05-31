@@ -1,47 +1,47 @@
-import { ChildProcess, IOType } from "node:child_process";
-import process from "node:process";
-import { PassThrough, Stream } from "node:stream";
+import type { ChildProcess, IOType } from "node:child_process"
+import process from "node:process"
+import { PassThrough, type Stream } from "node:stream"
 
-import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
-import spawn from "cross-spawn";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js"
+import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js"
+import spawn from "cross-spawn"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
-import { ReadBuffer, serializeMessage } from "./shared";
+import { ReadBuffer, serializeMessage } from "./shared"
 
 export type StdioServerParameters = {
   /**
    * The executable to run to start the server.
    */
-  command: string;
+  command: string
 
   /**
    * Command line arguments to pass to the executable.
    */
-  args?: string[];
+  args?: string[]
 
   /**
    * The environment to use when spawning the process.
    *
    * If not specified, the result of getDefaultEnvironment() will be used.
    */
-  env?: Record<string, string>;
+  env?: Record<string, string>
 
   /**
    * How to handle stderr of the child process. This matches the semantics of Node's `child_process.spawn`.
    *
    * The default is "inherit", meaning messages to stderr will be printed to the parent process's stderr.
    */
-  stderr?: IOType | Stream | number;
+  stderr?: IOType | Stream | number
 
   /**
    * The working directory to use when spawning the process.
    *
    * If not specified, the current working directory will be inherited.
    */
-  cwd?: string;
-};
+  cwd?: string
+}
 
 /**
  * Environment variables to inherit by default, if an environment is not explicitly given.
@@ -88,29 +88,29 @@ export const DEFAULT_INHERITED_ENV_VARS =
         "http_proxy",
         "https_proxy",
         "no_proxy",
-      ];
+      ]
 
 /**
  * Returns a default environment object including only environment variables deemed safe to inherit.
  */
 export function getDefaultEnvironment(): Record<string, string> {
-  const env: Record<string, string> = {};
+  const env: Record<string, string> = {}
 
   for (const key of DEFAULT_INHERITED_ENV_VARS) {
-    const value = process.env[key];
+    const value = process.env[key]
     if (value === undefined) {
-      continue;
+      continue
     }
 
     if (value.startsWith("()")) {
       // Skip functions, which are a security risk.
-      continue;
+      continue
     }
 
-    env[key] = value;
+    env[key] = value
   }
 
-  return env;
+  return env
 }
 
 /**
@@ -119,22 +119,22 @@ export function getDefaultEnvironment(): Record<string, string> {
  * This transport is only available in Node.js environments.
  */
 export class ProcessManagedStdioTransport implements Transport {
-  private _process?: ChildProcess;
-  private _abortController: AbortController = new AbortController();
-  private _readBuffer: ReadBuffer = new ReadBuffer();
-  private _serverParams: StdioServerParameters;
-  private _stderrStream: PassThrough | null = null;
-  private _isCleanup: boolean = false;
+  private _process?: ChildProcess
+  private _abortController: AbortController = new AbortController()
+  private _readBuffer: ReadBuffer = new ReadBuffer()
+  private _serverParams: StdioServerParameters
+  private _stderrStream: PassThrough | null = null
+  private _isCleanup: boolean = false
 
-  onclose?: () => void;
-  onerror?: (error: Error) => void;
-  onmessage?: (message: JSONRPCMessage) => void;
-  onprocesscrash?: (exitCode: number | null, signal: string | null) => void;
+  onclose?: () => void
+  onerror?: (error: Error) => void
+  onmessage?: (message: JSONRPCMessage) => void
+  onprocesscrash?: (exitCode: number | null, signal: string | null) => void
 
   constructor(server: StdioServerParameters) {
-    this._serverParams = server;
+    this._serverParams = server
     if (server.stderr === "pipe" || server.stderr === "overlapped") {
-      this._stderrStream = new PassThrough();
+      this._stderrStream = new PassThrough()
     }
   }
 
@@ -145,7 +145,7 @@ export class ProcessManagedStdioTransport implements Transport {
     if (this._process) {
       throw new Error(
         "StdioClientTransport already started! If using Client class, note that connect() calls start() automatically.",
-      );
+      )
     }
 
     return new Promise((resolve, reject) => {
@@ -165,60 +165,60 @@ export class ProcessManagedStdioTransport implements Transport {
           cwd: this._serverParams.cwd,
           detached: true,
         },
-      );
+      )
 
       // Unref the child process so it doesn't keep the parent alive
-      this._process.unref();
+      this._process.unref()
 
       this._process.on("error", (error) => {
         if (error.name === "AbortError") {
           // Expected when close() is called.
-          this.onclose?.();
-          return;
+          this.onclose?.()
+          return
         }
 
-        reject(error);
-        this.onerror?.(error);
-      });
+        reject(error)
+        this.onerror?.(error)
+      })
 
       this._process.on("spawn", () => {
         logger.info(
           `Spawned process PID ${this._process?.pid} for command: ${this._serverParams.command}`,
-        );
-        resolve();
-      });
+        )
+        resolve()
+      })
 
       this._process.on("close", (code, signal) => {
         // Only emit crash event if this wasn't a clean shutdown
         if (!this._isCleanup && (code !== 0 || signal)) {
-          logger.warn(`Process crashed with code: ${code}, signal: ${signal}`);
+          logger.warn(`Process crashed with code: ${code}, signal: ${signal}`)
           logger.info(
             `Calling onprocesscrash handler: ${this.onprocesscrash ? "handler exists" : "no handler"}`,
-          );
-          this.onprocesscrash?.(code, signal);
+          )
+          this.onprocesscrash?.(code, signal)
         }
 
-        this._process = undefined;
-        this.onclose?.();
-      });
+        this._process = undefined
+        this.onclose?.()
+      })
 
       this._process.stdin?.on("error", (error) => {
-        this.onerror?.(error);
-      });
+        this.onerror?.(error)
+      })
 
       this._process.stdout?.on("data", (chunk) => {
-        this._readBuffer.append(chunk);
-        this.processReadBuffer();
-      });
+        this._readBuffer.append(chunk)
+        this.processReadBuffer()
+      })
 
       this._process.stdout?.on("error", (error) => {
-        this.onerror?.(error);
-      });
+        this.onerror?.(error)
+      })
 
       if (this._stderrStream && this._process.stderr) {
-        this._process.stderr.pipe(this._stderrStream);
+        this._process.stderr.pipe(this._stderrStream)
       }
-    });
+    })
   }
 
   /**
@@ -230,10 +230,10 @@ export class ProcessManagedStdioTransport implements Transport {
    */
   get stderr(): Stream | null {
     if (this._stderrStream) {
-      return this._stderrStream;
+      return this._stderrStream
     }
 
-    return this._process?.stderr ?? null;
+    return this._process?.stderr ?? null
   }
 
   /**
@@ -242,84 +242,84 @@ export class ProcessManagedStdioTransport implements Transport {
    * This is only available after the transport has been started.
    */
   get pid(): number | null {
-    return this._process?.pid ?? null;
+    return this._process?.pid ?? null
   }
 
   private processReadBuffer() {
     while (true) {
       try {
-        const message = this._readBuffer.readMessage();
+        const message = this._readBuffer.readMessage()
         if (message === null) {
-          break;
+          break
         }
 
-        this.onmessage?.(message);
+        this.onmessage?.(message)
       } catch (error) {
-        this.onerror?.(error as Error);
+        this.onerror?.(error as Error)
       }
     }
   }
 
   async close(): Promise<void> {
-    this._isCleanup = true;
+    this._isCleanup = true
 
-    const pid = this._process?.pid;
+    const pid = this._process?.pid
     if (pid) {
-      this._abortController.abort();
+      this._abortController.abort()
 
       await new Promise<void>((resolve) => {
         // Register close listener BEFORE sending SIGTERM to prevent race
         // where a fast-exiting child emits "close" before listener is attached
         const onClose = () => {
-          clearTimeout(killTimer);
-          resolve();
-        };
-        this._process?.on("close", onClose);
+          clearTimeout(killTimer)
+          resolve()
+        }
+        this._process?.on("close", onClose)
 
         // Send SIGTERM to the entire process group
         try {
-          process.kill(-pid, "SIGTERM");
-          logger.info(`Sent SIGTERM to process group -${pid}`);
+          process.kill(-pid, "SIGTERM")
+          logger.info(`Sent SIGTERM to process group -${pid}`)
         } catch {
           // Process already dead
-          resolve();
-          return;
+          resolve()
+          return
         }
 
         // Escalate to SIGKILL after 5 seconds if still alive
         const killTimer = setTimeout(() => {
           try {
-            process.kill(-pid, "SIGKILL");
-            logger.warn(`Escalated to SIGKILL for process group -${pid}`);
+            process.kill(-pid, "SIGKILL")
+            logger.warn(`Escalated to SIGKILL for process group -${pid}`)
           } catch {
             // Already dead
           }
           // Give SIGKILL a moment to take effect
-          setTimeout(resolve, 500);
-        }, 5000);
-      });
+          setTimeout(resolve, 500)
+        }, 5000)
+      })
     }
 
-    this._process = undefined;
-    this._readBuffer.clear();
+    this._process = undefined
+    this._readBuffer.clear()
   }
 
   send(message: JSONRPCMessage): Promise<void> {
     return new Promise((resolve) => {
       if (!this._process?.stdin) {
-        throw new Error("Not connected");
+        throw new Error("Not connected")
       }
 
-      const json = serializeMessage(message);
+      const json = serializeMessage(message)
       if (this._process.stdin.write(json)) {
-        resolve();
+        resolve()
       } else {
-        this._process.stdin.once("drain", resolve);
+        this._process.stdin.once("drain", resolve)
       }
-    });
+    })
   }
 }
 
 function isElectron() {
-  return "type" in process;
+  return "type" in process
 }

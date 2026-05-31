@@ -1,24 +1,24 @@
-"use client";
+"use client"
 
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
-} from "lucide-react";
-import * as React from "react";
+} from "lucide-react"
+import type * as React from "react"
 
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
   PaginationLink,
-} from "@/components/ui/pagination";
-import { useTranslations } from "@/hooks/useTranslations";
+} from "@/components/ui/pagination"
+import { useTranslations } from "@/hooks/useTranslations"
 
 interface PaginationUiProps {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
+  currentPage: number
+  totalPages: number
+  onPageChange: (page: number) => void
 }
 
 export function PaginationUi({
@@ -26,22 +26,22 @@ export function PaginationUi({
   totalPages,
   onPageChange,
 }: PaginationUiProps) {
-  const { t } = useTranslations();
-  const showEllipsisStart = currentPage > 3;
-  const showEllipsisEnd = currentPage < totalPages - 2;
+  const { t } = useTranslations()
+  const showEllipsisStart = currentPage > 3
+  const showEllipsisEnd = currentPage < totalPages - 2
 
   const getPageNumbers = () => {
-    const pages: number[] = [];
+    const pages: number[] = []
 
     if (totalPages <= 5) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
+      return Array.from({ length: totalPages }, (_, i) => i + 1)
     }
 
     // Always show first page
-    pages.push(1);
+    pages.push(1)
 
     if (showEllipsisStart) {
-      pages.push(-1); // -1 represents ellipsis
+      pages.push(-1) // -1 represents ellipsis
     }
 
     // Show current page and surrounding pages
@@ -50,20 +50,20 @@ export function PaginationUi({
       i <= Math.min(totalPages - 1, currentPage + 1);
       i++
     ) {
-      pages.push(i);
+      pages.push(i)
     }
 
     if (showEllipsisEnd) {
-      pages.push(-1); // -1 represents ellipsis
+      pages.push(-1) // -1 represents ellipsis
     }
 
     // Always show last page
     if (totalPages > 1) {
-      pages.push(totalPages);
+      pages.push(totalPages)
     }
 
-    return pages;
-  };
+    return pages
+  }
 
   // Create localized pagination components
   const LocalizedPaginationPrevious = ({
@@ -80,7 +80,7 @@ export function PaginationUi({
       <ChevronLeftIcon />
       <span className="hidden sm:block">{t("common:pagination.previous")}</span>
     </PaginationLink>
-  );
+  )
 
   const LocalizedPaginationNext = ({
     onClick,
@@ -96,14 +96,14 @@ export function PaginationUi({
       <span className="hidden sm:block">{t("common:pagination.next")}</span>
       <ChevronRightIcon />
     </PaginationLink>
-  );
+  )
 
   const LocalizedPaginationEllipsis = () => (
     <span aria-hidden className="flex size-9 items-center justify-center">
       <MoreHorizontalIcon className="size-4" />
       <span className="sr-only">{t("common:pagination.morePages")}</span>
     </span>
-  );
+  )
 
   return (
     <Pagination className="justify-center">
@@ -112,8 +112,8 @@ export function PaginationUi({
           <LocalizedPaginationPrevious
             href="#"
             onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              if (currentPage > 1) onPageChange(currentPage - 1);
+              e.preventDefault()
+              if (currentPage > 1) onPageChange(currentPage - 1)
             }}
           />
         </PaginationItem>
@@ -128,8 +128,8 @@ export function PaginationUi({
               <PaginationLink
                 href="#"
                 onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
-                  onPageChange(pageNum);
+                  e.preventDefault()
+                  onPageChange(pageNum)
                 }}
                 isActive={pageNum === currentPage}
                 aria-label={t("common:pagination.goToPage", { page: pageNum })}
@@ -144,12 +144,12 @@ export function PaginationUi({
           <LocalizedPaginationNext
             href="#"
             onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              if (currentPage < totalPages) onPageChange(currentPage + 1);
+              e.preventDefault()
+              if (currentPage < totalPages) onPageChange(currentPage + 1)
             }}
           />
         </PaginationItem>
       </PaginationContent>
     </Pagination>
-  );
+  )
 }

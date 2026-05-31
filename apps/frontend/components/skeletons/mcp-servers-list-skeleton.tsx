@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -6,7 +6,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/table"
 
 export function McpServersListSkeleton() {
   return (
@@ -84,5 +84,5 @@ export function McpServersListSkeleton() {
         <Skeleton className="h-4 w-32" />
       </div>
     </div>
-  );
+  )
 }

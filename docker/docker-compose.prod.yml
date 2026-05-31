@@ -1,0 +1,24 @@
+# Production / self-host overlay: pulls the prebuilt image (built by CI from
+# docker/dockerfiles/Dockerfile) and exposes only the frontend port. The backend
+# stays internal on 12009. Migrations run in-process when the backend boots.
+#
+# Deploy from the repository root: `docker compose pull && docker compose up -d`.
+services:
+  app:
+    pull_policy: always
+    ports:
+      - "12008:12008"
+    environment:
+      # Required: the app refuses to start with a missing/default/weak secret.
+      # Generate one with: openssl rand -base64 48
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set to a unique random value (e.g. openssl rand -base64 48)}
+    restart: "no"
+
+  postgres:
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local

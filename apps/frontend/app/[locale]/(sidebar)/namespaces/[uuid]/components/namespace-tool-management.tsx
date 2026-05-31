@@ -1,30 +1,30 @@
-"use client";
+"use client"
 import {
-  ClientRequest,
+  type ClientRequest,
   ListToolsResultSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import { ToolStatusEnum } from "@repo/zod-types";
-import { AlertTriangle, Database, RefreshCw, Wrench } from "lucide-react";
-import React, { useCallback, useRef, useState } from "react";
-import { toast } from "sonner";
+} from "@modelcontextprotocol/sdk/types.js"
+import { ToolStatusEnum } from "@repo/zod-types"
+import { AlertTriangle, Database, RefreshCw, Wrench } from "lucide-react"
+import React, { useCallback, useRef, useState } from "react"
+import { toast } from "sonner"
 
-import { ToolManagementSkeleton } from "@/components/skeletons/tool-management-skeleton";
-import { Button } from "@/components/ui/button";
-import { useTranslations } from "@/hooks/useTranslations";
-import { MakeRequestFn } from "@/lib/mcp-types";
-import { trpc } from "@/lib/trpc";
+import { ToolManagementSkeleton } from "@/components/skeletons/tool-management-skeleton"
+import { Button } from "@/components/ui/button"
+import { useTranslations } from "@/hooks/useTranslations"
+import type { MakeRequestFn } from "@/lib/mcp-types"
+import { trpc } from "@/lib/trpc"
 
-import { EnhancedNamespaceToolsTable } from "./enhanced-namespace-tools-table";
+import { EnhancedNamespaceToolsTable } from "./enhanced-namespace-tools-table"
 
 interface NamespaceToolManagementProps {
   servers: Array<{
-    uuid: string;
-    name: string;
-    status: string;
-  }>;
-  namespaceUuid: string;
-  makeRequest?: MakeRequestFn;
-  sessionInitializing?: boolean; // Whether session initialization is in progress
+    uuid: string
+    name: string
+    status: string
+  }>
+  namespaceUuid: string
+  makeRequest?: MakeRequestFn
+  sessionInitializing?: boolean // Whether session initialization is in progress
 }
 
 export function NamespaceToolManagement({
@@ -33,22 +33,22 @@ export function NamespaceToolManagement({
   makeRequest,
   sessionInitializing = false,
 }: NamespaceToolManagementProps) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false)
   const [mcpTools, setMcpTools] = useState<
     Array<{
-      name: string;
-      description?: string;
-      inputSchema: Record<string, unknown>;
+      name: string
+      description?: string
+      inputSchema: Record<string, unknown>
     }>
-  >([]);
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const hasAttemptedInitialFetch = useRef(false);
+  >([])
+  const [isAutoSaving, setIsAutoSaving] = useState(false)
+  const hasAttemptedInitialFetch = useRef(false)
 
   // Get translations
-  const { t } = useTranslations();
+  const { t } = useTranslations()
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Get tools from namespace tool mapping table
   const {
@@ -57,9 +57,9 @@ export function NamespaceToolManagement({
     refetch: refetchTools,
   } = trpc.frontend.namespaces.getTools.useQuery({
     namespaceUuid,
-  });
+  })
 
-  const namespaceTools = toolsResponse?.success ? toolsResponse.data : [];
+  const namespaceTools = toolsResponse?.success ? toolsResponse.data : []
 
   // Track if this is an auto-save operation (only for first load)
   // const [isAutoSaving, setIsAutoSaving] = useState(false);
@@ -72,195 +72,195 @@ export function NamespaceToolManagement({
           // Always show the backend response message which contains useful details
           const toastTitle = isAutoSaving
             ? t("namespaces:toolManagement.toolsAutoSaved")
-            : t("namespaces:toolManagement.toolsRefreshed");
+            : t("namespaces:toolManagement.toolsRefreshed")
 
           toast.success(toastTitle, {
             description: response.message, // Backend provides the detailed message
-          });
+          })
 
           if (isAutoSaving) {
-            setIsAutoSaving(false);
+            setIsAutoSaving(false)
           }
 
           // Invalidate the namespace tools query to refresh the data
-          utils.frontend.namespaces.getTools.invalidate({ namespaceUuid });
+          utils.frontend.namespaces.getTools.invalidate({ namespaceUuid })
         } else {
           toast.error(t("namespaces:toolManagement.toolsRefreshFailed"), {
             description: response.message,
-          });
+          })
           if (isAutoSaving) {
-            setIsAutoSaving(false);
+            setIsAutoSaving(false)
           }
         }
       },
       onError: (error) => {
-        console.error("Error refreshing tools:", error);
+        console.error("Error refreshing tools:", error)
         toast.error(t("namespaces:toolManagement.toolsRefreshFailed"), {
           description: error.message,
-        });
+        })
         if (isAutoSaving) {
-          setIsAutoSaving(false);
+          setIsAutoSaving(false)
         }
       },
-    });
+    })
 
   // Fetch tools from MetaMCP
   const fetchMetaMCPTools = useCallback(
     async (autoSave: boolean = false) => {
       if (!makeRequest) {
-        console.warn("MetaMCP connection not available");
-        return;
+        console.warn("MetaMCP connection not available")
+        return
       }
 
       try {
         const listToolsRequest: ClientRequest = {
           method: "tools/list",
           params: {},
-        };
+        }
 
         const toolsListResponse = await makeRequest(
           listToolsRequest,
           ListToolsResultSchema,
           { suppressToast: true },
-        );
+        )
 
-        if (toolsListResponse && toolsListResponse.tools) {
+        if (toolsListResponse?.tools) {
           const mcpToolsData = toolsListResponse.tools.map(
             (tool: {
-              name: string;
-              description?: string;
-              inputSchema: unknown;
+              name: string
+              description?: string
+              inputSchema: unknown
             }) => ({
               name: tool.name,
               description: tool.description || "",
               inputSchema: tool.inputSchema,
             }),
-          );
+          )
 
-          setMcpTools(mcpToolsData);
+          setMcpTools(mcpToolsData)
 
           // Automatically save tools to namespace mappings when autoSave is true (first load only)
           if (autoSave && toolsListResponse.tools.length > 0) {
             const toolsForSubmission = toolsListResponse.tools.map(
               (tool: {
-                name: string;
-                description?: string;
-                inputSchema: unknown;
+                name: string
+                description?: string
+                inputSchema: unknown
               }) => ({
                 name: tool.name, // Keep the full "ServerName__toolName" format
                 description: tool.description || "",
                 inputSchema: tool.inputSchema,
               }),
-            );
+            )
 
             // Set auto-saving flag for better user feedback
-            setIsAutoSaving(true);
+            setIsAutoSaving(true)
 
             // Submit the tools for update to namespace tool mapping records
             refreshToolsMutation.mutate({
               namespaceUuid,
               tools: toolsForSubmission,
-            });
+            })
           } else if (autoSave) {
             // Auto-save requested but no tools found - this is fine
           } else {
             // Manual refresh - not auto-saving
           }
         } else {
-          setMcpTools([]);
+          setMcpTools([])
         }
       } catch (error) {
-        console.error("Error fetching tools from MetaMCP:", error);
-        setMcpTools([]);
+        console.error("Error fetching tools from MetaMCP:", error)
+        setMcpTools([])
       }
     },
     [makeRequest, refreshToolsMutation, namespaceUuid],
-  );
+  )
 
   // Safely auto-fetch MetaMCP tools when connection becomes available
   React.useEffect(() => {
     if (makeRequest && !hasAttemptedInitialFetch.current) {
-      hasAttemptedInitialFetch.current = true;
+      hasAttemptedInitialFetch.current = true
       // Auto-save tools on first fetch to create namespace mappings automatically
-      fetchMetaMCPTools(true);
+      fetchMetaMCPTools(true)
     }
-  }, [makeRequest, fetchMetaMCPTools]);
+  }, [makeRequest, fetchMetaMCPTools])
 
   // Handle MCP refresh for all servers (just refresh display, don't save again)
   const handleRefreshAllTools = async () => {
     if (!makeRequest) {
-      console.warn(t("namespaces:toolManagement.metaMCPNotAvailable"));
-      setLoading(true);
+      console.warn(t("namespaces:toolManagement.metaMCPNotAvailable"))
+      setLoading(true)
       try {
-        await refetchTools();
+        await refetchTools()
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-      return;
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
       // Just fetch and display the tools (no mutation call to avoid duplicate toast)
-      await fetchMetaMCPTools(false);
+      await fetchMetaMCPTools(false)
 
       // Show simple success message for manual refresh
       toast.success(t("namespaces:toolManagement.toolsRefreshed"), {
         description: t("namespaces:toolManagement.toolsRefreshedDescription"),
-      });
+      })
     } catch (error) {
-      console.error("Error fetching tools from MetaMCP:", error);
+      console.error("Error fetching tools from MetaMCP:", error)
       toast.error(t("namespaces:toolManagement.fetchToolsError"), {
         description: error instanceof Error ? error.message : "Unknown error",
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   // Calculate counts
-  const serverCount = servers.length;
+  const serverCount = servers.length
   const activeServerCount = servers.filter(
     (s) => s.status === ToolStatusEnum.enum.ACTIVE,
-  ).length;
-  const savedToolCount = namespaceTools.length;
+  ).length
+  const savedToolCount = namespaceTools.length
   const activeToolCount = namespaceTools.filter(
     (t) => t.status === ToolStatusEnum.enum.ACTIVE,
-  ).length;
-  const mcpToolCount = mcpTools.length;
+  ).length
+  const mcpToolCount = mcpTools.length
 
   // Calculate new tools count by comparing MetaMCP tools with saved tools
   // Parse the server__toolName format to get the actual tool name for comparison
   const newToolsCount = mcpTools.filter((mcpTool) => {
-    const lastDoubleUnderscoreIndex = mcpTool.name.lastIndexOf("__");
-    if (lastDoubleUnderscoreIndex === -1) return false;
+    const lastDoubleUnderscoreIndex = mcpTool.name.lastIndexOf("__")
+    if (lastDoubleUnderscoreIndex === -1) return false
 
-    const serverName = mcpTool.name.substring(0, lastDoubleUnderscoreIndex);
-    let actualToolName = mcpTool.name.substring(lastDoubleUnderscoreIndex + 2);
+    const serverName = mcpTool.name.substring(0, lastDoubleUnderscoreIndex)
+    let actualToolName = mcpTool.name.substring(lastDoubleUnderscoreIndex + 2)
 
     // Handle nested MetaMCP scenarios - get actual server names from saved tools
     const actualServerNames = new Set(
       namespaceTools.map((tool) => tool.serverName),
-    );
+    )
 
     if (!actualServerNames.has(serverName) && serverName.includes("__")) {
-      const firstDoubleUnderscoreIndex = serverName.indexOf("__");
+      const firstDoubleUnderscoreIndex = serverName.indexOf("__")
       const actualServerName = serverName.substring(
         0,
         firstDoubleUnderscoreIndex,
-      );
+      )
 
       if (actualServerNames.has(actualServerName)) {
         // This is a nested MetaMCP tool - adjust parsing
-        const nestedPart = serverName.substring(firstDoubleUnderscoreIndex + 2);
-        actualToolName = `${nestedPart}__${actualToolName}`;
+        const nestedPart = serverName.substring(firstDoubleUnderscoreIndex + 2)
+        actualToolName = `${nestedPart}__${actualToolName}`
       }
     }
 
     return !namespaceTools.some(
       (savedTool) => savedTool.name === actualToolName,
-    );
-  }).length;
+    )
+  }).length
 
   // Show loading skeleton when initially loading
   if (isToolsLoading || loading) {
@@ -324,7 +324,7 @@ export function NamespaceToolManagement({
           <ToolManagementSkeleton />
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -410,5 +410,5 @@ export function NamespaceToolManagement({
         </div>
       )}
     </div>
-  );
+  )
 }

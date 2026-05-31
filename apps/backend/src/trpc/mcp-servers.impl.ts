@@ -1,31 +1,31 @@
 import {
-  BulkImportMcpServersRequestSchema,
-  BulkImportMcpServersResponseSchema,
-  CreateMcpServerRequestSchema,
-  CreateMcpServerResponseSchema,
-  DeleteMcpServerResponseSchema,
-  GetMcpServerResponseSchema,
-  ListMcpServersResponseSchema,
+  type BulkImportMcpServersRequestSchema,
+  type BulkImportMcpServersResponseSchema,
+  type CreateMcpServerRequestSchema,
+  type CreateMcpServerResponseSchema,
+  type DeleteMcpServerResponseSchema,
+  type GetMcpServerResponseSchema,
+  type ListMcpServersResponseSchema,
   McpServerTypeEnum,
-  UpdateMcpServerRequestSchema,
-  UpdateMcpServerResponseSchema,
-} from "@repo/zod-types";
-import { z } from "zod";
+  type UpdateMcpServerRequestSchema,
+  type UpdateMcpServerResponseSchema,
+} from "@repo/zod-types"
+import type { z } from "zod"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
 import {
   mcpServersRepository,
   namespaceMappingsRepository,
   usersRepository,
-} from "../db/repositories";
-import { McpServersSerializer } from "../db/serializers";
-import { canManageResource, resolveOwnerUserId } from "../lib/authz";
-import { mcpServerPool } from "../lib/metamcp/mcp-server-pool";
-import { clearOverrideCache } from "../lib/metamcp/metamcp-middleware/tool-overrides.functional";
-import { metaMcpServerPool } from "../lib/metamcp/metamcp-server-pool";
-import { serverErrorTracker } from "../lib/metamcp/server-error-tracker";
-import { convertDbServerToParams } from "../lib/metamcp/utils";
+} from "../db/repositories"
+import { McpServersSerializer } from "../db/serializers"
+import { canManageResource, resolveOwnerUserId } from "../lib/authz"
+import { mcpServerPool } from "../lib/metamcp/mcp-server-pool"
+import { clearOverrideCache } from "../lib/metamcp/metamcp-middleware/tool-overrides.functional"
+import { metaMcpServerPool } from "../lib/metamcp/metamcp-server-pool"
+import { serverErrorTracker } from "../lib/metamcp/server-error-tracker"
+import { convertDbServerToParams } from "../lib/metamcp/utils"
 
 export const mcpServersImplementations = {
   create: async (
@@ -35,50 +35,50 @@ export const mcpServersImplementations = {
     try {
       // Owner is the authenticated caller. Only admins may create a server for
       // another user or a public (user_id = null) server.
-      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId);
+      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId)
 
       const createdServer = await mcpServersRepository.create({
         ...input,
         user_id: effectiveUserId,
-      });
+      })
 
       if (!createdServer) {
         return {
           success: false as const,
           message: "Failed to create MCP server",
-        };
+        }
       }
 
       // Ensure idle session for the newly created server (async)
-      const serverParams = await convertDbServerToParams(createdServer);
+      const serverParams = await convertDbServerToParams(createdServer)
       if (serverParams) {
         mcpServerPool
           .ensureIdleSessionForNewServer(createdServer.uuid, serverParams)
           .then(() => {
             logger.info(
               `Ensured idle session for newly created server: ${createdServer.name} (${createdServer.uuid})`,
-            );
+            )
           })
           .catch((error) => {
             logger.error(
               `Error ensuring idle session for newly created server ${createdServer.name} (${createdServer.uuid}):`,
               error,
-            );
-          });
+            )
+          })
       }
 
       return {
         success: true as const,
         data: McpServersSerializer.serializeMcpServer(createdServer),
         message: "MCP server created successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error creating MCP server:", error);
+      logger.error("Error creating MCP server:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
 
@@ -87,9 +87,8 @@ export const mcpServersImplementations = {
   ): Promise<z.infer<typeof ListMcpServersResponseSchema>> => {
     try {
       // Find servers accessible to user (public + user's own)
-      const servers =
-        await mcpServersRepository.findAllAccessibleToUser(userId);
-      const isAdmin = await usersRepository.isAdmin(userId);
+      const servers = await mcpServersRepository.findAllAccessibleToUser(userId)
+      const isAdmin = await usersRepository.isAdmin(userId)
 
       return {
         success: true as const,
@@ -100,14 +99,14 @@ export const mcpServersImplementations = {
           isAdmin,
         }),
         message: "MCP servers retrieved successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error fetching MCP servers:", error);
+      logger.error("Error fetching MCP servers:", error)
       return {
         success: false as const,
         data: [],
         message: "Failed to fetch MCP servers",
-      };
+      }
     }
   },
 
@@ -116,9 +115,9 @@ export const mcpServersImplementations = {
     userId: string,
   ): Promise<z.infer<typeof BulkImportMcpServersResponseSchema>> => {
     try {
-      const serversToInsert = [];
-      const errors: string[] = [];
-      let imported = 0;
+      const serversToInsert = []
+      const errors: string[] = []
+      let imported = 0
 
       for (const [serverName, serverConfig] of Object.entries(
         input.mcpServers,
@@ -128,7 +127,7 @@ export const mcpServersImplementations = {
           if (!/^[a-zA-Z0-9_-]+$/.test(serverName)) {
             throw new Error(
               `Server name "${serverName}" is invalid. Server names must only contain letters, numbers, underscores, and hyphens.`,
-            );
+            )
           }
 
           // Provide default type if not specified
@@ -143,48 +142,48 @@ export const mcpServersImplementations = {
             bearerToken: undefined,
             headers: serverConfig.headers || {},
             user_id: userId, // Default bulk imported servers to current user
-          };
+          }
 
-          serversToInsert.push(serverWithDefaults);
+          serversToInsert.push(serverWithDefaults)
         } catch (error) {
           errors.push(
             `Failed to process server "${serverName}": ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
+          )
         }
       }
 
       if (serversToInsert.length > 0) {
         const createdServers =
-          await mcpServersRepository.bulkCreate(serversToInsert);
-        imported = serversToInsert.length;
+          await mcpServersRepository.bulkCreate(serversToInsert)
+        imported = serversToInsert.length
 
         // Ensure idle sessions for all imported servers (async)
         if (createdServers && createdServers.length > 0) {
           createdServers.forEach(async (server) => {
             try {
-              const params = await convertDbServerToParams(server);
+              const params = await convertDbServerToParams(server)
               if (params) {
                 mcpServerPool
                   .ensureIdleSessionForNewServer(server.uuid, params)
                   .then(() => {
                     logger.info(
                       `Ensured idle session for bulk imported server: ${server.name} (${server.uuid})`,
-                    );
+                    )
                   })
                   .catch((error) => {
                     logger.error(
                       `Error ensuring idle session for bulk imported server ${server.name} (${server.uuid}):`,
                       error,
-                    );
-                  });
+                    )
+                  })
               }
             } catch (error) {
               logger.error(
                 `Error processing idle session for bulk imported server ${server.name} (${server.uuid}):`,
                 error,
-              );
+              )
             }
-          });
+          })
         }
       }
 
@@ -193,9 +192,9 @@ export const mcpServersImplementations = {
         imported,
         errors: errors.length > 0 ? errors : undefined,
         message: `Successfully imported ${imported} MCP servers${errors.length > 0 ? ` with ${errors.length} errors` : ""}`,
-      };
+      }
     } catch (error) {
-      logger.error("Error bulk importing MCP servers:", error);
+      logger.error("Error bulk importing MCP servers:", error)
       return {
         success: false as const,
         imported: 0,
@@ -203,43 +202,43 @@ export const mcpServersImplementations = {
           error instanceof Error
             ? error.message
             : "Internal server error during bulk import",
-      };
+      }
     }
   },
 
   get: async (
     input: {
-      uuid: string;
+      uuid: string
     },
     userId: string,
   ): Promise<z.infer<typeof GetMcpServerResponseSchema>> => {
     try {
-      const server = await mcpServersRepository.findByUuid(input.uuid);
+      const server = await mcpServersRepository.findByUuid(input.uuid)
 
       // Check if user has access to this server (own server or public server)
-      if (server && server.user_id && server.user_id !== userId) {
+      if (server?.user_id && server.user_id !== userId) {
         return {
           success: false as const,
           message:
             "Access denied: You can only view servers you own or public servers",
-        };
+        }
       }
 
       if (!server) {
         return {
           success: false as const,
           message: "MCP server not found",
-        };
+        }
       }
 
       // Owner/admin can see secrets; for a public server viewed by a
       // non-owner, redact bearerToken/env/headers.
-      const isAdmin = await usersRepository.isAdmin(userId);
+      const isAdmin = await usersRepository.isAdmin(userId)
       const redactSecrets = !McpServersSerializer.canSeeSecrets(
         server.user_id,
         userId,
         isAdmin,
-      );
+      )
 
       return {
         success: true as const,
@@ -247,31 +246,31 @@ export const mcpServersImplementations = {
           redactSecrets,
         }),
         message: "MCP server retrieved successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error fetching MCP server:", error);
+      logger.error("Error fetching MCP server:", error)
       return {
         success: false as const,
         message: "Failed to fetch MCP server",
-      };
+      }
     }
   },
 
   delete: async (
     input: {
-      uuid: string;
+      uuid: string
     },
     userId: string,
   ): Promise<z.infer<typeof DeleteMcpServerResponseSchema>> => {
     try {
       // Check if server exists and user has permission to delete it
-      const server = await mcpServersRepository.findByUuid(input.uuid);
+      const server = await mcpServersRepository.findByUuid(input.uuid)
 
       if (!server) {
         return {
           success: false as const,
           message: "MCP server not found",
-        };
+        }
       }
 
       // Only the server owner (or an admin) may delete it. Public servers are
@@ -280,25 +279,23 @@ export const mcpServersImplementations = {
         return {
           success: false as const,
           message: "Access denied: You can only delete servers you own",
-        };
+        }
       }
 
       // Find affected namespaces before deleting the server
       const affectedNamespaceUuids =
-        await namespaceMappingsRepository.findNamespacesByServerUuid(
-          input.uuid,
-        );
+        await namespaceMappingsRepository.findNamespacesByServerUuid(input.uuid)
 
       // Clean up any idle sessions for this server
-      await mcpServerPool.cleanupIdleSession(input.uuid);
+      await mcpServerPool.cleanupIdleSession(input.uuid)
 
-      const deletedServer = await mcpServersRepository.deleteByUuid(input.uuid);
+      const deletedServer = await mcpServersRepository.deleteByUuid(input.uuid)
 
       if (!deletedServer) {
         return {
           success: false as const,
           message: "MCP server not found",
-        };
+        }
       }
 
       // Invalidate idle MetaMCP servers for all affected namespaces (async)
@@ -308,14 +305,14 @@ export const mcpServersImplementations = {
           .then(() => {
             logger.info(
               `Invalidated idle MetaMCP servers for ${affectedNamespaceUuids.length} namespaces after deleting server: ${deletedServer.name} (${deletedServer.uuid})`,
-            );
+            )
           })
           .catch((error) => {
             logger.error(
               `Error invalidating idle MetaMCP servers after deleting server ${deletedServer.uuid}:`,
               error,
-            );
-          });
+            )
+          })
 
         // Also invalidate OpenAPI sessions for affected namespaces
         metaMcpServerPool
@@ -323,35 +320,35 @@ export const mcpServersImplementations = {
           .then(() => {
             logger.info(
               `Invalidated OpenAPI sessions for ${affectedNamespaceUuids.length} namespaces after deleting server: ${deletedServer.name} (${deletedServer.uuid})`,
-            );
+            )
           })
           .catch((error) => {
             logger.error(
               `Error invalidating OpenAPI sessions after deleting server ${deletedServer.uuid}:`,
               error,
-            );
-          });
+            )
+          })
 
         // Clear tool overrides cache for affected namespaces since server deletion affects tool availability
         affectedNamespaceUuids.forEach((namespaceUuid) => {
-          clearOverrideCache(namespaceUuid);
-        });
+          clearOverrideCache(namespaceUuid)
+        })
         logger.info(
           `Cleared tool overrides cache for ${affectedNamespaceUuids.length} namespaces after deleting server: ${deletedServer.name} (${deletedServer.uuid})`,
-        );
+        )
       }
 
       return {
         success: true as const,
         message: "MCP server deleted successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error deleting MCP server:", error);
+      logger.error("Error deleting MCP server:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
 
@@ -361,13 +358,13 @@ export const mcpServersImplementations = {
   ): Promise<z.infer<typeof UpdateMcpServerResponseSchema>> => {
     try {
       // Check if server exists and user has permission to update it
-      const server = await mcpServersRepository.findByUuid(input.uuid);
+      const server = await mcpServersRepository.findByUuid(input.uuid)
 
       if (!server) {
         return {
           success: false as const,
           message: "MCP server not found",
-        };
+        }
       }
 
       // Only the server owner (or an admin) may update it. Public servers are
@@ -376,7 +373,7 @@ export const mcpServersImplementations = {
         return {
           success: false as const,
           message: "Access denied: You can only update servers you own",
-        };
+        }
       }
 
       // Keep existing ownership; only admins may reassign a server to another
@@ -385,58 +382,58 @@ export const mcpServersImplementations = {
         input.user_id,
         userId,
         server.user_id,
-      );
+      )
 
       const updatedServer = await mcpServersRepository.update({
         ...input,
         user_id: effectiveUserId,
-      });
+      })
 
       if (!updatedServer) {
         return {
           success: false as const,
           message: "MCP server not found",
-        };
+        }
       }
 
       // Reset error status for stdio servers when they are updated
       if (updatedServer.type === McpServerTypeEnum.enum.STDIO) {
         try {
-          await serverErrorTracker.resetServerErrorState(updatedServer.uuid);
+          await serverErrorTracker.resetServerErrorState(updatedServer.uuid)
           logger.info(
             `Reset error status for updated stdio server: ${updatedServer.name} (${updatedServer.uuid})`,
-          );
+          )
         } catch (error) {
           logger.error(
             `Error resetting error status for updated stdio server ${updatedServer.name} (${updatedServer.uuid}):`,
             error,
-          );
+          )
         }
       }
 
       // Invalidate idle session for the updated server to refresh with new parameters (async)
-      const serverParams = await convertDbServerToParams(updatedServer);
+      const serverParams = await convertDbServerToParams(updatedServer)
       if (serverParams) {
         mcpServerPool
           .invalidateIdleSession(updatedServer.uuid, serverParams)
           .then(() => {
             logger.info(
               `Invalidated and refreshed idle session for updated server: ${updatedServer.name} (${updatedServer.uuid})`,
-            );
+            )
           })
           .catch((error) => {
             logger.error(
               `Error invalidating idle session for updated server ${updatedServer.name} (${updatedServer.uuid}):`,
               error,
-            );
-          });
+            )
+          })
       }
 
       // Find affected namespaces and invalidate their idle MetaMCP servers (async)
       const affectedNamespaceUuids =
         await namespaceMappingsRepository.findNamespacesByServerUuid(
           updatedServer.uuid,
-        );
+        )
 
       if (affectedNamespaceUuids.length > 0) {
         metaMcpServerPool
@@ -444,14 +441,14 @@ export const mcpServersImplementations = {
           .then(() => {
             logger.info(
               `Invalidated idle MetaMCP servers for ${affectedNamespaceUuids.length} namespaces after updating server: ${updatedServer.name} (${updatedServer.uuid})`,
-            );
+            )
           })
           .catch((error) => {
             logger.error(
               `Error invalidating idle MetaMCP servers after updating server ${updatedServer.uuid}:`,
               error,
-            );
-          });
+            )
+          })
 
         // Also invalidate OpenAPI sessions for affected namespaces
         metaMcpServerPool
@@ -459,36 +456,36 @@ export const mcpServersImplementations = {
           .then(() => {
             logger.info(
               `Invalidated OpenAPI sessions for ${affectedNamespaceUuids.length} namespaces after updating server: ${updatedServer.name} (${updatedServer.uuid})`,
-            );
+            )
           })
           .catch((error) => {
             logger.error(
               `Error invalidating OpenAPI sessions after updating server ${updatedServer.uuid}:`,
               error,
-            );
-          });
+            )
+          })
 
         // Clear tool overrides cache for affected namespaces since server update may affect tool availability
         affectedNamespaceUuids.forEach((namespaceUuid) => {
-          clearOverrideCache(namespaceUuid);
-        });
+          clearOverrideCache(namespaceUuid)
+        })
         logger.info(
           `Cleared tool overrides cache for ${affectedNamespaceUuids.length} namespaces after updating server: ${updatedServer.name} (${updatedServer.uuid})`,
-        );
+        )
       }
 
       return {
         success: true as const,
         data: McpServersSerializer.serializeMcpServer(updatedServer),
         message: "MCP server updated successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error updating MCP server:", error);
+      logger.error("Error updating MCP server:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
-};
+}

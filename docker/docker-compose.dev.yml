@@ -1,0 +1,39 @@
+# Development overlay: runs the app IN Docker with hot reload (bun run dev →
+# turbo: backend `bun --watch`, frontend `next dev --turbopack`). Source is
+# bind-mounted; node_modules are kept inside the container via anonymous volumes.
+#
+# Used by `bun run dev:docker` (which selects this overlay explicitly). DB
+# migrations run automatically when the backend boots.
+services:
+  app:
+    container_name: metamcp-dev
+    build:
+      dockerfile: docker/dockerfiles/Dockerfile.dev
+    ports:
+      - "12008:12008"
+      - "12009:12009"
+    volumes:
+      # Mount source code for hot reloading
+      - ..:/app
+      # Keep container-installed node_modules (don't shadow with host's)
+      - /app/node_modules
+      - /app/apps/frontend/node_modules
+      - /app/apps/backend/node_modules
+      - /app/packages/trpc/node_modules
+      - /app/packages/zod-types/node_modules
+      - /app/packages/typescript-config/node_modules
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-all}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-your-super-secret-key-change-this-in-production}
+    restart: "no"
+
+  postgres:
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT:-9433}:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data_dev:
+    driver: local

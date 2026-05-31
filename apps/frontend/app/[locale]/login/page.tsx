@@ -1,124 +1,124 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useEffect, useState } from "react"
 
-import { DomainWarningBanner } from "@/components/domain-warning-banner";
-import { LanguageSwitcher } from "@/components/language-switcher";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useTranslations } from "@/hooks/useTranslations";
-import { authClient } from "@/lib/auth-client";
-import { vanillaTrpcClient } from "@/lib/trpc";
-import { safeInternalRedirect } from "@/lib/validation-utils";
+import { DomainWarningBanner } from "@/components/domain-warning-banner"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { useTranslations } from "@/hooks/useTranslations"
+import { authClient } from "@/lib/auth-client"
+import { vanillaTrpcClient } from "@/lib/trpc"
+import { safeInternalRedirect } from "@/lib/validation-utils"
 
 function LoginForm() {
-  const { t } = useTranslations();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isSignupDisabled, setIsSignupDisabled] = useState(false);
-  const [isBasicAuthDisabled, setIsBasicAuthDisabled] = useState(false);
-  const [isOidcLoading, setIsOidcLoading] = useState(false);
-  const [isOidcEnabled, setIsOidcEnabled] = useState(false);
-  const [authProvidersLoading, setAuthProvidersLoading] = useState(true);
+  const { t } = useTranslations()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [isSignupDisabled, setIsSignupDisabled] = useState(false)
+  const [isBasicAuthDisabled, setIsBasicAuthDisabled] = useState(false)
+  const [isOidcLoading, setIsOidcLoading] = useState(false)
+  const [isOidcEnabled, setIsOidcEnabled] = useState(false)
+  const [authProvidersLoading, setAuthProvidersLoading] = useState(true)
 
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const router = useRouter()
+  const searchParams = useSearchParams()
   // Sanitize to a same-origin relative path to prevent open redirects.
-  const callbackUrl = safeInternalRedirect(searchParams.get("callbackUrl"));
+  const callbackUrl = safeInternalRedirect(searchParams.get("callbackUrl"))
 
   // Check if signup is disabled
   useEffect(() => {
     const checkSignupStatus = async () => {
       try {
         const isDisabled =
-          await vanillaTrpcClient.frontend.config.getSignupDisabled.query();
-        setIsSignupDisabled(isDisabled);
+          await vanillaTrpcClient.frontend.config.getSignupDisabled.query()
+        setIsSignupDisabled(isDisabled)
       } catch (error) {
-        console.error("Failed to fetch signup status:", error);
+        console.error("Failed to fetch signup status:", error)
       }
-    };
+    }
 
-    checkSignupStatus();
-  }, []);
+    checkSignupStatus()
+  }, [])
 
   // Check if basic auth is disabled
   useEffect(() => {
     const checkBasicAuthStatus = async () => {
       try {
         const isDisabled =
-          await vanillaTrpcClient.frontend.config.getBasicAuthDisabled.query();
-        setIsBasicAuthDisabled(isDisabled);
+          await vanillaTrpcClient.frontend.config.getBasicAuthDisabled.query()
+        setIsBasicAuthDisabled(isDisabled)
       } catch (error) {
-        console.error("Failed to fetch basic auth config:", error);
+        console.error("Failed to fetch basic auth config:", error)
       }
-    };
+    }
 
-    checkBasicAuthStatus();
-  }, []);
+    checkBasicAuthStatus()
+  }, [])
 
   // Check if OIDC is enabled
   useEffect(() => {
     const checkOidcStatus = async () => {
       try {
         const providers =
-          await vanillaTrpcClient.frontend.config.getAuthProviders.query();
+          await vanillaTrpcClient.frontend.config.getAuthProviders.query()
         const oidcProvider = providers.find(
           (provider) => provider.id === "oidc" && provider.enabled,
-        );
-        setIsOidcEnabled(!!oidcProvider);
+        )
+        setIsOidcEnabled(!!oidcProvider)
       } catch (error) {
-        console.error("Failed to fetch OIDC config:", error);
+        console.error("Failed to fetch OIDC config:", error)
       } finally {
-        setAuthProvidersLoading(false);
+        setAuthProvidersLoading(false)
       }
-    };
+    }
 
-    checkOidcStatus();
-  }, []);
+    checkOidcStatus()
+  }, [])
 
   const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
 
     try {
       const { error } = await authClient.signIn.email({
         email,
         password,
         callbackURL: callbackUrl,
-      });
+      })
 
       if (error) {
-        setError(error.message || t("auth:signInError"));
+        setError(error.message || t("auth:signInError"))
       } else {
-        router.push(callbackUrl);
+        router.push(callbackUrl)
       }
     } catch (_err) {
-      setError(t("auth:signInError"));
+      setError(t("auth:signInError"))
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleOidcSignIn = async () => {
-    setIsOidcLoading(true);
+    setIsOidcLoading(true)
     try {
       await authClient.signIn.social({
         provider: "oidc",
         callbackURL: callbackUrl,
-      });
+      })
     } catch (error) {
-      console.error("OIDC sign in failed:", error);
-      setError(t("auth:oidcSignInError"));
+      console.error("OIDC sign in failed:", error)
+      setError(t("auth:oidcSignInError"))
     } finally {
-      setIsOidcLoading(false);
+      setIsOidcLoading(false)
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -216,7 +216,7 @@ function LoginForm() {
         </div>
       )}
     </div>
-  );
+  )
 }
 
 export default function LoginPage() {
@@ -233,5 +233,5 @@ export default function LoginPage() {
         </Suspense>
       </div>
     </div>
-  );
+  )
 }

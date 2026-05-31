@@ -1,44 +1,44 @@
-"use client";
+"use client"
 
-import { Languages } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { Languages } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useTranslations } from "@/hooks/useTranslations";
+} from "@/components/ui/dropdown-menu"
+import { useTranslations } from "@/hooks/useTranslations"
 import {
   getLocalizedPath,
   getPathnameWithoutLocale,
   LOCALE_NAMES,
   SUPPORTED_LOCALES,
-  SupportedLocale,
-} from "@/lib/i18n";
+  type SupportedLocale,
+} from "@/lib/i18n"
 
 export function LanguageSwitcher() {
-  const { locale: currentLocale } = useTranslations();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { locale: currentLocale } = useTranslations()
+  const router = useRouter()
+  const pathname = usePathname()
 
   const handleLanguageChange = (newLanguage: SupportedLocale) => {
-    if (newLanguage === currentLocale) return;
+    if (newLanguage === currentLocale) return
 
     // Set cookie to persist language preference
-    document.cookie = `preferred-language=${newLanguage}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+    document.cookie = `preferred-language=${newLanguage}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
 
     // Get the current path without locale
-    const pathnameWithoutLocale = getPathnameWithoutLocale(pathname);
+    const pathnameWithoutLocale = getPathnameWithoutLocale(pathname)
 
     // Build the new path with the new locale using the utility function
-    const newPath = getLocalizedPath(pathnameWithoutLocale, newLanguage);
+    const newPath = getLocalizedPath(pathnameWithoutLocale, newLanguage)
 
     // Navigate to the new path
-    router.push(newPath);
-  };
+    router.push(newPath)
+  }
 
   return (
     <DropdownMenu>
@@ -60,5 +60,5 @@ export function LanguageSwitcher() {
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

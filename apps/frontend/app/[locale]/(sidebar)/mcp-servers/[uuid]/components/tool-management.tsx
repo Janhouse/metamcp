@@ -1,94 +1,94 @@
-"use client";
-import { ListToolsResultSchema } from "@modelcontextprotocol/sdk/types.js";
-import { Tool } from "@repo/zod-types";
-import { AlertTriangle, Database, RefreshCw, Wrench } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+"use client"
+import { ListToolsResultSchema } from "@modelcontextprotocol/sdk/types.js"
+import type { Tool } from "@repo/zod-types"
+import { AlertTriangle, Database, RefreshCw, Wrench } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
-import { useTranslations } from "@/hooks/useTranslations";
-import { MakeRequestFn } from "@/lib/mcp-types";
-import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button"
+import { useTranslations } from "@/hooks/useTranslations"
+import type { MakeRequestFn } from "@/lib/mcp-types"
+import { trpc } from "@/lib/trpc"
 
-import { UnifiedToolsTable } from "./tools-data-table";
+import { UnifiedToolsTable } from "./tools-data-table"
 
 // MCP Tool type from the protocol
 interface MCPTool {
-  name: string;
-  title?: string;
-  description?: string;
+  name: string
+  title?: string
+  description?: string
   inputSchema: {
-    type: "object";
-    properties?: Record<string, unknown>;
-    required?: string[];
-  };
+    type: "object"
+    properties?: Record<string, unknown>
+    required?: string[]
+  }
 }
 
 // Type for the tools/list response
 interface ToolsListResponse {
-  tools: MCPTool[];
+  tools: MCPTool[]
 }
 
 interface ToolManagementProps {
-  mcpServerUuid: string;
-  makeRequest: MakeRequestFn;
+  mcpServerUuid: string
+  makeRequest: MakeRequestFn
 }
 
 export function ToolManagement({
   mcpServerUuid,
   makeRequest,
 }: ToolManagementProps) {
-  const [mcpTools, setMcpTools] = useState<MCPTool[]>([]);
-  const [loading, setLoading] = useState(false);
-  const hasInitiallyFetched = useRef(false);
-  const { t } = useTranslations();
+  const [mcpTools, setMcpTools] = useState<MCPTool[]>([])
+  const [loading, setLoading] = useState(false)
+  const hasInitiallyFetched = useRef(false)
+  const { t } = useTranslations()
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Get tools from database
   const { data: dbToolsResponse, refetch: refetchDbTools } =
     trpc.frontend.tools.getByMcpServerUuid.useQuery({
       mcpServerUuid,
-    });
+    })
 
-  const dbTools: Tool[] = dbToolsResponse?.success ? dbToolsResponse.data : [];
+  const dbTools: Tool[] = dbToolsResponse?.success ? dbToolsResponse.data : []
 
   // Save tools to database mutation (with cleanup)
   const saveToolsMutation = trpc.frontend.tools.sync.useMutation({
     onSuccess: (response) => {
       if (response.success) {
-        const foundCount = mcpTools.length;
+        const foundCount = mcpTools.length
         toast.success(
           t("mcp-servers:tools.foundToolsFromMcp", { count: foundCount }),
-        );
+        )
         // Invalidate and refetch the tools list
-        utils.frontend.tools.getByMcpServerUuid.invalidate({ mcpServerUuid });
-        refetchDbTools();
+        utils.frontend.tools.getByMcpServerUuid.invalidate({ mcpServerUuid })
+        refetchDbTools()
       } else {
-        toast.error(response.error || t("mcp-servers:tools.failedToSaveTools"));
+        toast.error(response.error || t("mcp-servers:tools.failedToSaveTools"))
       }
     },
     onError: (error) => {
-      console.error("Error saving tools:", error);
+      console.error("Error saving tools:", error)
       toast.error(t("mcp-servers:tools.failedToSaveTools"), {
         description: error.message,
-      });
+      })
     },
-  });
+  })
 
   // Fetch tools from MCP server with pagination
   const fetchMCPTools = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       // Paginated tool fetching - load all pages automatically
-      const allTools: MCPTool[] = [];
-      let cursor: string | undefined = undefined;
-      let hasMore = true;
-      let _pageCount = 0;
+      const allTools: MCPTool[] = []
+      let cursor: string | undefined
+      let hasMore = true
+      let _pageCount = 0
 
       while (hasMore) {
-        _pageCount++;
+        _pageCount++
 
         const response = (await makeRequest(
           {
@@ -97,59 +97,59 @@ export function ToolManagement({
           },
           ListToolsResultSchema,
           { suppressToast: true },
-        )) as ToolsListResponse & { nextCursor?: string };
+        )) as ToolsListResponse & { nextCursor?: string }
 
         if (response?.tools && response.tools.length > 0) {
-          allTools.push(...response.tools);
+          allTools.push(...response.tools)
         }
 
-        cursor = response?.nextCursor;
-        hasMore = !!response?.nextCursor;
+        cursor = response?.nextCursor
+        hasMore = !!response?.nextCursor
       }
 
       if (allTools.length > 0) {
-        setMcpTools(allTools);
+        setMcpTools(allTools)
 
         // Automatically save tools to database
         const toolsToSave = allTools.map((tool) => ({
           name: tool.name,
           description: tool.description || undefined,
           inputSchema: tool.inputSchema || { type: "object" as const },
-        }));
+        }))
 
         saveToolsMutation.mutate({
           mcpServerUuid,
           tools: toolsToSave,
-        });
+        })
       } else {
-        setMcpTools([]);
-        toast.info(t("mcp-servers:tools.noToolsFromMcp"));
+        setMcpTools([])
+        toast.info(t("mcp-servers:tools.noToolsFromMcp"))
       }
     } catch (error) {
-      console.error("Error fetching MCP tools:", error);
+      console.error("Error fetching MCP tools:", error)
       toast.error(t("mcp-servers:tools.failedToFetchTools"), {
         description: error instanceof Error ? error.message : String(error),
-      });
-      setMcpTools([]);
+      })
+      setMcpTools([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [makeRequest, mcpServerUuid, saveToolsMutation, t]);
+  }, [makeRequest, mcpServerUuid, saveToolsMutation, t])
 
   // Auto-fetch tools when component mounts - but only once
   useEffect(() => {
     if (!hasInitiallyFetched.current) {
-      hasInitiallyFetched.current = true;
-      fetchMCPTools();
+      hasInitiallyFetched.current = true
+      fetchMCPTools()
     }
-  }, [fetchMCPTools]);
+  }, [fetchMCPTools])
 
   // Calculate tool counts for display
-  const mcpToolCount = mcpTools.length;
-  const dbToolCount = dbTools.length;
+  const mcpToolCount = mcpTools.length
+  const dbToolCount = dbTools.length
   const newToolsCount = mcpTools.filter(
     (mcpTool) => !dbTools.some((dbTool) => dbTool.name === mcpTool.name),
-  ).length;
+  ).length
 
   return (
     <div className="space-y-4">
@@ -217,5 +217,5 @@ export function ToolManagement({
         </div>
       )}
     </div>
-  );
+  )
 }

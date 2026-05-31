@@ -1,13 +1,13 @@
-import {
+import type {
   DatabaseEndpoint,
   DatabaseEndpointWithNamespace,
   EndpointCreateInput,
   EndpointUpdateInput,
-} from "@repo/zod-types";
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+} from "@repo/zod-types"
+import { and, desc, eq, isNull, or } from "drizzle-orm"
 
-import { db } from "../index";
-import { endpointsTable, namespacesTable } from "../schema";
+import { db } from "../index"
+import { endpointsTable, namespacesTable } from "../schema"
 
 export class EndpointsRepository {
   async create(input: EndpointCreateInput): Promise<DatabaseEndpoint> {
@@ -30,13 +30,13 @@ export class EndpointsRepository {
         use_query_param_auth: input.use_query_param_auth ?? false,
         user_id: input.user_id,
       })
-      .returning();
+      .returning()
 
     if (!createdEndpoint) {
-      throw new Error("Failed to create endpoint");
+      throw new Error("Failed to create endpoint")
     }
 
-    return createdEndpoint;
+    return createdEndpoint
   }
 
   async findAll(): Promise<DatabaseEndpoint[]> {
@@ -63,7 +63,7 @@ export class EndpointsRepository {
         user_id: endpointsTable.user_id,
       })
       .from(endpointsTable)
-      .orderBy(desc(endpointsTable.created_at));
+      .orderBy(desc(endpointsTable.created_at))
   }
 
   // Find endpoints accessible to a specific user (public + user's own endpoints)
@@ -97,7 +97,7 @@ export class EndpointsRepository {
           eq(endpointsTable.user_id, userId), // User's own endpoints
         ),
       )
-      .orderBy(desc(endpointsTable.created_at));
+      .orderBy(desc(endpointsTable.created_at))
   }
 
   // Find endpoints accessible to a specific user with namespace data (public + user's own endpoints)
@@ -147,9 +147,9 @@ export class EndpointsRepository {
           eq(endpointsTable.user_id, userId), // User's own endpoints
         ),
       )
-      .orderBy(desc(endpointsTable.created_at));
+      .orderBy(desc(endpointsTable.created_at))
 
-    return endpointsData;
+    return endpointsData
   }
 
   // Find only public endpoints (no user ownership)
@@ -178,7 +178,7 @@ export class EndpointsRepository {
       })
       .from(endpointsTable)
       .where(isNull(endpointsTable.user_id))
-      .orderBy(desc(endpointsTable.created_at));
+      .orderBy(desc(endpointsTable.created_at))
   }
 
   // Find endpoints owned by a specific user
@@ -207,7 +207,7 @@ export class EndpointsRepository {
       })
       .from(endpointsTable)
       .where(eq(endpointsTable.user_id, userId))
-      .orderBy(desc(endpointsTable.created_at));
+      .orderBy(desc(endpointsTable.created_at))
   }
 
   async findAllWithNamespaces(): Promise<DatabaseEndpointWithNamespace[]> {
@@ -248,9 +248,9 @@ export class EndpointsRepository {
         namespacesTable,
         eq(endpointsTable.namespace_uuid, namespacesTable.uuid),
       )
-      .orderBy(desc(endpointsTable.created_at));
+      .orderBy(desc(endpointsTable.created_at))
 
-    return endpointsData;
+    return endpointsData
   }
 
   async findByUuid(uuid: string): Promise<DatabaseEndpoint | undefined> {
@@ -277,9 +277,9 @@ export class EndpointsRepository {
         user_id: endpointsTable.user_id,
       })
       .from(endpointsTable)
-      .where(eq(endpointsTable.uuid, uuid));
+      .where(eq(endpointsTable.uuid, uuid))
 
-    return endpoint;
+    return endpoint
   }
 
   async findByUuidWithNamespace(
@@ -322,9 +322,9 @@ export class EndpointsRepository {
         namespacesTable,
         eq(endpointsTable.namespace_uuid, namespacesTable.uuid),
       )
-      .where(eq(endpointsTable.uuid, uuid));
+      .where(eq(endpointsTable.uuid, uuid))
 
-    return endpointData;
+    return endpointData
   }
 
   async findByName(name: string): Promise<DatabaseEndpoint | undefined> {
@@ -351,9 +351,9 @@ export class EndpointsRepository {
         user_id: endpointsTable.user_id,
       })
       .from(endpointsTable)
-      .where(eq(endpointsTable.name, name));
+      .where(eq(endpointsTable.name, name))
 
-    return endpoint;
+    return endpoint
   }
 
   // Find endpoint by name within user scope (for uniqueness checks)
@@ -392,18 +392,18 @@ export class EndpointsRepository {
             : isNull(endpointsTable.user_id),
         ),
       )
-      .limit(1);
+      .limit(1)
 
-    return endpoint;
+    return endpoint
   }
 
   async deleteByUuid(uuid: string): Promise<DatabaseEndpoint | undefined> {
     const [deletedEndpoint] = await db
       .delete(endpointsTable)
       .where(eq(endpointsTable.uuid, uuid))
-      .returning();
+      .returning()
 
-    return deletedEndpoint;
+    return deletedEndpoint
   }
 
   async update(input: EndpointUpdateInput): Promise<DatabaseEndpoint> {
@@ -428,15 +428,15 @@ export class EndpointsRepository {
         updated_at: new Date(),
       })
       .where(eq(endpointsTable.uuid, input.uuid))
-      .returning();
+      .returning()
 
     if (!updatedEndpoint) {
-      throw new Error("Failed to update endpoint");
+      throw new Error("Failed to update endpoint")
     }
 
-    return updatedEndpoint;
+    return updatedEndpoint
   }
 }
 
 // Export the repository instance
-export const endpointsRepository = new EndpointsRepository();
+export const endpointsRepository = new EndpointsRepository()

@@ -1,37 +1,37 @@
-"use client";
-import { EmptyResultSchema } from "@modelcontextprotocol/sdk/types.js";
-import { Activity, CheckCircle, Clock, XCircle, Zap } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod";
+"use client"
+import { EmptyResultSchema } from "@modelcontextprotocol/sdk/types.js"
+import { Activity, CheckCircle, Clock, XCircle, Zap } from "lucide-react"
+import { useState } from "react"
+import { toast } from "sonner"
+import { z } from "zod"
 
-import { Button } from "@/components/ui/button";
-import { useTranslations } from "@/hooks/useTranslations";
-import { MakeRequestFn } from "@/lib/mcp-types";
+import { Button } from "@/components/ui/button"
+import { useTranslations } from "@/hooks/useTranslations"
+import type { MakeRequestFn } from "@/lib/mcp-types"
 
 interface PingHistory {
-  id: string;
-  timestamp: Date;
-  success: boolean;
-  duration: number;
-  error?: string;
-  method: string;
+  id: string
+  timestamp: Date
+  success: boolean
+  duration: number
+  error?: string
+  method: string
 }
 
 interface InspectorPingProps {
-  makeRequest: MakeRequestFn;
+  makeRequest: MakeRequestFn
 }
 
 export function InspectorPing({ makeRequest }: InspectorPingProps) {
-  const { t } = useTranslations();
-  const [pinging, setPinging] = useState(false);
-  const [pingHistory, setPingHistory] = useState<PingHistory[]>([]);
-  const [currentPing, setCurrentPing] = useState<PingHistory | null>(null);
+  const { t } = useTranslations()
+  const [pinging, setPinging] = useState(false)
+  const [pingHistory, setPingHistory] = useState<PingHistory[]>([])
+  const [currentPing, setCurrentPing] = useState<PingHistory | null>(null)
 
   const handlePing = async () => {
-    setPinging(true);
-    const startTime = Date.now();
-    const pingId = `ping-${Date.now()}`;
+    setPinging(true)
+    const startTime = Date.now()
+    const pingId = `ping-${Date.now()}`
 
     const newPing: PingHistory = {
       id: pingId,
@@ -39,9 +39,9 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
       success: false,
       duration: 0,
       method: "ping",
-    };
+    }
 
-    setCurrentPing(newPing);
+    setCurrentPing(newPing)
 
     try {
       // First try the standard ping method
@@ -52,25 +52,25 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
         },
         EmptyResultSchema,
         { suppressToast: true, timeout: 5000 },
-      );
+      )
 
-      const duration = Date.now() - startTime;
+      const duration = Date.now() - startTime
       const successPing = {
         ...newPing,
         success: true,
         duration,
         method: "ping",
-      };
+      }
 
-      setCurrentPing(successPing);
-      setPingHistory((prev) => [successPing, ...prev].slice(0, 10)); // Keep last 10 pings
+      setCurrentPing(successPing)
+      setPingHistory((prev) => [successPing, ...prev].slice(0, 10)) // Keep last 10 pings
       toast.success(
         t("inspector:pingComponent.pingSuccessMessage", { duration }),
-      );
+      )
     } catch (_pingError) {
       // If ping method doesn't exist, try a fallback method
       try {
-        const fallbackStartTime = Date.now();
+        const fallbackStartTime = Date.now()
 
         // Try tools/list as a fallback connectivity test
         await makeRequest(
@@ -80,23 +80,23 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
           },
           z.object({ tools: z.array(z.any()) }).passthrough(),
           { suppressToast: true, timeout: 3000 },
-        );
+        )
 
-        const duration = Date.now() - fallbackStartTime;
+        const duration = Date.now() - fallbackStartTime
         const successPing = {
           ...newPing,
           success: true,
           duration,
           method: t("inspector:pingComponent.fallbackMethod"),
-        };
+        }
 
-        setCurrentPing(successPing);
-        setPingHistory((prev) => [successPing, ...prev].slice(0, 10));
+        setCurrentPing(successPing)
+        setPingHistory((prev) => [successPing, ...prev].slice(0, 10))
         toast.success(
           t("inspector:pingComponent.pingFallbackMessage", { duration }),
-        );
+        )
       } catch (fallbackError) {
-        const duration = Date.now() - startTime;
+        const duration = Date.now() - startTime
         const failedPing = {
           ...newPing,
           success: false,
@@ -106,10 +106,10 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
               ? fallbackError.message
               : String(fallbackError),
           method: t("inspector:pingComponent.pingAndFallback"),
-        };
+        }
 
-        setCurrentPing(failedPing);
-        setPingHistory((prev) => [failedPing, ...prev].slice(0, 10));
+        setCurrentPing(failedPing)
+        setPingHistory((prev) => [failedPing, ...prev].slice(0, 10))
         toast.error(
           t("inspector:pingComponent.pingFailedMessage", { duration }),
           {
@@ -118,54 +118,54 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
                 ? fallbackError.message
                 : String(fallbackError),
           },
-        );
+        )
       }
     } finally {
-      setPinging(false);
+      setPinging(false)
     }
-  };
+  }
 
   const clearHistory = () => {
-    setPingHistory([]);
-    setCurrentPing(null);
-  };
+    setPingHistory([])
+    setCurrentPing(null)
+  }
 
   const formatDuration = (duration: number) => {
     if (duration < 1000) {
-      return `${duration}ms`;
+      return `${duration}ms`
     }
-    return `${(duration / 1000).toFixed(2)}s`;
-  };
+    return `${(duration / 1000).toFixed(2)}s`
+  }
 
   const getStatusColor = (success: boolean) => {
     return success
       ? "text-green-600 dark:text-green-400"
-      : "text-red-600 dark:text-red-400";
-  };
+      : "text-red-600 dark:text-red-400"
+  }
 
   const getStatusIcon = (success: boolean) => {
-    return success ? CheckCircle : XCircle;
-  };
+    return success ? CheckCircle : XCircle
+  }
 
   const getAverageResponseTime = () => {
-    if (pingHistory.length === 0) return 0;
-    const successfulPings = pingHistory.filter((p) => p.success);
-    if (successfulPings.length === 0) return 0;
+    if (pingHistory.length === 0) return 0
+    const successfulPings = pingHistory.filter((p) => p.success)
+    if (successfulPings.length === 0) return 0
     return Math.round(
       successfulPings.reduce((sum, ping) => sum + ping.duration, 0) /
         successfulPings.length,
-    );
-  };
+    )
+  }
 
   const getSuccessRate = () => {
-    if (pingHistory.length === 0) return 0;
-    const successfulPings = pingHistory.filter((p) => p.success).length;
-    return Math.round((successfulPings / pingHistory.length) * 100);
-  };
+    if (pingHistory.length === 0) return 0
+    const successfulPings = pingHistory.filter((p) => p.success).length
+    return Math.round((successfulPings / pingHistory.length) * 100)
+  }
 
   const getLatestPings = (count: number) => {
-    return pingHistory.slice(0, count);
-  };
+    return pingHistory.slice(0, count)
+  }
 
   return (
     <div className="space-y-6">
@@ -208,12 +208,12 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {(() => {
-                const StatusIcon = getStatusIcon(currentPing.success);
+                const StatusIcon = getStatusIcon(currentPing.success)
                 return (
                   <StatusIcon
                     className={`h-6 w-6 ${getStatusColor(currentPing.success)}`}
                   />
-                );
+                )
               })()}
               <div>
                 <div
@@ -289,7 +289,7 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {getLatestPings(10).map((ping) => {
-              const StatusIcon = getStatusIcon(ping.success);
+              const StatusIcon = getStatusIcon(ping.success)
               return (
                 <div
                   key={ping.id}
@@ -330,15 +330,17 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
                         key={i}
                         className={`w-1 h-4 rounded ${
                           i <
-                          (ping.success
-                            ? Math.min(
-                                5,
-                                Math.max(
-                                  1,
-                                  5 - Math.floor(ping.duration / 200),
-                                ),
-                              )
-                            : 0)
+                          (
+                            ping.success
+                              ? Math.min(
+                                  5,
+                                  Math.max(
+                                    1,
+                                    5 - Math.floor(ping.duration / 200),
+                                  ),
+                                )
+                              : 0
+                          )
                             ? ping.success
                               ? "bg-green-500"
                               : "bg-red-500"
@@ -348,7 +350,7 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
                     ))}
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         )}
@@ -369,5 +371,5 @@ export function InspectorPing({ makeRequest }: InspectorPingProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

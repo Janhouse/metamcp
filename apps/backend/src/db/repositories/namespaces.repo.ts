@@ -1,21 +1,21 @@
-import {
+import type {
   DatabaseNamespace,
   DatabaseNamespaceTool,
   DatabaseNamespaceWithServers,
   NamespaceCreateInput,
   NamespaceUpdateInput,
-} from "@repo/zod-types";
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+} from "@repo/zod-types"
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm"
 
-import { db } from "../index";
+import { db } from "../index"
 import {
   mcpServersTable,
   namespaceServerMappingsTable,
   namespacesTable,
   namespaceToolMappingsTable,
   toolsTable,
-} from "../schema";
-import { namespaceMappingsRepository } from "./namespace-mappings.repo";
+} from "../schema"
+import { namespaceMappingsRepository } from "./namespace-mappings.repo"
 
 export class NamespacesRepository {
   async create(input: NamespaceCreateInput): Promise<DatabaseNamespace> {
@@ -28,10 +28,10 @@ export class NamespacesRepository {
           description: input.description,
           user_id: input.user_id,
         })
-        .returning();
+        .returning()
 
       if (!createdNamespace) {
-        throw new Error("Failed to create namespace");
+        throw new Error("Failed to create namespace")
       }
 
       // If mcp server UUIDs are provided, create the mappings with default ACTIVE status
@@ -40,9 +40,9 @@ export class NamespacesRepository {
           namespace_uuid: createdNamespace.uuid,
           mcp_server_uuid: serverUuid,
           status: "ACTIVE" as const,
-        }));
+        }))
 
-        await tx.insert(namespaceServerMappingsTable).values(mappings);
+        await tx.insert(namespaceServerMappingsTable).values(mappings)
 
         // Also create namespace-tool mappings for all tools of the selected servers
         const serverTools = await tx
@@ -51,7 +51,7 @@ export class NamespacesRepository {
             mcp_server_uuid: toolsTable.mcp_server_uuid,
           })
           .from(toolsTable)
-          .where(inArray(toolsTable.mcp_server_uuid, input.mcpServerUuids));
+          .where(inArray(toolsTable.mcp_server_uuid, input.mcpServerUuids))
 
         if (serverTools.length > 0) {
           const toolMappings = serverTools.map((tool) => ({
@@ -59,14 +59,14 @@ export class NamespacesRepository {
             tool_uuid: tool.uuid,
             mcp_server_uuid: tool.mcp_server_uuid,
             status: "ACTIVE" as const,
-          }));
+          }))
 
-          await tx.insert(namespaceToolMappingsTable).values(toolMappings);
+          await tx.insert(namespaceToolMappingsTable).values(toolMappings)
         }
       }
 
-      return createdNamespace;
-    });
+      return createdNamespace
+    })
   }
 
   async findAll(): Promise<DatabaseNamespace[]> {
@@ -80,7 +80,7 @@ export class NamespacesRepository {
         user_id: namespacesTable.user_id,
       })
       .from(namespacesTable)
-      .orderBy(desc(namespacesTable.created_at));
+      .orderBy(desc(namespacesTable.created_at))
   }
 
   // Find namespaces accessible to a specific user (public + user's own namespaces)
@@ -101,7 +101,7 @@ export class NamespacesRepository {
           eq(namespacesTable.user_id, userId), // User's own namespaces
         ),
       )
-      .orderBy(desc(namespacesTable.created_at));
+      .orderBy(desc(namespacesTable.created_at))
   }
 
   // Find only public namespaces (no user ownership)
@@ -117,7 +117,7 @@ export class NamespacesRepository {
       })
       .from(namespacesTable)
       .where(isNull(namespacesTable.user_id))
-      .orderBy(desc(namespacesTable.created_at));
+      .orderBy(desc(namespacesTable.created_at))
   }
 
   // Find namespaces owned by a specific user
@@ -133,7 +133,7 @@ export class NamespacesRepository {
       })
       .from(namespacesTable)
       .where(eq(namespacesTable.user_id, userId))
-      .orderBy(desc(namespacesTable.created_at));
+      .orderBy(desc(namespacesTable.created_at))
   }
 
   async findByUuid(uuid: string): Promise<DatabaseNamespace | undefined> {
@@ -147,9 +147,9 @@ export class NamespacesRepository {
         user_id: namespacesTable.user_id,
       })
       .from(namespacesTable)
-      .where(eq(namespacesTable.uuid, uuid));
+      .where(eq(namespacesTable.uuid, uuid))
 
-    return namespace;
+    return namespace
   }
 
   // Find namespace by name within user scope (for uniqueness checks)
@@ -175,19 +175,19 @@ export class NamespacesRepository {
             : isNull(namespacesTable.user_id),
         ),
       )
-      .limit(1);
+      .limit(1)
 
-    return namespace;
+    return namespace
   }
 
   async findByUuidWithServers(
     uuid: string,
   ): Promise<DatabaseNamespaceWithServers | null> {
     // First, get the namespace
-    const namespace = await this.findByUuid(uuid);
+    const namespace = await this.findByUuid(uuid)
 
     if (!namespace) {
-      return null;
+      return null
     }
 
     // Then, get servers associated with this namespace
@@ -213,7 +213,7 @@ export class NamespacesRepository {
         namespaceServerMappingsTable,
         eq(mcpServersTable.uuid, namespaceServerMappingsTable.mcp_server_uuid),
       )
-      .where(eq(namespaceServerMappingsTable.namespace_uuid, uuid));
+      .where(eq(namespaceServerMappingsTable.namespace_uuid, uuid))
 
     // Format the servers without date conversion
     const servers = serversData.map((server) => ({
@@ -231,12 +231,12 @@ export class NamespacesRepository {
       created_at: server.created_at,
       user_id: server.user_id,
       status: server.status,
-    }));
+    }))
 
     return {
       ...namespace,
       servers,
-    };
+    }
   }
 
   async findToolsByNamespaceUuid(
@@ -272,18 +272,18 @@ export class NamespacesRepository {
         eq(toolsTable.mcp_server_uuid, mcpServersTable.uuid),
       )
       .where(eq(namespaceToolMappingsTable.namespace_uuid, namespaceUuid))
-      .orderBy(desc(toolsTable.created_at));
+      .orderBy(desc(toolsTable.created_at))
 
-    return toolsData;
+    return toolsData
   }
 
   async deleteByUuid(uuid: string): Promise<DatabaseNamespace | undefined> {
     const [deletedNamespace] = await db
       .delete(namespacesTable)
       .where(eq(namespacesTable.uuid, uuid))
-      .returning();
+      .returning()
 
-    return deletedNamespace;
+    return deletedNamespace
   }
 
   async update(input: NamespaceUpdateInput): Promise<DatabaseNamespace> {
@@ -298,10 +298,10 @@ export class NamespacesRepository {
           updated_at: new Date(),
         })
         .where(eq(namespacesTable.uuid, input.uuid))
-        .returning();
+        .returning()
 
       if (!updatedNamespace) {
-        throw new Error("Namespace not found");
+        throw new Error("Namespace not found")
       }
 
       // If mcpServerUuids are provided, update the mappings
@@ -310,23 +310,23 @@ export class NamespacesRepository {
         const existingToolMappings =
           await namespaceMappingsRepository.findToolMappingsByNamespace(
             input.uuid,
-          );
-        const existingToolStatusMap = new Map<string, "ACTIVE" | "INACTIVE">();
+          )
+        const existingToolStatusMap = new Map<string, "ACTIVE" | "INACTIVE">()
 
         // Create a map of existing tool statuses by tool_uuid
         existingToolMappings.forEach((mapping) => {
-          existingToolStatusMap.set(mapping.tool_uuid, mapping.status);
-        });
+          existingToolStatusMap.set(mapping.tool_uuid, mapping.status)
+        })
 
         // Delete existing server mappings
         await tx
           .delete(namespaceServerMappingsTable)
-          .where(eq(namespaceServerMappingsTable.namespace_uuid, input.uuid));
+          .where(eq(namespaceServerMappingsTable.namespace_uuid, input.uuid))
 
         // Delete existing tool mappings
         await tx
           .delete(namespaceToolMappingsTable)
-          .where(eq(namespaceToolMappingsTable.namespace_uuid, input.uuid));
+          .where(eq(namespaceToolMappingsTable.namespace_uuid, input.uuid))
 
         // Create new server mappings if any servers are specified
         if (input.mcpServerUuids.length > 0) {
@@ -334,9 +334,9 @@ export class NamespacesRepository {
             namespace_uuid: input.uuid,
             mcp_server_uuid: serverUuid,
             status: "ACTIVE" as const,
-          }));
+          }))
 
-          await tx.insert(namespaceServerMappingsTable).values(serverMappings);
+          await tx.insert(namespaceServerMappingsTable).values(serverMappings)
 
           // Also create namespace-tool mappings for all tools of the selected servers
           const serverTools = await tx
@@ -345,7 +345,7 @@ export class NamespacesRepository {
               mcp_server_uuid: toolsTable.mcp_server_uuid,
             })
             .from(toolsTable)
-            .where(inArray(toolsTable.mcp_server_uuid, input.mcpServerUuids));
+            .where(inArray(toolsTable.mcp_server_uuid, input.mcpServerUuids))
 
           if (serverTools.length > 0) {
             const toolMappings = serverTools.map((tool) => ({
@@ -355,16 +355,16 @@ export class NamespacesRepository {
               // Preserve existing status if tool was previously mapped, otherwise default to ACTIVE
               status:
                 existingToolStatusMap.get(tool.uuid) || ("ACTIVE" as const),
-            }));
+            }))
 
-            await tx.insert(namespaceToolMappingsTable).values(toolMappings);
+            await tx.insert(namespaceToolMappingsTable).values(toolMappings)
           }
         }
       }
 
-      return updatedNamespace;
-    });
+      return updatedNamespace
+    })
   }
 }
 
-export const namespacesRepository = new NamespacesRepository();
+export const namespacesRepository = new NamespacesRepository()

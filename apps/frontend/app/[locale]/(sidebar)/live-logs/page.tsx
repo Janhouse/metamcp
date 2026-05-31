@@ -1,12 +1,12 @@
-"use client";
+"use client"
 
-import { FileTerminal, RefreshCw, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
+import { FileTerminal, RefreshCw, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -14,13 +14,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { useTranslations } from "@/hooks/useTranslations";
-import { useLogsStore } from "@/lib/stores/logs-store";
+} from "@/components/ui/dialog"
+import { useTranslations } from "@/hooks/useTranslations"
+import { useLogsStore } from "@/lib/stores/logs-store"
 
 export default function LiveLogsPage() {
-  const { t } = useTranslations();
-  const [showClearDialog, setShowClearDialog] = useState(false);
+  const { t } = useTranslations()
+  const [showClearDialog, setShowClearDialog] = useState(false)
   const {
     logs,
     isLoading,
@@ -30,35 +30,35 @@ export default function LiveLogsPage() {
     fetchLogs,
     clearLogs,
     setAutoRefresh,
-  } = useLogsStore();
+  } = useLogsStore()
 
   const handleClearLogs = async () => {
     try {
-      await clearLogs();
-      toast.success(t("logs:logsClearSuccess"));
-      setShowClearDialog(false);
+      await clearLogs()
+      toast.success(t("logs:logsClearSuccess"))
+      setShowClearDialog(false)
     } catch (_error) {
-      toast.error(t("logs:logsClearError"));
+      toast.error(t("logs:logsClearError"))
     }
-  };
+  }
 
   const handleRefresh = async () => {
     try {
-      await fetchLogs();
-      toast.success(t("logs:refreshSuccess"));
+      await fetchLogs()
+      toast.success(t("logs:refreshSuccess"))
     } catch (_error) {
-      toast.error(t("logs:refreshError"));
+      toast.error(t("logs:refreshError"))
     }
-  };
+  }
 
   const handleToggleAutoRefresh = () => {
-    setAutoRefresh(!isAutoRefreshing);
+    setAutoRefresh(!isAutoRefreshing)
     if (!isAutoRefreshing) {
-      toast.success(t("logs:autoRefreshEnabled"));
+      toast.success(t("logs:autoRefreshEnabled"))
     } else {
-      toast.info(t("logs:autoRefreshDisabled"));
+      toast.info(t("logs:autoRefreshDisabled"))
     }
-  };
+  }
 
   // const getLevelColor = (level: string) => {
   //   switch (level) {
@@ -74,8 +74,8 @@ export default function LiveLogsPage() {
   // };
 
   const formatTimestamp = (timestamp: Date) => {
-    return new Date(timestamp).toLocaleString();
-  };
+    return new Date(timestamp).toLocaleString()
+  }
 
   return (
     <div className="space-y-6">
@@ -203,5 +203,5 @@ export default function LiveLogsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

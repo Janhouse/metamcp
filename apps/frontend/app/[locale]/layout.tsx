@@ -1,23 +1,23 @@
-import { notFound } from "next/navigation";
-import { ReactNode } from "react";
+import { notFound } from "next/navigation"
+import type { ReactNode } from "react"
 
-import { SUPPORTED_LOCALES, SupportedLocale } from "../../lib/i18n";
+import { SUPPORTED_LOCALES, type SupportedLocale } from "../../lib/i18n"
 
 interface LocaleLayoutProps {
-  children: ReactNode;
-  params: Promise<{ locale: string }>;
+  children: ReactNode
+  params: Promise<{ locale: string }>
 }
 
 export default async function LocaleLayout({
   children,
   params,
 }: LocaleLayoutProps) {
-  const { locale } = await params;
+  const { locale } = await params
 
   // Validate that the locale is supported
   if (!SUPPORTED_LOCALES.includes(locale as SupportedLocale)) {
-    notFound();
+    notFound()
   }
 
-  return <div lang={locale}>{children}</div>;
+  return <div lang={locale}>{children}</div>
 }

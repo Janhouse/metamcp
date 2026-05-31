@@ -1,64 +1,61 @@
-import { ServerParameters } from "@repo/zod-types";
+import type { ServerParameters } from "@repo/zod-types"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
-import { configService } from "../config.service";
-import { ConnectedClient, connectMetaMcpClient } from "./client";
-import { serverErrorTracker } from "./server-error-tracker";
+import { configService } from "../config.service"
+import { type ConnectedClient, connectMetaMcpClient } from "./client"
+import { serverErrorTracker } from "./server-error-tracker"
 
 export interface McpServerPoolStatus {
-  idle: number;
-  active: number;
-  activeSessionIds: string[];
-  idleServerUuids: string[];
+  idle: number
+  active: number
+  activeSessionIds: string[]
+  idleServerUuids: string[]
 }
 
 export class McpServerPool {
   // Singleton instance
-  private static instance: McpServerPool | null = null;
+  private static instance: McpServerPool | null = null
 
   // Idle sessions: serverUuid -> ConnectedClient (no sessionId assigned yet)
-  private idleSessions: Record<string, ConnectedClient> = {};
+  private idleSessions: Record<string, ConnectedClient> = {}
 
   // Active sessions: sessionId -> Record<serverUuid, ConnectedClient>
-  private activeSessions: Record<string, Record<string, ConnectedClient>> = {};
+  private activeSessions: Record<string, Record<string, ConnectedClient>> = {}
 
   // Mapping: sessionId -> Set<serverUuid> for cleanup tracking
-  private sessionToServers: Record<string, Set<string>> = {};
+  private sessionToServers: Record<string, Set<string>> = {}
 
   // Session creation timestamps: sessionId -> timestamp
-  private sessionTimestamps: Record<string, number> = {};
+  private sessionTimestamps: Record<string, number> = {}
 
   // Server parameters cache: serverUuid -> ServerParameters
-  private serverParamsCache: Record<string, ServerParameters> = {};
+  private serverParamsCache: Record<string, ServerParameters> = {}
 
   // Track ongoing idle session creation to prevent duplicates
-  private creatingIdleSessions: Set<string> = new Set();
+  private creatingIdleSessions: Set<string> = new Set()
 
   // Session cleanup timer
-  private cleanupTimer: NodeJS.Timeout | null = null;
+  private cleanupTimer: NodeJS.Timeout | null = null
 
   // Background idle sessions by namespace: namespaceUuid -> Map<userId|key, status>
   private backgroundIdleSessionsByNamespace: Map<string, Map<string, string>> =
-    new Map();
-
-  // Default number of idle sessions per server UUID
-  private readonly defaultIdleCount: number;
+    new Map()
 
   // Maximum total connections (idle + active) to prevent runaway process spawning
-  private readonly maxTotalConnections: number;
+  private readonly maxTotalConnections: number
 
   // Generation counter per serverUuid to detect stale async idle session creation
   // Only incremented, never deleted, to prevent false matches via ?? 0 default
-  private idleSessionGenerations: Map<string, number> = new Map();
+  private idleSessionGenerations: Map<string, number> = new Map()
 
   private constructor(
     defaultIdleCount: number = 1,
     maxTotalConnections: number = 100,
   ) {
-    this.defaultIdleCount = defaultIdleCount;
-    this.maxTotalConnections = maxTotalConnections;
-    this.startCleanupTimer();
+    this.defaultIdleCount = defaultIdleCount
+    this.maxTotalConnections = maxTotalConnections
+    this.startCleanupTimer()
   }
 
   /**
@@ -66,9 +63,9 @@ export class McpServerPool {
    */
   static getInstance(defaultIdleCount: number = 1): McpServerPool {
     if (!McpServerPool.instance) {
-      McpServerPool.instance = new McpServerPool(defaultIdleCount);
+      McpServerPool.instance = new McpServerPool(defaultIdleCount)
     }
-    return McpServerPool.instance;
+    return McpServerPool.instance
   }
 
   /**
@@ -81,42 +78,42 @@ export class McpServerPool {
     namespaceUuid?: string,
   ): Promise<ConnectedClient | undefined> {
     // Update server params cache
-    this.serverParamsCache[serverUuid] = params;
+    this.serverParamsCache[serverUuid] = params
 
     // Check if we already have an active session for this sessionId and server
     if (this.activeSessions[sessionId]?.[serverUuid]) {
-      return this.activeSessions[sessionId][serverUuid];
+      return this.activeSessions[sessionId][serverUuid]
     }
 
     // Initialize session if it doesn't exist
     if (!this.activeSessions[sessionId]) {
-      this.activeSessions[sessionId] = {};
-      this.sessionToServers[sessionId] = new Set();
-      this.sessionTimestamps[sessionId] = Date.now();
+      this.activeSessions[sessionId] = {}
+      this.sessionToServers[sessionId] = new Set()
+      this.sessionTimestamps[sessionId] = Date.now()
     }
 
     // Check if we have an idle session for this server that we can convert
-    const idleClient = this.idleSessions[serverUuid];
+    const idleClient = this.idleSessions[serverUuid]
     if (idleClient) {
       // Convert idle session to active session
-      delete this.idleSessions[serverUuid];
-      this.activeSessions[sessionId][serverUuid] = idleClient;
-      this.sessionToServers[sessionId].add(serverUuid);
+      delete this.idleSessions[serverUuid]
+      this.activeSessions[sessionId][serverUuid] = idleClient
+      this.sessionToServers[sessionId].add(serverUuid)
 
       logger.info(
         `Converted idle session to active for server ${serverUuid}, session ${sessionId}`,
-      );
+      )
 
       // Create a new idle session to replace the one we just used (ASYNC - NON-BLOCKING)
-      this.createIdleSessionAsync(serverUuid, params, namespaceUuid);
+      this.createIdleSessionAsync(serverUuid, params, namespaceUuid)
 
-      return idleClient;
+      return idleClient
     }
 
     // No idle session available, create a new connection
-    const newClient = await this.createNewConnection(params, namespaceUuid);
+    const newClient = await this.createNewConnection(params, namespaceUuid)
     if (!newClient) {
-      return undefined;
+      return undefined
     }
 
     // Post-await re-check: a concurrent call may have populated this slot
@@ -125,22 +122,22 @@ export class McpServerPool {
         logger.error(
           `Error cleaning up duplicate connection for ${serverUuid}:`,
           error,
-        );
-      });
-      return this.activeSessions[sessionId][serverUuid];
+        )
+      })
+      return this.activeSessions[sessionId][serverUuid]
     }
 
-    this.activeSessions[sessionId][serverUuid] = newClient;
-    this.sessionToServers[sessionId].add(serverUuid);
+    this.activeSessions[sessionId][serverUuid] = newClient
+    this.sessionToServers[sessionId].add(serverUuid)
 
     logger.info(
       `Created new active session for server ${serverUuid}, session ${sessionId}`,
-    );
+    )
 
     // Also create an idle session for future use (ASYNC - NON-BLOCKING)
-    this.createIdleSessionAsync(serverUuid, params, namespaceUuid);
+    this.createIdleSessionAsync(serverUuid, params, namespaceUuid)
 
-    return newClient;
+    return newClient
   }
 
   /**
@@ -154,20 +151,20 @@ export class McpServerPool {
     if (!this.canCreateConnection()) {
       logger.warn(
         `Skipping connection for server ${params.name} (${params.uuid}) - connection limit reached`,
-      );
-      return undefined;
+      )
+      return undefined
     }
 
     logger.info(
       `Creating new connection for server ${params.name} (${params.uuid}) with namespace: ${namespaceUuid || "none"}`,
-    );
+    )
 
     const connectedClient = await connectMetaMcpClient(
       params,
       (exitCode, signal) => {
         logger.info(
           `Crash handler callback called for server ${params.name} (${params.uuid}) with namespace: ${namespaceUuid || "none"}`,
-        );
+        )
 
         // Handle process crash - always set up crash handler
         if (namespaceUuid) {
@@ -181,8 +178,8 @@ export class McpServerPool {
             logger.error(
               `Error handling server crash for ${params.uuid} in ${namespaceUuid}:`,
               error,
-            );
-          });
+            )
+          })
         } else {
           // If no namespace context, still track the crash globally
           this.handleServerCrashWithoutNamespace(
@@ -193,16 +190,16 @@ export class McpServerPool {
             logger.error(
               `Error handling server crash for ${params.uuid} (no namespace):`,
               error,
-            );
-          });
+            )
+          })
         }
       },
-    );
+    )
     if (!connectedClient) {
-      return undefined;
+      return undefined
     }
 
-    return connectedClient;
+    return connectedClient
   }
 
   /**
@@ -218,25 +215,25 @@ export class McpServerPool {
       this.idleSessions[serverUuid] ||
       this.creatingIdleSessions.has(serverUuid)
     ) {
-      return;
+      return
     }
 
-    this.creatingIdleSessions.add(serverUuid);
+    this.creatingIdleSessions.add(serverUuid)
     try {
-      const newClient = await this.createNewConnection(params, namespaceUuid);
+      const newClient = await this.createNewConnection(params, namespaceUuid)
       if (newClient && !this.idleSessions[serverUuid]) {
-        this.idleSessions[serverUuid] = newClient;
-        logger.info(`Created idle session for server ${serverUuid}`);
+        this.idleSessions[serverUuid] = newClient
+        logger.info(`Created idle session for server ${serverUuid}`)
       } else if (newClient) {
         newClient.cleanup().catch((error) => {
           logger.error(
             `Error cleaning up extra idle session for ${serverUuid}:`,
             error,
-          );
-        });
+          )
+        })
       }
     } finally {
-      this.creatingIdleSessions.delete(serverUuid);
+      this.creatingIdleSessions.delete(serverUuid)
     }
   }
 
@@ -253,45 +250,45 @@ export class McpServerPool {
       this.idleSessions[serverUuid] ||
       this.creatingIdleSessions.has(serverUuid)
     ) {
-      return;
+      return
     }
 
     // Capture generation before async work to detect invalidation during await
-    const gen = this.idleSessionGenerations.get(serverUuid) ?? 0;
+    const gen = this.idleSessionGenerations.get(serverUuid) ?? 0
 
     // Mark that we're creating an idle session for this server
-    this.creatingIdleSessions.add(serverUuid);
+    this.creatingIdleSessions.add(serverUuid)
 
     // Create the session in the background (fire and forget)
     this.createNewConnection(params, namespaceUuid)
       .then((newClient) => {
-        const currentGen = this.idleSessionGenerations.get(serverUuid) ?? 0;
+        const currentGen = this.idleSessionGenerations.get(serverUuid) ?? 0
         if (currentGen !== gen) {
           // Generation changed — session was invalidated during creation
           if (newClient) {
             logger.info(
               `Discarding stale idle session for server ${serverUuid} (gen ${gen} → ${currentGen})`,
-            );
+            )
             newClient.cleanup().catch((error) => {
               logger.error(
                 `Error cleaning up stale idle session for ${serverUuid}:`,
                 error,
-              );
-            });
+              )
+            })
           }
-          return;
+          return
         }
 
         if (newClient && !this.idleSessions[serverUuid]) {
-          this.idleSessions[serverUuid] = newClient;
+          this.idleSessions[serverUuid] = newClient
           logger.info(
             `Created background idle session for server [${params.name}] ${serverUuid}`,
-          );
+          )
           if (namespaceUuid) {
             this.setBackgroundIdleSessionsByNamespace(
               namespaceUuid,
               new Map().set("status", "created"),
-            );
+            )
           }
         } else if (newClient) {
           // We already have an idle session, cleanup the extra one
@@ -299,23 +296,23 @@ export class McpServerPool {
             logger.error(
               `Error cleaning up extra idle session for ${serverUuid}:`,
               error,
-            );
-          });
+            )
+          })
         }
       })
       .catch((error) => {
         logger.error(
           `Error creating background idle session for ${serverUuid}:`,
           error,
-        );
+        )
       })
       .finally(() => {
         // Only remove from creating set if generation hasn't changed
-        const currentGen = this.idleSessionGenerations.get(serverUuid) ?? 0;
+        const currentGen = this.idleSessionGenerations.get(serverUuid) ?? 0
         if (currentGen === gen) {
-          this.creatingIdleSessions.delete(serverUuid);
+          this.creatingIdleSessions.delete(serverUuid)
         }
-      });
+      })
   }
 
   /**
@@ -328,53 +325,53 @@ export class McpServerPool {
     const promises = Object.entries(serverParams).map(
       async ([uuid, params]) => {
         if (!this.idleSessions[uuid]) {
-          await this.createIdleSession(uuid, params, namespaceUuid);
+          await this.createIdleSession(uuid, params, namespaceUuid)
         }
       },
-    );
+    )
 
-    await Promise.allSettled(promises);
+    await Promise.allSettled(promises)
   }
 
   /**
    * Cleanup a session by sessionId
    */
   async cleanupSession(sessionId: string): Promise<void> {
-    const activeSession = this.activeSessions[sessionId];
+    const activeSession = this.activeSessions[sessionId]
     if (!activeSession) {
-      return;
+      return
     }
 
     // Cleanup all connections for this session
     await Promise.allSettled(
       Object.entries(activeSession).map(async ([_serverUuid, client]) => {
-        await client.cleanup();
+        await client.cleanup()
       }),
-    );
+    )
 
     // Remove from active sessions
-    delete this.activeSessions[sessionId];
+    delete this.activeSessions[sessionId]
 
     // Clean up session timestamp
-    delete this.sessionTimestamps[sessionId];
+    delete this.sessionTimestamps[sessionId]
 
     // Clean up session to servers mapping
-    const serverUuids = this.sessionToServers[sessionId];
+    const serverUuids = this.sessionToServers[sessionId]
     if (serverUuids) {
       // For each server this session was using, create new idle sessions if needed (ASYNC - NON-BLOCKING)
       Array.from(serverUuids).forEach((serverUuid) => {
-        const params = this.serverParamsCache[serverUuid];
+        const params = this.serverParamsCache[serverUuid]
         if (params) {
           // Note: We don't have namespaceUuid here, so we can't track crashes properly
           // This is a limitation of the current design - we'll need to pass namespaceUuid from the caller
-          this.createIdleSessionAsync(serverUuid, params);
+          this.createIdleSessionAsync(serverUuid, params)
         }
-      });
+      })
 
-      delete this.sessionToServers[sessionId];
+      delete this.sessionToServers[sessionId]
     }
 
-    logger.info(`Cleaned up MCP server pool session ${sessionId}`);
+    logger.info(`Cleaned up MCP server pool session ${sessionId}`)
   }
 
   /**
@@ -386,84 +383,84 @@ export class McpServerPool {
       this.idleSessionGenerations.set(
         serverUuid,
         (this.idleSessionGenerations.get(serverUuid) ?? 0) + 1,
-      );
+      )
     }
 
     // Cleanup all active sessions
-    const activeSessionIds = Object.keys(this.activeSessions);
+    const activeSessionIds = Object.keys(this.activeSessions)
     await Promise.allSettled(
       activeSessionIds.map((sessionId) => this.cleanupSession(sessionId)),
-    );
+    )
 
     // Cleanup all idle sessions
     await Promise.allSettled(
       Object.entries(this.idleSessions).map(async ([_uuid, client]) => {
-        await client.cleanup();
+        await client.cleanup()
       }),
-    );
+    )
 
     // Clear all state
-    this.idleSessions = {};
-    this.activeSessions = {};
-    this.sessionToServers = {};
-    this.sessionTimestamps = {};
-    this.serverParamsCache = {};
-    this.creatingIdleSessions.clear();
+    this.idleSessions = {}
+    this.activeSessions = {}
+    this.sessionToServers = {}
+    this.sessionTimestamps = {}
+    this.serverParamsCache = {}
+    this.creatingIdleSessions.clear()
 
     // Clear cleanup timer
     if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
-      this.cleanupTimer = null;
+      clearInterval(this.cleanupTimer)
+      this.cleanupTimer = null
     }
 
-    logger.info("Cleaned up all MCP server pool sessions");
+    logger.info("Cleaned up all MCP server pool sessions")
   }
 
   /**
    * Get pool status for monitoring
    */
   getPoolStatus(): McpServerPoolStatus {
-    const idle = Object.keys(this.idleSessions).length;
+    const idle = Object.keys(this.idleSessions).length
     const active = Object.keys(this.activeSessions).reduce(
       (total, sessionId) =>
         total + Object.keys(this.activeSessions[sessionId]).length,
       0,
-    );
+    )
 
     return {
       idle,
       active,
       activeSessionIds: Object.keys(this.activeSessions),
       idleServerUuids: Object.keys(this.idleSessions),
-    };
+    }
   }
 
   /**
    * Get total connection count (idle + active + pending)
    */
   private getTotalConnectionCount(): number {
-    const idle = Object.keys(this.idleSessions).length;
+    const idle = Object.keys(this.idleSessions).length
     const active = Object.keys(this.activeSessions).reduce(
       (total, sessionId) =>
         total + Object.keys(this.activeSessions[sessionId]).length,
       0,
-    );
-    const pending = this.creatingIdleSessions.size;
-    return idle + active + pending;
+    )
+    const pending = this.creatingIdleSessions.size
+    return idle + active + pending
   }
 
   /**
    * Check if we can create a new connection (respects maxTotalConnections limit)
    */
   private canCreateConnection(): boolean {
-    const total = this.getTotalConnectionCount();
+    const total = this.getTotalConnectionCount()
     if (total >= this.maxTotalConnections) {
       logger.warn(
         `Connection limit reached: ${total}/${this.maxTotalConnections}. Refusing to create new connection.`,
-      );
-      return false;
+      )
+      return false
     }
-    return true;
+    return true
   }
 
   /**
@@ -472,21 +469,21 @@ export class McpServerPool {
   getSessionConnections(
     sessionId: string,
   ): Record<string, ConnectedClient> | undefined {
-    return this.activeSessions[sessionId];
+    return this.activeSessions[sessionId]
   }
 
   /**
    * Get all active session IDs (for debugging/monitoring)
    */
   getActiveSessionIds(): string[] {
-    return Object.keys(this.activeSessions);
+    return Object.keys(this.activeSessions)
   }
 
   /**
    * Get background idle sessions by namespace
    */
   getBackgroundIdleSessionsByNamespace(): Map<string, Map<string, string>> {
-    return this.backgroundIdleSessionsByNamespace;
+    return this.backgroundIdleSessionsByNamespace
   }
 
   /**
@@ -496,7 +493,7 @@ export class McpServerPool {
     namespaceUuid: string,
     options: Map<string, string>,
   ): void {
-    this.backgroundIdleSessionsByNamespace.set(namespaceUuid, options);
+    this.backgroundIdleSessionsByNamespace.set(namespaceUuid, options)
   }
 
   /**
@@ -508,39 +505,37 @@ export class McpServerPool {
     params: ServerParameters,
     namespaceUuid?: string,
   ): Promise<void> {
-    logger.info(`Invalidating idle session for server ${serverUuid}`);
+    logger.info(`Invalidating idle session for server ${serverUuid}`)
 
     // Bump generation before async work to invalidate any in-flight creation
     this.idleSessionGenerations.set(
       serverUuid,
       (this.idleSessionGenerations.get(serverUuid) ?? 0) + 1,
-    );
+    )
 
     // Update server params cache
-    this.serverParamsCache[serverUuid] = params;
+    this.serverParamsCache[serverUuid] = params
 
     // Cleanup existing idle session if it exists
-    const existingIdleSession = this.idleSessions[serverUuid];
+    const existingIdleSession = this.idleSessions[serverUuid]
     if (existingIdleSession) {
       try {
-        await existingIdleSession.cleanup();
-        logger.info(
-          `Cleaned up existing idle session for server ${serverUuid}`,
-        );
+        await existingIdleSession.cleanup()
+        logger.info(`Cleaned up existing idle session for server ${serverUuid}`)
       } catch (error) {
         logger.error(
           `Error cleaning up existing idle session for server ${serverUuid}:`,
           error,
-        );
+        )
       }
-      delete this.idleSessions[serverUuid];
+      delete this.idleSessions[serverUuid]
     }
 
     // Remove from creating set if it's in progress
-    this.creatingIdleSessions.delete(serverUuid);
+    this.creatingIdleSessions.delete(serverUuid)
 
     // Create a new idle session with updated parameters
-    await this.createIdleSession(serverUuid, params, namespaceUuid);
+    await this.createIdleSession(serverUuid, params, namespaceUuid)
   }
 
   /**
@@ -552,9 +547,9 @@ export class McpServerPool {
   ): Promise<void> {
     const promises = Object.entries(serverParams).map(([serverUuid, params]) =>
       this.invalidateIdleSession(serverUuid, params, namespaceUuid),
-    );
+    )
 
-    await Promise.allSettled(promises);
+    await Promise.allSettled(promises)
   }
 
   /**
@@ -562,34 +557,34 @@ export class McpServerPool {
    * This should be called when a server is being deleted
    */
   async cleanupIdleSession(serverUuid: string): Promise<void> {
-    logger.info(`Cleaning up idle session for server ${serverUuid}`);
+    logger.info(`Cleaning up idle session for server ${serverUuid}`)
 
     // Bump generation before async work to invalidate any in-flight creation
     this.idleSessionGenerations.set(
       serverUuid,
       (this.idleSessionGenerations.get(serverUuid) ?? 0) + 1,
-    );
+    )
 
     // Cleanup existing idle session if it exists
-    const existingIdleSession = this.idleSessions[serverUuid];
+    const existingIdleSession = this.idleSessions[serverUuid]
     if (existingIdleSession) {
       try {
-        await existingIdleSession.cleanup();
-        logger.info(`Cleaned up idle session for server ${serverUuid}`);
+        await existingIdleSession.cleanup()
+        logger.info(`Cleaned up idle session for server ${serverUuid}`)
       } catch (error) {
         logger.error(
           `Error cleaning up idle session for server ${serverUuid}:`,
           error,
-        );
+        )
       }
-      delete this.idleSessions[serverUuid];
+      delete this.idleSessions[serverUuid]
     }
 
     // Remove from creating set if it's in progress
-    this.creatingIdleSessions.delete(serverUuid);
+    this.creatingIdleSessions.delete(serverUuid)
 
     // Remove from server params cache
-    delete this.serverParamsCache[serverUuid];
+    delete this.serverParamsCache[serverUuid]
   }
 
   /**
@@ -601,17 +596,17 @@ export class McpServerPool {
     params: ServerParameters,
     namespaceUuid?: string,
   ): Promise<void> {
-    logger.info(`Ensuring idle session exists for new server ${serverUuid}`);
+    logger.info(`Ensuring idle session exists for new server ${serverUuid}`)
 
     // Update server params cache
-    this.serverParamsCache[serverUuid] = params;
+    this.serverParamsCache[serverUuid] = params
 
     // Only create if we don't already have one
     if (
       !this.idleSessions[serverUuid] &&
       !this.creatingIdleSessions.has(serverUuid)
     ) {
-      await this.createIdleSession(serverUuid, params, namespaceUuid);
+      await this.createIdleSession(serverUuid, params, namespaceUuid)
     }
   }
 
@@ -626,13 +621,13 @@ export class McpServerPool {
   ): Promise<void> {
     logger.warn(
       `Handling server crash for ${serverUuid} in namespace ${namespaceUuid}`,
-    );
+    )
 
     // Record the crash in the error tracker
-    await serverErrorTracker.recordServerCrash(serverUuid, exitCode, signal);
+    await serverErrorTracker.recordServerCrash(serverUuid, exitCode, signal)
 
     // Clean up any existing sessions for this server
-    await this.cleanupServerSessions(serverUuid);
+    await this.cleanupServerSessions(serverUuid)
   }
 
   /**
@@ -646,14 +641,14 @@ export class McpServerPool {
   ): Promise<void> {
     logger.warn(
       `Handling server crash for ${serverUuid} (no namespace context)`,
-    );
+    )
 
     // Record the crash in the error tracker
-    logger.info(`Recording crash for server ${serverUuid}`);
-    await serverErrorTracker.recordServerCrash(serverUuid, exitCode, signal);
+    logger.info(`Recording crash for server ${serverUuid}`)
+    await serverErrorTracker.recordServerCrash(serverUuid, exitCode, signal)
 
     // Clean up any existing sessions for this server
-    await this.cleanupServerSessions(serverUuid);
+    await this.cleanupServerSessions(serverUuid)
   }
 
   /**
@@ -664,21 +659,21 @@ export class McpServerPool {
     this.idleSessionGenerations.set(
       serverUuid,
       (this.idleSessionGenerations.get(serverUuid) ?? 0) + 1,
-    );
+    )
 
     // Clean up idle session
-    const idleSession = this.idleSessions[serverUuid];
+    const idleSession = this.idleSessions[serverUuid]
     if (idleSession) {
       try {
-        await idleSession.cleanup();
-        logger.info(`Cleaned up idle session for crashed server ${serverUuid}`);
+        await idleSession.cleanup()
+        logger.info(`Cleaned up idle session for crashed server ${serverUuid}`)
       } catch (error) {
         logger.error(
           `Error cleaning up idle session for crashed server ${serverUuid}:`,
           error,
-        );
+        )
       }
-      delete this.idleSessions[serverUuid];
+      delete this.idleSessions[serverUuid]
     }
 
     // Clean up active sessions that use this server
@@ -687,30 +682,30 @@ export class McpServerPool {
     )) {
       if (sessionServers[serverUuid]) {
         try {
-          await sessionServers[serverUuid].cleanup();
+          await sessionServers[serverUuid].cleanup()
           logger.info(
             `Cleaned up active session ${sessionId} for crashed server ${serverUuid}`,
-          );
+          )
         } catch (error) {
           logger.error(
             `Error cleaning up active session ${sessionId} for crashed server ${serverUuid}:`,
             error,
-          );
+          )
         }
-        delete sessionServers[serverUuid];
-        this.sessionToServers[sessionId]?.delete(serverUuid);
+        delete sessionServers[serverUuid]
+        this.sessionToServers[sessionId]?.delete(serverUuid)
       }
     }
 
     // Remove from creating set
-    this.creatingIdleSessions.delete(serverUuid);
+    this.creatingIdleSessions.delete(serverUuid)
   }
 
   /**
    * Check if a server is in error state
    */
   async isServerInErrorState(serverUuid: string): Promise<boolean> {
-    return await serverErrorTracker.isServerInErrorState(serverUuid);
+    return await serverErrorTracker.isServerInErrorState(serverUuid)
   }
 
   /**
@@ -718,9 +713,9 @@ export class McpServerPool {
    */
   async resetServerErrorState(serverUuid: string): Promise<void> {
     // Reset crash attempts and error status
-    await serverErrorTracker.resetServerErrorState(serverUuid);
+    await serverErrorTracker.resetServerErrorState(serverUuid)
 
-    logger.info(`Reset error state for server ${serverUuid}`);
+    logger.info(`Reset error state for server ${serverUuid}`)
   }
 
   /**
@@ -730,10 +725,10 @@ export class McpServerPool {
     // Check for expired sessions every 5 minutes
     this.cleanupTimer = setInterval(
       async () => {
-        await this.cleanupExpiredSessions();
+        await this.cleanupExpiredSessions()
       },
       5 * 60 * 1000,
-    ); // 5 minutes
+    ) // 5 minutes
   }
 
   /**
@@ -741,22 +736,22 @@ export class McpServerPool {
    */
   private async cleanupExpiredSessions(): Promise<void> {
     try {
-      const sessionLifetime = await configService.getSessionLifetime();
+      const sessionLifetime = await configService.getSessionLifetime()
 
       // If session lifetime is null, sessions are infinite - skip cleanup
       if (sessionLifetime === null) {
-        return;
+        return
       }
 
-      const now = Date.now();
-      const expiredSessionIds: string[] = [];
+      const now = Date.now()
+      const expiredSessionIds: string[] = []
 
       // Find expired sessions
       for (const [sessionId, timestamp] of Object.entries(
         this.sessionTimestamps,
       )) {
         if (now - timestamp > sessionLifetime) {
-          expiredSessionIds.push(sessionId);
+          expiredSessionIds.push(sessionId)
         }
       }
 
@@ -764,14 +759,14 @@ export class McpServerPool {
       if (expiredSessionIds.length > 0) {
         logger.info(
           `Cleaning up ${expiredSessionIds.length} expired MCP server pool sessions: ${expiredSessionIds.join(", ")}`,
-        );
+        )
 
         await Promise.allSettled(
           expiredSessionIds.map((sessionId) => this.cleanupSession(sessionId)),
-        );
+        )
       }
     } catch (error) {
-      logger.error("Error during automatic session cleanup:", error);
+      logger.error("Error during automatic session cleanup:", error)
     }
   }
 
@@ -779,22 +774,22 @@ export class McpServerPool {
    * Get session age in milliseconds
    */
   getSessionAge(sessionId: string): number | undefined {
-    const timestamp = this.sessionTimestamps[sessionId];
-    return timestamp ? Date.now() - timestamp : undefined;
+    const timestamp = this.sessionTimestamps[sessionId]
+    return timestamp ? Date.now() - timestamp : undefined
   }
 
   /**
    * Check if a session is expired
    */
   async isSessionExpired(sessionId: string): Promise<boolean> {
-    const age = this.getSessionAge(sessionId);
-    if (age === undefined) return false;
+    const age = this.getSessionAge(sessionId)
+    if (age === undefined) return false
 
-    const sessionLifetime = await configService.getSessionLifetime();
-    if (sessionLifetime === null) return false; // infinite sessions
-    return age > sessionLifetime;
+    const sessionLifetime = await configService.getSessionLifetime()
+    if (sessionLifetime === null) return false // infinite sessions
+    return age > sessionLifetime
   }
 }
 
 // Create a singleton instance
-export const mcpServerPool = McpServerPool.getInstance();
+export const mcpServerPool = McpServerPool.getInstance()

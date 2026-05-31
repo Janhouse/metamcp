@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import { Root } from "@modelcontextprotocol/sdk/types.js";
+import type { Root } from "@modelcontextprotocol/sdk/types.js"
 import {
   AlertTriangle,
   Folder,
@@ -8,28 +8,28 @@ import {
   Minus,
   Plus,
   RefreshCw,
-} from "lucide-react";
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
+} from "lucide-react"
+import { useCallback, useState } from "react"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 interface InspectorRootsProps {
-  enabled?: boolean;
+  enabled?: boolean
 }
 
 export function InspectorRoots({ enabled = true }: InspectorRootsProps) {
-  const [roots, setRoots] = useState<Root[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [customRoots, setCustomRoots] = useState<Root[]>([]);
-  const [newRootUri, setNewRootUri] = useState("");
-  const [newRootName, setNewRootName] = useState("");
+  const [roots, setRoots] = useState<Root[]>([])
+  const [loading, setLoading] = useState(false)
+  const [customRoots, setCustomRoots] = useState<Root[]>([])
+  const [newRootUri, setNewRootUri] = useState("")
+  const [newRootName, setNewRootName] = useState("")
 
   const fetchRoots = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled) return
 
-    setLoading(true);
+    setLoading(true)
     try {
       // Note: The MCP protocol doesn't have a standard roots/list method
       // The official inspector handles this differently - roots are typically
@@ -38,44 +38,44 @@ export function InspectorRoots({ enabled = true }: InspectorRootsProps) {
       // For now, we'll show a placeholder that explains this
       console.log(
         "Roots fetching - this is managed through server notifications",
-      );
-      setRoots([]);
+      )
+      setRoots([])
     } catch (_error) {
-      console.log("Roots listing not supported (this is expected)");
-      setRoots([]);
+      console.log("Roots listing not supported (this is expected)")
+      setRoots([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [enabled]);
+  }, [enabled])
 
   const refreshRoots = () => {
     // Refresh the roots list by calling fetchRoots again
-    fetchRoots();
-    toast.success("Refreshing roots list");
-  };
+    fetchRoots()
+    toast.success("Refreshing roots list")
+  }
 
   const addCustomRoot = () => {
     if (!newRootUri.trim()) {
-      toast.error("Please enter a root URI");
-      return;
+      toast.error("Please enter a root URI")
+      return
     }
 
     const newRoot: Root = {
       uri: newRootUri.trim(),
       name: newRootName.trim() || undefined,
-    };
+    }
 
-    setCustomRoots((prev) => [...prev, newRoot]);
-    setNewRootUri("");
-    setNewRootName("");
-    toast.success(`Added custom root: ${newRoot.uri}`);
-  };
+    setCustomRoots((prev) => [...prev, newRoot])
+    setNewRootUri("")
+    setNewRootName("")
+    toast.success(`Added custom root: ${newRoot.uri}`)
+  }
 
   const removeCustomRoot = (index: number) => {
-    const root = customRoots[index];
-    setCustomRoots((prev) => prev.filter((_, i) => i !== index));
-    toast.success(`Removed custom root: ${root?.uri}`);
-  };
+    const root = customRoots[index]
+    setCustomRoots((prev) => prev.filter((_, i) => i !== index))
+    toast.success(`Removed custom root: ${root?.uri}`)
+  }
 
   // Roots are loaded manually by clicking the button
   // useEffect(() => {
@@ -83,25 +83,25 @@ export function InspectorRoots({ enabled = true }: InspectorRootsProps) {
   // }, [fetchRoots]);
 
   const getRootDisplayName = (root: Root) => {
-    return root.name || root.uri.split("/").pop() || root.uri;
-  };
+    return root.name || root.uri.split("/").pop() || root.uri
+  }
 
   const getRootIcon = (uri: string) => {
     if (uri.startsWith("file://")) {
-      return Folder;
+      return Folder
     }
-    return FolderTree;
-  };
+    return FolderTree
+  }
 
   const getRootType = (uri: string) => {
-    if (uri.startsWith("file://")) return "File System";
-    if (uri.startsWith("http://") || uri.startsWith("https://")) return "HTTP";
-    if (uri.startsWith("ftp://")) return "FTP";
-    if (uri.startsWith("sftp://")) return "SFTP";
-    return "Other";
-  };
+    if (uri.startsWith("file://")) return "File System"
+    if (uri.startsWith("http://") || uri.startsWith("https://")) return "HTTP"
+    if (uri.startsWith("ftp://")) return "FTP"
+    if (uri.startsWith("sftp://")) return "SFTP"
+    return "Other"
+  }
 
-  const allRoots = [...roots, ...customRoots];
+  const allRoots = [...roots, ...customRoots]
 
   if (!enabled) {
     return (
@@ -112,7 +112,7 @@ export function InspectorRoots({ enabled = true }: InspectorRootsProps) {
           This MCP server doesn&apos;t support root listing.
         </p>
       </div>
-    );
+    )
   }
 
   return (
@@ -187,8 +187,8 @@ export function InspectorRoots({ enabled = true }: InspectorRootsProps) {
         ) : (
           <div className="space-y-2">
             {allRoots.map((root, index) => {
-              const RootIcon = getRootIcon(root.uri);
-              const isCustom = index >= roots.length;
+              const RootIcon = getRootIcon(root.uri)
+              const isCustom = index >= roots.length
               return (
                 <div
                   key={`${root.uri}-${index}`}
@@ -242,7 +242,7 @@ export function InspectorRoots({ enabled = true }: InspectorRootsProps) {
                     )}
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         )}
@@ -271,5 +271,5 @@ export function InspectorRoots({ enabled = true }: InspectorRootsProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -8,9 +8,9 @@ export const INSECURE_DEFAULT_AUTH_SECRETS = new Set<string>([
   "change-this-in-production",
   "secret",
   "changeme",
-]);
+])
 
-const MIN_AUTH_SECRET_LENGTH = 16;
+const MIN_AUTH_SECRET_LENGTH = 16
 
 /**
  * Validate BETTER_AUTH_SECRET. Throws when it is missing, a well-known
@@ -19,19 +19,19 @@ const MIN_AUTH_SECRET_LENGTH = 16;
  */
 export function assertSecureAuthSecret(secret: string | undefined): string {
   if (!secret) {
-    throw new Error("BETTER_AUTH_SECRET environment variable is required");
+    throw new Error("BETTER_AUTH_SECRET environment variable is required")
   }
   if (INSECURE_DEFAULT_AUTH_SECRETS.has(secret)) {
     throw new Error(
       "BETTER_AUTH_SECRET is set to a well-known default value. Set a unique, " +
         "randomly generated secret (e.g. `openssl rand -base64 48`).",
-    );
+    )
   }
   if (secret.length < MIN_AUTH_SECRET_LENGTH) {
     throw new Error(
       `BETTER_AUTH_SECRET is too short (min ${MIN_AUTH_SECRET_LENGTH} chars). ` +
         "Generate a strong value, e.g. `openssl rand -base64 48`.",
-    );
+    )
   }
-  return secret;
+  return secret
 }

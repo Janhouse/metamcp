@@ -1,4 +1,4 @@
-import type { Response } from "express";
+import type { Response } from "express"
 
 /**
  * Send a client-safe error response. Never serializes the raw Error object
@@ -11,6 +11,6 @@ export function sendSafeError(
   status: number,
   message: string,
 ): void {
-  if (res.headersSent) return;
-  res.status(status).json({ error: message });
+  if (res.headersSent) return
+  res.status(status).json({ error: message })
 }

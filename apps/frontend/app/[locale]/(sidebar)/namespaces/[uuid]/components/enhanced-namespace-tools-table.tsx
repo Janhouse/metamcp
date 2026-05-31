@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import { NamespaceTool, ToolStatusEnum } from "@repo/zod-types";
+import { type NamespaceTool, ToolStatusEnum } from "@repo/zod-types"
 import {
   Braces,
   Calendar,
@@ -20,22 +20,22 @@ import {
   Server,
   Wrench,
   X,
-} from "lucide-react";
-import Link from "next/link";
-import React, { useMemo, useState } from "react";
-import { toast } from "sonner";
+} from "lucide-react"
+import Link from "next/link"
+import React, { useMemo, useState } from "react"
+import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CodeBlock } from "@/components/ui/code-block";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { CodeBlock } from "@/components/ui/code-block"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import {
   Table,
   TableBody,
@@ -43,91 +43,86 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useTranslations } from "@/hooks/useTranslations";
-import { parseToolName } from "@/lib/tool-name-parser";
-import { trpc } from "@/lib/trpc";
+} from "@/components/ui/tooltip"
+import { useTranslations } from "@/hooks/useTranslations"
+import { parseToolName } from "@/lib/tool-name-parser"
+import { trpc } from "@/lib/trpc"
 
 // MCP Tool type from MetaMCP
 interface MCPTool {
-  name: string; // Contains "ServerName__toolName" format
-  title?: string;
-  description?: string;
-  inputSchema: Record<string, unknown>;
+  name: string // Contains "ServerName__toolName" format
+  title?: string
+  description?: string
+  inputSchema: Record<string, unknown>
 }
 
 // Enhanced tool type that combines saved and MCP tools
 interface EnhancedNamespaceTool {
   // Common fields
-  name: string; // The actual tool name (without server prefix)
-  description?: string | null;
-  title?: string | null;
-  toolSchema?: Record<string, unknown>;
-  inputSchema?: Record<string, unknown>;
-  annotations?: Record<string, unknown> | null;
+  name: string // The actual tool name (without server prefix)
+  description?: string | null
+  title?: string | null
+  toolSchema?: Record<string, unknown>
+  inputSchema?: Record<string, unknown>
+  annotations?: Record<string, unknown> | null
 
   // Saved tool specific fields
-  uuid?: string;
-  created_at?: string;
-  updated_at?: string;
-  mcp_server_uuid?: string;
-  status?: string;
-  serverName?: string;
-  serverUuid?: string;
+  uuid?: string
+  created_at?: string
+  updated_at?: string
+  mcp_server_uuid?: string
+  status?: string
+  serverName?: string
+  serverUuid?: string
 
   // Override fields
-  overrideName?: string | null;
-  overrideTitle?: string | null;
-  overrideDescription?: string | null;
-  overrideAnnotations?: Record<string, unknown> | null;
+  overrideName?: string | null
+  overrideTitle?: string | null
+  overrideDescription?: string | null
+  overrideAnnotations?: Record<string, unknown> | null
 
   // Source tracking
   sources: {
-    metamcp: boolean;
-    saved: boolean;
-  };
-  isTemporary?: boolean; // For tools that are fetched from MetaMCP but not yet saved
+    metamcp: boolean
+    saved: boolean
+  }
+  isTemporary?: boolean // For tools that are fetched from MetaMCP but not yet saved
 }
 
 interface EnhancedNamespaceToolsTableProps {
-  savedTools: NamespaceTool[];
-  mcpTools: MCPTool[];
-  loading?: boolean;
-  autoSaving?: boolean;
-  onRefreshTools?: () => void;
-  namespaceUuid: string;
+  savedTools: NamespaceTool[]
+  mcpTools: MCPTool[]
+  loading?: boolean
+  autoSaving?: boolean
+  onRefreshTools?: () => void
+  namespaceUuid: string
   servers: Array<{
-    uuid: string;
-    name: string;
-    status: string;
-  }>;
-  sessionInitializing?: boolean;
+    uuid: string
+    name: string
+    status: string
+  }>
+  sessionInitializing?: boolean
 }
 
-type SortField =
-  | "name"
-  | "serverName"
-  | "status"
-  | "description"
-  | "updated_at";
-type SortDirection = "asc" | "desc";
+type SortField = "name" | "serverName" | "status" | "description" | "updated_at"
+type SortDirection = "asc" | "desc"
 
 type OverrideDraft = {
-  name?: string;
-  title?: string;
-  description?: string;
-  annotations?: string;
-};
+  name?: string
+  title?: string
+  description?: string
+  annotations?: string
+}
 
 const formatAnnotations = (annotations?: Record<string, unknown> | null) => {
-  return annotations ? JSON.stringify(annotations, null, 2) : "";
-};
+  return annotations ? JSON.stringify(annotations, null, 2) : ""
+}
 
 export function EnhancedNamespaceToolsTable({
   savedTools,
@@ -139,170 +134,164 @@ export function EnhancedNamespaceToolsTable({
   servers,
   sessionInitializing = false,
 }: EnhancedNamespaceToolsTableProps) {
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [searchTerm, setSearchTerm] = useState<string>("")
+  const [sortField, setSortField] = useState<SortField>("name")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const [editingOverrides, setEditingOverrides] = useState<Set<string>>(
     new Set(),
-  );
+  )
   const [tempOverrides, setTempOverrides] = useState<
     Map<string, OverrideDraft>
-  >(new Map());
+  >(new Map())
 
   // Get translations
-  const { t } = useTranslations();
+  const { t } = useTranslations()
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Use namespace-specific tool status update mutation
   const updateToolStatusMutation =
     trpc.frontend.namespaces.updateToolStatus.useMutation({
       onSuccess: (response) => {
         if (response.success) {
-          toast.success(t("namespaces:enhancedToolsTable.toolStatusUpdated"));
+          toast.success(t("namespaces:enhancedToolsTable.toolStatusUpdated"))
           // Invalidate the namespace tools query to refresh the data
-          utils.frontend.namespaces.getTools.invalidate({ namespaceUuid });
+          utils.frontend.namespaces.getTools.invalidate({ namespaceUuid })
         } else {
-          toast.error(
-            t("namespaces:enhancedToolsTable.toolStatusUpdateFailed"),
-          );
+          toast.error(t("namespaces:enhancedToolsTable.toolStatusUpdateFailed"))
         }
       },
       onError: (error) => {
-        console.error("Error updating tool status:", error);
+        console.error("Error updating tool status:", error)
         toast.error(t("namespaces:enhancedToolsTable.toolStatusUpdateFailed"), {
           description: error.message,
-        });
+        })
       },
-    });
+    })
 
   // Use namespace-specific tool overrides update mutation
   const updateToolOverridesMutation =
     trpc.frontend.namespaces.updateToolOverrides.useMutation({
       onSuccess: (response) => {
         if (response.success) {
-          toast.success(
-            t("namespaces:enhancedToolsTable.toolOverridesUpdated"),
-          );
+          toast.success(t("namespaces:enhancedToolsTable.toolOverridesUpdated"))
           // Invalidate the namespace tools query to refresh the data
-          utils.frontend.namespaces.getTools.invalidate({ namespaceUuid });
+          utils.frontend.namespaces.getTools.invalidate({ namespaceUuid })
         } else {
           toast.error(
             t("namespaces:enhancedToolsTable.toolOverridesUpdateFailed"),
-          );
+          )
         }
       },
       onError: (error) => {
-        console.error("Error updating tool overrides:", error);
+        console.error("Error updating tool overrides:", error)
         toast.error(
           t("namespaces:enhancedToolsTable.toolOverridesUpdateFailed"),
           {
             description: error.message,
           },
-        );
+        )
       },
-    });
+    })
 
   // Combine and enhance tools from both sources
   const enhancedTools: EnhancedNamespaceTool[] = useMemo(() => {
-    const toolMap = new Map<string, EnhancedNamespaceTool>();
+    const toolMap = new Map<string, EnhancedNamespaceTool>()
 
     // Create a map of server names to their status for quick lookup
-    const serverStatusMap = new Map<string, string>();
+    const serverStatusMap = new Map<string, string>()
     servers.forEach((server) => {
-      serverStatusMap.set(server.name, server.status);
-    });
+      serverStatusMap.set(server.name, server.status)
+    })
 
     // Helper function to create a unique key for tools (toolName + serverName)
     const createToolKey = (toolName: string, serverName: string) => {
-      return `${serverName}__${toolName}`;
-    };
+      return `${serverName}__${toolName}`
+    }
 
     // First, add all saved tools, but only if their server is active
     savedTools.forEach((tool) => {
-      const serverStatus = serverStatusMap.get(tool.serverName);
+      const serverStatus = serverStatusMap.get(tool.serverName)
       // Only include tools from active servers
       if (serverStatus === "ACTIVE") {
-        const toolKey = createToolKey(tool.name, tool.serverName);
+        const toolKey = createToolKey(tool.name, tool.serverName)
         toolMap.set(toolKey, {
           ...tool,
           sources: {
             metamcp: false, // Will be set to true only if currently available from MetaMCP
             saved: true,
           },
-        });
+        })
       }
-    });
+    })
 
     // Get list of actual server names from saved tools for validation
-    const actualServerNames = new Set(
-      savedTools.map((tool) => tool.serverName),
-    );
+    const actualServerNames = new Set(savedTools.map((tool) => tool.serverName))
 
     // Then, add or update with MetaMCP tools, but only if their server is active
     mcpTools.forEach((mcpTool) => {
       // Parse the tool name using shared utility
-      const parsed = parseToolName(mcpTool.name);
+      const parsed = parseToolName(mcpTool.name)
       if (!parsed) {
-        console.warn(`Invalid tool name format: ${mcpTool.name}`);
-        return;
+        console.warn(`Invalid tool name format: ${mcpTool.name}`)
+        return
       }
 
-      let { serverName, originalToolName: toolName } = parsed;
+      let { serverName, originalToolName: toolName } = parsed
 
       // Store the original parsed values for deduplication check
-      const originalParsedServerName = serverName;
-      const originalParsedToolName = toolName;
+      const originalParsedServerName = serverName
+      const originalParsedToolName = toolName
 
       // Handle nested MetaMCP scenarios
       // If the extracted server name doesn't exist in our actual servers list,
       // it might be a nested MetaMCP name like "ParentServer__ChildServer"
       if (!actualServerNames.has(serverName) && serverName.includes("__")) {
-        const firstDoubleUnderscoreIndex = serverName.indexOf("__");
+        const firstDoubleUnderscoreIndex = serverName.indexOf("__")
         const actualServerName = serverName.substring(
           0,
           firstDoubleUnderscoreIndex,
-        );
+        )
 
         if (actualServerNames.has(actualServerName)) {
           // This is a nested MetaMCP tool - adjust parsing
           const nestedPart = serverName.substring(
             firstDoubleUnderscoreIndex + 2,
-          );
-          serverName = actualServerName;
-          toolName = `${nestedPart}__${toolName}`;
+          )
+          serverName = actualServerName
+          toolName = `${nestedPart}__${toolName}`
         }
       }
 
       // Check if the server for this tool is explicitly inactive
-      const serverStatus = serverStatusMap.get(serverName);
+      const serverStatus = serverStatusMap.get(serverName)
       if (serverStatus === "INACTIVE") {
         // Skip tools from explicitly inactive servers
-        return;
+        return
       }
 
-      const toolKey = createToolKey(toolName, serverName);
-      const existingTool = toolMap.get(toolKey);
+      const toolKey = createToolKey(toolName, serverName)
+      const existingTool = toolMap.get(toolKey)
 
       if (existingTool) {
         // Tool exists in saved tools, mark it as currently available in MetaMCP
-        existingTool.sources.metamcp = true;
+        existingTool.sources.metamcp = true
         // Update MetaMCP-specific fields if available
         if (mcpTool.inputSchema) {
-          existingTool.inputSchema = mcpTool.inputSchema;
+          existingTool.inputSchema = mcpTool.inputSchema
         }
         if (mcpTool.description && !existingTool.description) {
-          existingTool.description = mcpTool.description;
+          existingTool.description = mcpTool.description
         }
         if (typeof mcpTool.title === "string") {
-          existingTool.title = mcpTool.title;
+          existingTool.title = mcpTool.title
         }
       } else {
         // Check if this MCP tool name matches any existing tool's override name
         // Use the ORIGINAL parsed values before nested modifications for this check
-        let isOverrideOfExistingTool = false;
+        let isOverrideOfExistingTool = false
         for (const [, existingTool] of toolMap) {
           if (
             existingTool.serverName === originalParsedServerName &&
@@ -310,18 +299,18 @@ export function EnhancedNamespaceToolsTable({
           ) {
             // This MCP tool is actually the override name of an existing saved tool
             // Mark the existing tool as available in MetaMCP and skip adding this duplicate
-            existingTool.sources.metamcp = true;
+            existingTool.sources.metamcp = true
             if (mcpTool.inputSchema) {
-              existingTool.inputSchema = mcpTool.inputSchema;
+              existingTool.inputSchema = mcpTool.inputSchema
             }
             if (mcpTool.description && !existingTool.description) {
-              existingTool.description = mcpTool.description;
+              existingTool.description = mcpTool.description
             }
             if (typeof mcpTool.title === "string") {
-              existingTool.title = mcpTool.title;
+              existingTool.title = mcpTool.title
             }
-            isOverrideOfExistingTool = true;
-            break;
+            isOverrideOfExistingTool = true
+            break
           }
         }
 
@@ -338,38 +327,38 @@ export function EnhancedNamespaceToolsTable({
               saved: false,
             },
             isTemporary: true,
-          });
+          })
         }
       }
-    });
+    })
 
-    return Array.from(toolMap.values());
-  }, [savedTools, mcpTools, servers]);
+    return Array.from(toolMap.values())
+  }, [savedTools, mcpTools, servers])
 
   // Handle status toggle (only for saved tools)
   const handleStatusToggle = async (tool: EnhancedNamespaceTool) => {
     if (!tool.sources.saved || !tool.uuid || !tool.serverUuid) {
-      toast.error(t("namespaces:enhancedToolsTable.cannotToggleStatus"));
-      return;
+      toast.error(t("namespaces:enhancedToolsTable.cannotToggleStatus"))
+      return
     }
 
     // Don't allow toggles during session initialization
     if (sessionInitializing || updateToolStatusMutation.isPending) {
-      return;
+      return
     }
 
     const newStatus =
       tool.status === ToolStatusEnum.enum.ACTIVE
         ? ToolStatusEnum.enum.INACTIVE
-        : ToolStatusEnum.enum.ACTIVE;
+        : ToolStatusEnum.enum.ACTIVE
 
     updateToolStatusMutation.mutate({
       namespaceUuid,
       toolUuid: tool.uuid,
       serverUuid: tool.serverUuid,
       status: newStatus,
-    });
-  };
+    })
+  }
 
   // Handle tool overrides update (only for saved tools)
   const handleOverridesUpdate = async (
@@ -380,13 +369,13 @@ export function EnhancedNamespaceToolsTable({
     overrideAnnotations?: Record<string, unknown> | null,
   ) => {
     if (!tool.sources.saved || !tool.uuid || !tool.serverUuid) {
-      toast.error(t("namespaces:enhancedToolsTable.cannotUpdateOverrides"));
-      return;
+      toast.error(t("namespaces:enhancedToolsTable.cannotUpdateOverrides"))
+      return
     }
 
     // Don't allow updates during session initialization
     if (sessionInitializing || updateToolOverridesMutation.isPending) {
-      return;
+      return
     }
 
     updateToolOverridesMutation.mutate({
@@ -397,15 +386,15 @@ export function EnhancedNamespaceToolsTable({
       overrideTitle,
       overrideDescription,
       overrideAnnotations,
-    });
-  };
+    })
+  }
 
   // Handle editing overrides
   const startEditingOverrides = (
     toolId: string,
     tool: EnhancedNamespaceTool,
   ) => {
-    setEditingOverrides((prev) => new Set(prev).add(toolId));
+    setEditingOverrides((prev) => new Set(prev).add(toolId))
     setTempOverrides((prev) =>
       new Map(prev).set(toolId, {
         name: tool.overrideName ?? tool.name ?? "",
@@ -413,62 +402,60 @@ export function EnhancedNamespaceToolsTable({
         description: tool.overrideDescription ?? tool.description ?? "",
         annotations: formatAnnotations(tool.overrideAnnotations),
       }),
-    );
+    )
 
     // Auto-expand the row when starting to edit overrides
-    setExpandedRows((prev) => new Set(prev).add(toolId));
-  };
+    setExpandedRows((prev) => new Set(prev).add(toolId))
+  }
 
   const cancelEditingOverrides = (toolId: string) => {
     setEditingOverrides((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(toolId);
-      return newSet;
-    });
+      const newSet = new Set(prev)
+      newSet.delete(toolId)
+      return newSet
+    })
     setTempOverrides((prev) => {
-      const newMap = new Map(prev);
-      newMap.delete(toolId);
-      return newMap;
-    });
-  };
+      const newMap = new Map(prev)
+      newMap.delete(toolId)
+      return newMap
+    })
+  }
 
   const saveOverrides = async (toolId: string, tool: EnhancedNamespaceTool) => {
-    const overrides = tempOverrides.get(toolId);
-    if (!overrides) return;
+    const overrides = tempOverrides.get(toolId)
+    if (!overrides) return
 
     // Determine if we should clear overrides (set to null) or keep them
     // Clear name override if it matches the original name or is empty
-    const trimmedName = overrides.name?.trim() ?? "";
+    const trimmedName = overrides.name?.trim() ?? ""
     const shouldClearName =
-      trimmedName === "" || trimmedName === (tool.name || "");
+      trimmedName === "" || trimmedName === (tool.name || "")
 
-    const trimmedTitle = overrides.title?.trim() ?? "";
-    const originalTitle = (tool.title ?? tool.name ?? "").trim();
+    const trimmedTitle = overrides.title?.trim() ?? ""
+    const originalTitle = (tool.title ?? tool.name ?? "").trim()
     const shouldClearTitle =
-      trimmedTitle === "" || trimmedTitle === originalTitle;
+      trimmedTitle === "" || trimmedTitle === originalTitle
 
     // Clear description override only if it exactly matches the original description
     // This allows users to set empty string as an override (to remove description)
-    const shouldClearDescription = overrides.description === tool.description;
+    const shouldClearDescription = overrides.description === tool.description
 
-    const originalAnnotationsText = formatAnnotations(tool.annotations);
-    const initialAnnotationsText = formatAnnotations(tool.overrideAnnotations);
+    const originalAnnotationsText = formatAnnotations(tool.annotations)
+    const initialAnnotationsText = formatAnnotations(tool.overrideAnnotations)
     const currentAnnotationsText =
-      overrides.annotations ?? initialAnnotationsText;
-    const annotationsChanged =
-      currentAnnotationsText !== initialAnnotationsText;
+      overrides.annotations ?? initialAnnotationsText
+    const annotationsChanged = currentAnnotationsText !== initialAnnotationsText
     const matchesOriginalAnnotations =
-      currentAnnotationsText === originalAnnotationsText;
+      currentAnnotationsText === originalAnnotationsText
 
-    let overrideAnnotationsPayload: Record<string, unknown> | null | undefined =
-      undefined;
+    let overrideAnnotationsPayload: Record<string, unknown> | null | undefined
 
     if (annotationsChanged) {
       if (currentAnnotationsText.trim() === "" || matchesOriginalAnnotations) {
-        overrideAnnotationsPayload = null;
+        overrideAnnotationsPayload = null
       } else {
         try {
-          const parsed = JSON.parse(currentAnnotationsText);
+          const parsed = JSON.parse(currentAnnotationsText)
 
           if (
             typeof parsed !== "object" ||
@@ -482,11 +469,11 @@ export function EnhancedNamespaceToolsTable({
                   "namespaces:enhancedToolsTable.annotationsMustBeObject",
                 ),
               },
-            );
-            return;
+            )
+            return
           }
 
-          overrideAnnotationsPayload = parsed as Record<string, unknown>;
+          overrideAnnotationsPayload = parsed as Record<string, unknown>
         } catch (error) {
           toast.error(
             t("namespaces:enhancedToolsTable.invalidAnnotationsJson"),
@@ -498,8 +485,8 @@ export function EnhancedNamespaceToolsTable({
                       "namespaces:enhancedToolsTable.invalidAnnotationsJsonDescription",
                     ),
             },
-          );
-          return;
+          )
+          return
         }
       }
     }
@@ -510,11 +497,11 @@ export function EnhancedNamespaceToolsTable({
       shouldClearTitle ? null : trimmedTitle,
       shouldClearDescription ? null : overrides.description,
       overrideAnnotationsPayload,
-    );
+    )
 
     // Clear editing state
-    cancelEditingOverrides(toolId);
-  };
+    cancelEditingOverrides(toolId)
+  }
 
   const updateTempOverride = (
     toolId: string,
@@ -522,30 +509,30 @@ export function EnhancedNamespaceToolsTable({
     value: string,
   ) => {
     setTempOverrides((prev) => {
-      const newMap = new Map(prev);
-      const current = newMap.get(toolId) || {};
-      newMap.set(toolId, { ...current, [field]: value });
-      return newMap;
-    });
-  };
+      const newMap = new Map(prev)
+      const current = newMap.get(toolId) || {}
+      newMap.set(toolId, { ...current, [field]: value })
+      return newMap
+    })
+  }
 
   // Handle sorting
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
     } else {
-      setSortField(field);
-      setSortDirection("asc");
+      setSortField(field)
+      setSortDirection("asc")
     }
-  };
+  }
 
   // Filter and sort tools
   const filteredAndSortedTools = useMemo(() => {
-    let filtered = enhancedTools;
+    let filtered = enhancedTools
 
     // Apply search filter
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
+      const searchLower = searchTerm.toLowerCase()
       filtered = enhancedTools.filter((tool) => {
         return (
           tool.name.toLowerCase().includes(searchLower) ||
@@ -555,81 +542,81 @@ export function EnhancedNamespaceToolsTable({
           tool.description?.toLowerCase().includes(searchLower) ||
           tool.overrideDescription?.toLowerCase().includes(searchLower) ||
           tool.serverName?.toLowerCase().includes(searchLower)
-        );
-      });
+        )
+      })
     }
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aValue = a[sortField] || "";
-      let bValue = b[sortField] || "";
+      let aValue = a[sortField] || ""
+      let bValue = b[sortField] || ""
 
       // Handle string comparison
       if (typeof aValue === "string" && typeof bValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
       }
 
       if (aValue < bValue) {
-        return sortDirection === "asc" ? -1 : 1;
+        return sortDirection === "asc" ? -1 : 1
       }
       if (aValue > bValue) {
-        return sortDirection === "asc" ? 1 : -1;
+        return sortDirection === "asc" ? 1 : -1
       }
-      return 0;
-    });
+      return 0
+    })
 
-    return filtered;
-  }, [enhancedTools, searchTerm, sortField, sortDirection]);
+    return filtered
+  }, [enhancedTools, searchTerm, sortField, sortDirection])
 
   // Render sort icon
   const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) return null;
+    if (sortField !== field) return null
     return sortDirection === "asc" ? (
       <ChevronUpIcon className="h-3 w-3 ml-1" />
     ) : (
       <ChevronDownIcon className="h-3 w-3 ml-1" />
-    );
-  };
+    )
+  }
 
   // Toggle row expansion
   const toggleRowExpansion = (toolId: string) => {
-    let collapsed = false;
+    let collapsed = false
     setExpandedRows((prev) => {
-      const newSet = new Set(prev);
+      const newSet = new Set(prev)
       if (newSet.has(toolId)) {
-        newSet.delete(toolId);
-        collapsed = true;
+        newSet.delete(toolId)
+        collapsed = true
       } else {
-        newSet.add(toolId);
+        newSet.add(toolId)
       }
-      return newSet;
-    });
+      return newSet
+    })
 
     if (collapsed) {
       setEditingOverrides((prev) => {
         if (!prev.has(toolId)) {
-          return prev;
+          return prev
         }
-        const newSet = new Set(prev);
-        newSet.delete(toolId);
-        return newSet;
-      });
+        const newSet = new Set(prev)
+        newSet.delete(toolId)
+        return newSet
+      })
 
       setTempOverrides((prev) => {
         if (!prev.has(toolId)) {
-          return prev;
+          return prev
         }
-        const newMap = new Map(prev);
-        newMap.delete(toolId);
-        return newMap;
-      });
+        const newMap = new Map(prev)
+        newMap.delete(toolId)
+        return newMap
+      })
     }
-  };
+  }
 
   // Get source badge(s)
   const getSourceBadge = (tool: EnhancedNamespaceTool) => {
-    const badges = [];
+    const badges = []
 
     if (tool.sources.metamcp) {
       badges.push(
@@ -637,7 +624,7 @@ export function EnhancedNamespaceToolsTable({
           <Wrench className="h-3 w-3" />
           {t("namespaces:enhancedToolsTable.sources.metamcp")}
         </Badge>,
-      );
+      )
     }
 
     if (tool.sources.saved) {
@@ -646,11 +633,11 @@ export function EnhancedNamespaceToolsTable({
           <Database className="h-3 w-3" />
           {t("namespaces:enhancedToolsTable.sources.saved")}
         </Badge>,
-      );
+      )
     }
 
     if (badges.length > 1) {
-      return <div className="flex items-center gap-1">{badges}</div>;
+      return <div className="flex items-center gap-1">{badges}</div>
     }
 
     return (
@@ -660,8 +647,8 @@ export function EnhancedNamespaceToolsTable({
           {t("namespaces:enhancedToolsTable.sources.unknown")}
         </Badge>
       )
-    );
-  };
+    )
+  }
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -671,16 +658,16 @@ export function EnhancedNamespaceToolsTable({
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    });
-  };
+    })
+  }
 
   // Get tool parameters from schema
   const getToolParameters = (tool: EnhancedNamespaceTool) => {
     const schema = (tool.toolSchema || tool.inputSchema) as Record<
       string,
       unknown
-    >;
-    if (!schema || !schema.properties) return [];
+    >
+    if (!schema?.properties) return []
 
     return Object.entries(
       schema.properties as Record<string, Record<string, unknown>>,
@@ -689,13 +676,13 @@ export function EnhancedNamespaceToolsTable({
       type: (value.type as string) || "unknown",
       description: (value.description as string) || "",
       required: (schema.required as string[])?.includes(key) || false,
-    }));
-  };
+    }))
+  }
 
   // Generate tool ID for expansion
   const getToolId = (tool: EnhancedNamespaceTool) => {
-    return tool.uuid || `mcp-${tool.name}`;
-  };
+    return tool.uuid || `mcp-${tool.name}`
+  }
 
   if (loading) {
     return (
@@ -725,7 +712,7 @@ export function EnhancedNamespaceToolsTable({
           ))}
         </div>
       </div>
-    );
+    )
   }
 
   if (filteredAndSortedTools.length === 0 && !searchTerm) {
@@ -750,7 +737,7 @@ export function EnhancedNamespaceToolsTable({
           </Button>
         )}
       </div>
-    );
+    )
   }
 
   return (
@@ -885,23 +872,23 @@ export function EnhancedNamespaceToolsTable({
             </TableHeader>
             <TableBody>
               {filteredAndSortedTools.map((tool) => {
-                const toolId = getToolId(tool);
-                const isExpanded = expandedRows.has(toolId);
-                const parameters = getToolParameters(tool);
+                const toolId = getToolId(tool)
+                const isExpanded = expandedRows.has(toolId)
+                const parameters = getToolParameters(tool)
                 const isToggling =
-                  sessionInitializing || updateToolStatusMutation.isPending;
-                const hasNameOverride = Boolean(tool.overrideName);
+                  sessionInitializing || updateToolStatusMutation.isPending
+                const hasNameOverride = Boolean(tool.overrideName)
                 const hasTitleOverride =
                   tool.overrideTitle !== null &&
-                  tool.overrideTitle !== undefined;
-                const displayTitle = tool.overrideTitle ?? tool.title;
-                const originalTitle = tool.title ?? tool.name ?? "";
-                const hasAnyOverride = hasNameOverride || hasTitleOverride;
+                  tool.overrideTitle !== undefined
+                const displayTitle = tool.overrideTitle ?? tool.title
+                const originalTitle = tool.title ?? tool.name ?? ""
+                const hasAnyOverride = hasNameOverride || hasTitleOverride
                 const hasAnnotationOverrides =
                   tool.overrideAnnotations &&
-                  Object.keys(tool.overrideAnnotations).length > 0;
+                  Object.keys(tool.overrideAnnotations).length > 0
 
-                const indicatorBadges: React.ReactNode[] = [];
+                const indicatorBadges: React.ReactNode[] = []
                 if (hasAnyOverride) {
                   indicatorBadges.push(
                     <Tooltip key="override-indicator">
@@ -918,7 +905,7 @@ export function EnhancedNamespaceToolsTable({
                         {t("namespaces:enhancedToolsTable.overridesTooltip")}
                       </TooltipContent>
                     </Tooltip>,
-                  );
+                  )
                 }
 
                 if (hasAnnotationOverrides) {
@@ -937,7 +924,7 @@ export function EnhancedNamespaceToolsTable({
                         {t("namespaces:enhancedToolsTable.annotationsTooltip")}
                       </TooltipContent>
                     </Tooltip>,
-                  );
+                  )
                 }
 
                 return (
@@ -1266,22 +1253,22 @@ export function EnhancedNamespaceToolsTable({
                                             toolId,
                                             "name",
                                             tool.name || "",
-                                          );
+                                          )
                                           updateTempOverride(
                                             toolId,
                                             "title",
                                             tool.title || tool.name || "",
-                                          );
+                                          )
                                           updateTempOverride(
                                             toolId,
                                             "description",
                                             tool.description || "",
-                                          );
+                                          )
                                           updateTempOverride(
                                             toolId,
                                             "annotations",
                                             formatAnnotations(tool.annotations),
-                                          );
+                                          )
                                         }}
                                       >
                                         <RotateCcw className="h-3 w-3 mr-1" />
@@ -1487,12 +1474,12 @@ export function EnhancedNamespaceToolsTable({
                       </TableRow>
                     )}
                   </React.Fragment>
-                );
+                )
               })}
             </TableBody>
           </Table>
         </div>
       )}
     </div>
-  );
+  )
 }

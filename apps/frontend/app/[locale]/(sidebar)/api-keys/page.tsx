@@ -1,12 +1,12 @@
-"use client";
+"use client"
 
-import { CreateApiKeyFormSchema } from "@repo/zod-types";
-import { format } from "date-fns";
-import { Copy, Eye, EyeOff, Key, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
+import { CreateApiKeyFormSchema } from "@repo/zod-types"
+import { format } from "date-fns"
+import { Copy, Eye, EyeOff, Key, Plus, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
+import type { z } from "zod"
 
 import {
   AlertDialog,
@@ -17,9 +17,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -27,17 +27,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+} from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -45,53 +45,53 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { copyToClipboard as copyTextToClipboard } from "@/lib/utils";
-import { createTranslatedZodResolver } from "@/lib/zod-resolver";
+} from "@/components/ui/table"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { copyToClipboard as copyTextToClipboard } from "@/lib/utils"
+import { createTranslatedZodResolver } from "@/lib/zod-resolver"
 
-type CreateApiKeyFormData = z.infer<typeof CreateApiKeyFormSchema>;
+type CreateApiKeyFormData = z.infer<typeof CreateApiKeyFormSchema>
 
 export default function ApiKeysPage() {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newApiKey, setNewApiKey] = useState<string | null>(null);
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [newApiKey, setNewApiKey] = useState<string | null>(null)
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [apiKeyToDelete, setApiKeyToDelete] = useState<{
-    uuid: string;
-    name: string;
-  } | null>(null);
-  const { t } = useTranslations();
+    uuid: string
+    name: string
+  } | null>(null)
+  const { t } = useTranslations()
 
-  const { data: apiKeys, refetch } = trpc.frontend.apiKeys.list.useQuery();
+  const { data: apiKeys, refetch } = trpc.frontend.apiKeys.list.useQuery()
   const createMutation = trpc.frontend.apiKeys.create.useMutation({
     onSuccess: (data) => {
-      setNewApiKey(data.key);
-      refetch();
-      toast.success(t("api-keys:apiKeyCreated"));
+      setNewApiKey(data.key)
+      refetch()
+      toast.success(t("api-keys:apiKeyCreated"))
     },
     onError: (error) => {
-      toast.error(error.message);
+      toast.error(error.message)
     },
-  });
+  })
 
   const deleteMutation = trpc.frontend.apiKeys.delete.useMutation({
     onSuccess: (data) => {
       if (data.success) {
-        refetch();
-        toast.success(t("api-keys:apiKeyDeleted"));
-        setDeleteDialogOpen(false);
-        setApiKeyToDelete(null);
+        refetch()
+        toast.success(t("api-keys:apiKeyDeleted"))
+        setDeleteDialogOpen(false)
+        setApiKeyToDelete(null)
       } else {
         // Handle backend error response
-        toast.error(data.message || t("api-keys:apiKeyDeleted"));
+        toast.error(data.message || t("api-keys:apiKeyDeleted"))
       }
     },
     onError: (error) => {
-      toast.error(error.message);
+      toast.error(error.message)
     },
-  });
+  })
 
   const form = useForm<CreateApiKeyFormData>({
     resolver: createTranslatedZodResolver(CreateApiKeyFormSchema, t),
@@ -99,53 +99,53 @@ export default function ApiKeysPage() {
       name: "",
       user_id: undefined, // Will be set based on ownership selection
     },
-  });
+  })
 
   const onSubmit = (data: CreateApiKeyFormData) => {
-    createMutation.mutate(data);
-  };
+    createMutation.mutate(data)
+  }
 
   const handleCreateSuccess = () => {
-    form.reset();
-    setCreateDialogOpen(false);
-  };
+    form.reset()
+    setCreateDialogOpen(false)
+  }
 
   const copyToClipboard = (text: string) => {
-    void copyTextToClipboard(text);
-    toast.success(t("api-keys:copyToClipboard"));
-  };
+    void copyTextToClipboard(text)
+    toast.success(t("api-keys:copyToClipboard"))
+  }
 
   const toggleKeyVisibility = (uuid: string) => {
     setVisibleKeys((prev) => {
-      const newSet = new Set(prev);
+      const newSet = new Set(prev)
       if (newSet.has(uuid)) {
-        newSet.delete(uuid);
+        newSet.delete(uuid)
       } else {
-        newSet.add(uuid);
+        newSet.add(uuid)
       }
-      return newSet;
-    });
-  };
+      return newSet
+    })
+  }
 
   const maskKey = (key: string) => {
-    return "•".repeat(key.length);
-  };
+    return "•".repeat(key.length)
+  }
 
   const handleDeleteClick = (apiKey: { uuid: string; name: string }) => {
-    setApiKeyToDelete(apiKey);
-    setDeleteDialogOpen(true);
-  };
+    setApiKeyToDelete(apiKey)
+    setDeleteDialogOpen(true)
+  }
 
   const handleDeleteConfirm = () => {
     if (apiKeyToDelete) {
-      deleteMutation.mutate({ uuid: apiKeyToDelete.uuid });
+      deleteMutation.mutate({ uuid: apiKeyToDelete.uuid })
     }
-  };
+  }
 
   const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setApiKeyToDelete(null);
-  };
+    setDeleteDialogOpen(false)
+    setApiKeyToDelete(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -194,8 +194,8 @@ export default function ApiKeysPage() {
                 </div>
                 <Button
                   onClick={() => {
-                    setNewApiKey(null);
-                    handleCreateSuccess();
+                    setNewApiKey(null)
+                    handleCreateSuccess()
                   }}
                   className="w-full"
                 >
@@ -233,7 +233,7 @@ export default function ApiKeysPage() {
                       form.setValue(
                         "user_id",
                         value === "public" ? null : undefined,
-                      );
+                      )
                     }}
                   >
                     <SelectTrigger>
@@ -422,5 +422,5 @@ export default function ApiKeysPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }

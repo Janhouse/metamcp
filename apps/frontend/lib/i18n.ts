@@ -1,52 +1,52 @@
 // Client-side i18n utilities
-export const SUPPORTED_LOCALES = ["en", "zh", "ko"] as const;
-export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+export const SUPPORTED_LOCALES = ["en", "zh", "ko"] as const
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
 export const LOCALE_NAMES = {
   en: "English",
   zh: "中文",
   ko: "한국어",
-} as const;
+} as const
 
 // Type for translations
 export type Translations = {
-  common: Record<string, unknown>;
-  auth: Record<string, unknown>;
-  navigation: Record<string, unknown>;
-  "mcp-servers": Record<string, unknown>;
-  namespaces: Record<string, unknown>;
-  endpoints: Record<string, unknown>;
-  "api-keys": Record<string, unknown>;
-  settings: Record<string, unknown>;
-  search: Record<string, unknown>;
-  inspector: Record<string, unknown>;
-  logs: Record<string, unknown>;
-  validation: Record<string, unknown>;
-};
+  common: Record<string, unknown>
+  auth: Record<string, unknown>
+  navigation: Record<string, unknown>
+  "mcp-servers": Record<string, unknown>
+  namespaces: Record<string, unknown>
+  endpoints: Record<string, unknown>
+  "api-keys": Record<string, unknown>
+  settings: Record<string, unknown>
+  search: Record<string, unknown>
+  inspector: Record<string, unknown>
+  logs: Record<string, unknown>
+  validation: Record<string, unknown>
+}
 
 // Utility functions for working with localized paths
 export function getPathnameWithoutLocale(pathname: string): string {
-  const segments = pathname.split("/").filter(Boolean);
-  const firstSegment = segments[0];
+  const segments = pathname.split("/").filter(Boolean)
+  const firstSegment = segments[0]
 
   if (SUPPORTED_LOCALES.includes(firstSegment as SupportedLocale)) {
-    return "/" + segments.slice(1).join("/");
+    return `/${segments.slice(1).join("/")}`
   }
 
-  return pathname;
+  return pathname
 }
 
 export function getLocalizedPath(
   pathname: string,
   locale: SupportedLocale,
 ): string {
-  const pathnameWithoutLocale = getPathnameWithoutLocale(pathname);
+  const pathnameWithoutLocale = getPathnameWithoutLocale(pathname)
 
   if (locale === "en") {
-    return pathnameWithoutLocale;
+    return pathnameWithoutLocale
   }
 
-  return `/${locale}${pathnameWithoutLocale === "/" ? "" : pathnameWithoutLocale}`;
+  return `/${locale}${pathnameWithoutLocale === "/" ? "" : pathnameWithoutLocale}`
 }
 
 // Client-side translation loader (for dynamic imports)
@@ -71,7 +71,7 @@ export async function loadTranslations(
       logs: (await import("../public/locales/en/logs.json")).default,
       validation: (await import("../public/locales/en/validation.json"))
         .default,
-    };
+    }
   } else if (locale === "zh") {
     // Load Chinese translations with fallback to English
     const [
@@ -116,10 +116,10 @@ export async function loadTranslations(
       import("../public/locales/zh/validation.json").catch(() => ({
         default: {},
       })),
-    ]);
+    ])
 
     // Get English fallback
-    const englishDict = await loadTranslations("en");
+    const englishDict = await loadTranslations("en")
 
     return {
       common: { ...englishDict.common, ...commonZh.default },
@@ -134,7 +134,7 @@ export async function loadTranslations(
       inspector: { ...englishDict.inspector, ...inspectorZh.default },
       logs: { ...englishDict.logs, ...logsZh.default },
       validation: { ...englishDict.validation, ...validationZh.default },
-    };
+    }
   } else if (locale === "ko") {
     // Load Korean translations with fallback to English
     const [
@@ -179,10 +179,10 @@ export async function loadTranslations(
       import("../public/locales/ko/validation.json").catch(() => ({
         default: {},
       })),
-    ]);
+    ])
 
     // Get English fallback
-    const englishDict = await loadTranslations("en");
+    const englishDict = await loadTranslations("en")
 
     return {
       common: { ...englishDict.common, ...commonKo.default },
@@ -197,10 +197,10 @@ export async function loadTranslations(
       inspector: { ...englishDict.inspector, ...inspectorKo.default },
       logs: { ...englishDict.logs, ...logsKo.default },
       validation: { ...englishDict.validation, ...validationKo.default },
-    };
+    }
   } else {
     // Fallback to English for unsupported locales
-    return loadTranslations("en");
+    return loadTranslations("en")
   }
 }
 
@@ -210,51 +210,51 @@ export function getTranslation(
   key: string,
   params?: Record<string, string | number>,
 ): string {
-  const parts = key.split(":");
-  let value: unknown = dictionary;
+  const parts = key.split(":")
+  let value: unknown = dictionary
 
   // First, navigate to the correct namespace (before the colon)
   if (parts.length > 1) {
-    const namespace = parts[0]!;
+    const namespace = parts[0]!
     if (value && typeof value === "object" && namespace in value) {
-      value = (value as Record<string, unknown>)[namespace];
+      value = (value as Record<string, unknown>)[namespace]
     } else {
-      return key; // Return the key if namespace not found
+      return key // Return the key if namespace not found
     }
 
     // Then navigate through the nested structure using dots
-    const nestedKeys = parts[1]!.split(".");
+    const nestedKeys = parts[1]!.split(".")
     for (const k of nestedKeys) {
       if (value && typeof value === "object" && k in value) {
-        value = (value as Record<string, unknown>)[k];
+        value = (value as Record<string, unknown>)[k]
       } else {
-        return key; // Return the key if translation not found
+        return key // Return the key if translation not found
       }
     }
   } else {
     // Handle keys without namespace (legacy support)
-    const keys = key.split(".");
+    const keys = key.split(".")
     for (const k of keys) {
       if (value && typeof value === "object" && k in value) {
-        value = (value as Record<string, unknown>)[k];
+        value = (value as Record<string, unknown>)[k]
       } else {
-        return key; // Return the key if translation not found
+        return key // Return the key if translation not found
       }
     }
   }
 
   if (typeof value !== "string") {
-    return key; // Return the key if the final value is not a string
+    return key // Return the key if the final value is not a string
   }
 
   // Simple parameter interpolation
   if (params) {
     return value.replace(/\{\{(\w+)\}\}/g, (match, paramKey) => {
-      return params[paramKey]?.toString() || match;
-    });
+      return params[paramKey]?.toString() || match
+    })
   }
 
-  return value;
+  return value
 }
 
 // Supported key formats:

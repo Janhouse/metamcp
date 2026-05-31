@@ -1,0 +1,15 @@
+[install]
+# Refuse to install npm releases younger than this many SECONDS.
+# 604800 = 7 days. Mitigates supply-chain attacks where a compromised
+# maintainer publishes a malicious version: a 7-day cool-down gives the
+# ecosystem time to spot and yank bad releases before we pull them in.
+# Bun uses seconds (npm uses days, pnpm uses minutes — this replaces the
+# pnpm-workspace.yaml / .npmrc minimum-release-age=10080 minutes setting).
+minimumReleaseAge = 604800
+
+# Add internal/trusted scopes here if any ever need to bypass the gate.
+# Note: excluding a package does NOT exclude its platform-specific binary
+# sub-packages (e.g. @biomejs/cli-linux-x64), so excluding e.g. @biomejs/biome
+# while it's <7d old yields a main/binary version mismatch. Prefer letting the
+# gate pick a mature version over excluding.
+# minimumReleaseAgeExcludes = ["@yourorg/internal"]

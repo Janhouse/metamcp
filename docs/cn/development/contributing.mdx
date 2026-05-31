@@ -11,7 +11,7 @@ description: "了解如何参与 MetaMCP 的开发并帮助改进项目"
 
 在贡献之前，请确保您具备：
 
-- **Node.js 18+** 和 **pnpm** 已安装
+- **Bun**（canary/Rust 版本）和 **Node.js 20+** 已安装
 - **Docker** 用于运行 PostgreSQL 和测试
 - **Git** 用于版本控制
 - 对 TypeScript、React 和 MCP 协议的**基本了解**
@@ -33,10 +33,10 @@ description: "了解如何参与 MetaMCP 的开发并帮助改进项目"
   </Accordion>
 
   <Accordion icon="package" title="安装依赖">
-    使用 pnpm 安装项目依赖：
+    使用 Bun 安装项目依赖：
     
     ```bash
-    pnpm install
+    bun install
     ```
     
     这将安装 monorepo 中所有工作区的依赖。
@@ -65,7 +65,7 @@ description: "了解如何参与 MetaMCP 的开发并帮助改进项目"
     ```bash
     cd apps/backend
 
-    pnpm db:migrate:dev
+    bun run db:migrate:dev
     ```
   </Accordion>
 </AccordionGroup>
@@ -110,7 +110,7 @@ git checkout -b docs/documentation-update
     运行开发服务器并测试您的更改：
     
     ```bash
-    pnpm dev
+    bun run dev
     ```
     
     这将以开发模式启动前端和后端。
@@ -121,10 +121,10 @@ git checkout -b docs/documentation-update
     
     ```bash
     # 运行代码检查
-    pnpm lint
+    bun run lint
     
     # 修复代码检查问题
-    pnpm lint:fix
+    bun run lint:fix
     ```
   </Accordion>
 
@@ -237,7 +237,7 @@ git checkout -b docs/documentation-update
 
 <Card title="提交前检查清单" icon="checklist">
 - ✅ **代码遵循项目标准**
-- ✅ **尽可能修复代码检查问题（在快速开发时相对宽容）** (`pnpm lint`)
+- ✅ **尽可能修复代码检查问题（在快速开发时相对宽容）** (`bun run lint`)
 - ✅ **没有 TypeScript 错误**
 - ✅ **如需要，文档已更新**
 - ✅ **手动测试了更改**
@@ -291,13 +291,13 @@ MetaMCP 支持 OpenID Connect 用于企业 SSO。在处理 OIDC 功能时：
     ```bash
     # 架构更改后生成迁移
     cd apps/backend
-    pnpm db:generate
+    bun run db:generate
     
     # 应用迁移
-    pnpm db:migrate:dev # 使用 env.local 中的 PG 相关环境变量
+    bun run db:migrate:dev # 使用 env.local 中的 PG 相关环境变量
     
     # 重置数据库（仅开发环境）
-    pnpm db:reset
+    bun run db:reset
     ```
   </Accordion>
 

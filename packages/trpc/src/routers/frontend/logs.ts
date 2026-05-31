@@ -2,10 +2,10 @@ import {
   ClearLogsResponseSchema,
   GetLogsRequestSchema,
   GetLogsResponseSchema,
-} from "@repo/zod-types";
-import { z } from "zod";
+} from "@repo/zod-types"
+import type { z } from "zod"
 
-import { protectedProcedure, router } from "../../trpc";
+import { protectedProcedure, router } from "../../trpc"
 
 // Define the logs router with procedure definitions
 // The actual implementation will be provided by the backend
@@ -14,8 +14,8 @@ export const createLogsRouter = (
   implementations: {
     getLogs: (
       input: z.infer<typeof GetLogsRequestSchema>,
-    ) => Promise<z.infer<typeof GetLogsResponseSchema>>;
-    clearLogs: () => Promise<z.infer<typeof ClearLogsResponseSchema>>;
+    ) => Promise<z.infer<typeof GetLogsResponseSchema>>
+    clearLogs: () => Promise<z.infer<typeof ClearLogsResponseSchema>>
   },
 ) =>
   router({
@@ -24,13 +24,13 @@ export const createLogsRouter = (
       .input(GetLogsRequestSchema)
       .output(GetLogsResponseSchema)
       .query(async ({ input }) => {
-        return await implementations.getLogs(input);
+        return await implementations.getLogs(input)
       }),
 
     // Protected: Clear all logs
     clear: protectedProcedure
       .output(ClearLogsResponseSchema)
       .mutation(async () => {
-        return await implementations.clearLogs();
+        return await implementations.clearLogs()
       }),
-  });
+  })

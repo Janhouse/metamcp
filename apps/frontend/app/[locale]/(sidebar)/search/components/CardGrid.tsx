@@ -1,18 +1,17 @@
 import {
-  CreateMcpServerRequest,
-  CreateServerFormData,
+  type CreateMcpServerRequest,
+  type CreateServerFormData,
   createServerFormSchema,
   McpServerTypeEnum,
-} from "@repo/zod-types";
-import { ExternalLink, Plus } from "lucide-react";
-import { ChevronDown } from "lucide-react";
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+} from "@repo/zod-types"
+import { ChevronDown, ExternalLink, Plus } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -20,20 +19,20 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
 import {
   Form,
   FormControl,
@@ -41,18 +40,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { createTranslatedZodResolver } from "@/lib/zod-resolver";
-import type { SearchIndex } from "@/types/search";
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { createTranslatedZodResolver } from "@/lib/zod-resolver"
+import type { SearchIndex } from "@/types/search"
 
 interface CreateServerDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  defaultValues: CreateServerFormData;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  defaultValues: CreateServerFormData
 }
 
 function CreateServerDialog({
@@ -60,11 +59,11 @@ function CreateServerDialog({
   onOpenChange,
   defaultValues,
 }: CreateServerDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { t } = useTranslations();
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { t } = useTranslations()
 
   // Get the tRPC query client for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // tRPC mutation for creating MCP server
   const createServerMutation = trpc.frontend.mcpServers.create.useMutation({
@@ -75,15 +74,15 @@ function CreateServerDialog({
           description: t("search:dialog.messages.successDescription", {
             name: form.getValues().name,
           }),
-        });
-        onOpenChange(false);
-        form.reset(defaultValues);
+        })
+        onOpenChange(false)
+        form.reset(defaultValues)
         // Invalidate and refetch the server list
-        utils.frontend.mcpServers.list.invalidate();
+        utils.frontend.mcpServers.list.invalidate()
       } else {
         // Handle business logic errors returned by the backend
         const errorMessage =
-          data.message || t("search:dialog.messages.createFailed");
+          data.message || t("search:dialog.messages.createFailed")
 
         // Check if this is a unique constraint violation for server name
         if (
@@ -94,10 +93,10 @@ function CreateServerDialog({
           form.setError("name", {
             type: "manual",
             message: errorMessage,
-          });
+          })
           toast.error(t("search:dialog.messages.nameExists"), {
             description: t("search:dialog.messages.nameExistsDescription"),
-          });
+          })
         } else if (
           errorMessage.includes("is invalid") &&
           errorMessage.includes("Server names must only contain")
@@ -106,20 +105,20 @@ function CreateServerDialog({
           form.setError("name", {
             type: "manual",
             message: errorMessage,
-          });
+          })
           toast.error(t("search:dialog.messages.invalidName"), {
             description: t("search:dialog.messages.invalidNameDescription"),
-          });
+          })
         } else {
           // Generic error handling
           toast.error(t("search:dialog.messages.createFailed"), {
             description: errorMessage,
-          });
+          })
         }
       }
     },
     onError: (error) => {
-      console.error("Error creating server:", error);
+      console.error("Error creating server:", error)
 
       // Check if this is a unique constraint violation for server name
       if (
@@ -130,10 +129,10 @@ function CreateServerDialog({
         form.setError("name", {
           type: "manual",
           message: error.message,
-        });
+        })
         toast.error(t("search:dialog.messages.nameExists"), {
           description: t("search:dialog.messages.nameExistsDescription"),
-        });
+        })
       } else if (
         error.message.includes("is invalid") &&
         error.message.includes("Server names must only contain")
@@ -142,40 +141,40 @@ function CreateServerDialog({
         form.setError("name", {
           type: "manual",
           message: error.message,
-        });
+        })
         toast.error(t("search:dialog.messages.invalidName"), {
           description: t("search:dialog.messages.invalidNameDescription"),
-        });
+        })
       } else {
         // Generic error handling
         toast.error(t("search:dialog.messages.createFailed"), {
           description:
             error.message || t("search:dialog.messages.unexpectedError"),
-        });
+        })
       }
     },
     onSettled: () => {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     },
-  });
+  })
 
   const form = useForm<CreateServerFormData>({
     resolver: createTranslatedZodResolver(createServerFormSchema, t),
     defaultValues,
-  });
+  })
 
   // Reset form when dialog opens with new defaultValues
   useEffect(() => {
     if (open) {
-      form.reset(defaultValues);
+      form.reset(defaultValues)
     } else {
       // Reset form when dialog closes to ensure clean state
-      form.reset(defaultValues);
+      form.reset(defaultValues)
     }
-  }, [open, defaultValues, form]);
+  }, [open, defaultValues, form])
 
   const onSubmit = async (data: CreateServerFormData) => {
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       // Parse args string into array by splitting on spaces
       const argsArray = data.args
@@ -183,19 +182,19 @@ function CreateServerDialog({
             .trim()
             .split(/\s+/)
             .filter((arg) => arg.length > 0)
-        : [];
+        : []
 
       // Parse env string into object
-      const envObject: Record<string, string> = {};
+      const envObject: Record<string, string> = {}
       if (data.env) {
-        const envLines = data.env.trim().split("\n");
+        const envLines = data.env.trim().split("\n")
         for (const line of envLines) {
-          const trimmedLine = line.trim();
-          if (trimmedLine && trimmedLine.includes("=")) {
-            const [key, ...valueParts] = trimmedLine.split("=");
-            const value = valueParts.join("="); // Handle values that contain '='
+          const trimmedLine = line.trim()
+          if (trimmedLine?.includes("=")) {
+            const [key, ...valueParts] = trimmedLine.split("=")
+            const value = valueParts.join("=") // Handle values that contain '='
             if (key?.trim()) {
-              envObject[key.trim()] = value;
+              envObject[key.trim()] = value
             }
           }
         }
@@ -212,21 +211,21 @@ function CreateServerDialog({
         url: data.url,
         bearerToken: data.bearerToken,
         user_id: data.user_id,
-      };
+      }
 
       // Use tRPC mutation
-      createServerMutation.mutate(apiPayload);
+      createServerMutation.mutate(apiPayload)
     } catch (error) {
-      setIsSubmitting(false);
-      console.error("Error preparing server data:", error);
+      setIsSubmitting(false)
+      console.error("Error preparing server data:", error)
       toast.error("Failed to Create Server", {
         description:
           error instanceof Error
             ? error.message
             : "An unexpected error occurred",
-      });
+      })
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -486,8 +485,8 @@ function CreateServerDialog({
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  form.reset(defaultValues);
-                  onOpenChange(false);
+                  form.reset(defaultValues)
+                  onOpenChange(false)
                 }}
                 disabled={isSubmitting}
               >
@@ -503,23 +502,23 @@ function CreateServerDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 export default function CardGrid({ items }: { items: SearchIndex }) {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<CreateServerFormData | null>(
     null,
-  );
-  const { t } = useTranslations();
+  )
+  const { t } = useTranslations()
 
   const handleAddServer = (item: SearchIndex[string]) => {
     // Prepare default values for the form
-    const sanitizedName = item.name.replace(/[^a-zA-Z0-9_-]/g, "-");
+    const sanitizedName = item.name.replace(/[^a-zA-Z0-9_-]/g, "-")
     const envString =
       item.envs && item.envs.length > 0
         ? item.envs.map((env) => `${env}=`).join("\n")
-        : "";
+        : ""
 
     const defaultValues: CreateServerFormData = {
       name: sanitizedName,
@@ -531,11 +530,11 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
       bearerToken: "",
       env: envString,
       user_id: undefined, // Default to private
-    };
+    }
 
-    setSelectedItem(defaultValues);
-    setCreateDialogOpen(true);
-  };
+    setSelectedItem(defaultValues)
+    setCreateDialogOpen(true)
+  }
 
   return (
     <>
@@ -641,5 +640,5 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
         />
       )}
     </>
-  );
+  )
 }

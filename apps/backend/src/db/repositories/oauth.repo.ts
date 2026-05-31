@@ -1,19 +1,19 @@
-import {
+import type {
   OAuthAccessToken,
   OAuthAccessTokenCreateInput,
   OAuthAuthorizationCode,
   OAuthAuthorizationCodeCreateInput,
   OAuthClient,
   OAuthClientCreateInput,
-} from "@repo/zod-types";
-import { and, eq, isNull, lt, or } from "drizzle-orm";
+} from "@repo/zod-types"
+import { and, eq, isNull, lt, or } from "drizzle-orm"
 
-import { db } from "../index";
+import { db } from "../index"
 import {
   oauthAccessTokensTable,
   oauthAuthorizationCodesTable,
   oauthClientsTable,
-} from "../schema";
+} from "../schema"
 
 export class OAuthRepository {
   // ===== Registered Clients =====
@@ -23,8 +23,8 @@ export class OAuthRepository {
       .select()
       .from(oauthClientsTable)
       .where(eq(oauthClientsTable.client_id, clientId))
-      .limit(1);
-    return result[0] || null;
+      .limit(1)
+    return result[0] || null
   }
 
   async upsertClient(clientData: OAuthClientCreateInput): Promise<void> {
@@ -37,7 +37,7 @@ export class OAuthRepository {
           redirect_uris: clientData.redirect_uris,
           updated_at: new Date(),
         },
-      });
+      })
   }
 
   // ===== Authorization Codes =====
@@ -47,8 +47,8 @@ export class OAuthRepository {
       .select()
       .from(oauthAuthorizationCodesTable)
       .where(eq(oauthAuthorizationCodesTable.code, code))
-      .limit(1);
-    return result[0] || null;
+      .limit(1)
+    return result[0] || null
   }
 
   async setAuthCode(
@@ -64,13 +64,13 @@ export class OAuthRepository {
       code_challenge: data.code_challenge,
       code_challenge_method: data.code_challenge_method,
       expires_at: new Date(data.expires_at),
-    });
+    })
   }
 
   async deleteAuthCode(code: string): Promise<void> {
     await db
       .delete(oauthAuthorizationCodesTable)
-      .where(eq(oauthAuthorizationCodesTable.code, code));
+      .where(eq(oauthAuthorizationCodesTable.code, code))
   }
 
   /**
@@ -82,8 +82,8 @@ export class OAuthRepository {
     const [row] = await db
       .delete(oauthAuthorizationCodesTable)
       .where(eq(oauthAuthorizationCodesTable.code, code))
-      .returning();
-    return row ?? null;
+      .returning()
+    return row ?? null
   }
 
   // ===== Access Tokens =====
@@ -93,8 +93,8 @@ export class OAuthRepository {
       .select()
       .from(oauthAccessTokensTable)
       .where(eq(oauthAccessTokensTable.access_token, token))
-      .limit(1);
-    return result[0] || null;
+      .limit(1)
+    return result[0] || null
   }
 
   async setAccessToken(
@@ -111,7 +111,7 @@ export class OAuthRepository {
       refresh_token_expires_at: data.refresh_token_expires_at
         ? new Date(data.refresh_token_expires_at)
         : null,
-    });
+    })
   }
 
   async getAccessTokenByRefreshToken(
@@ -121,14 +121,14 @@ export class OAuthRepository {
       .select()
       .from(oauthAccessTokensTable)
       .where(eq(oauthAccessTokensTable.refresh_token, refreshToken))
-      .limit(1);
-    return result[0] || null;
+      .limit(1)
+    return result[0] || null
   }
 
   async deleteAccessTokenByRefreshToken(refreshToken: string): Promise<void> {
     await db
       .delete(oauthAccessTokensTable)
-      .where(eq(oauthAccessTokensTable.refresh_token, refreshToken));
+      .where(eq(oauthAccessTokensTable.refresh_token, refreshToken))
   }
 
   /**
@@ -142,20 +142,20 @@ export class OAuthRepository {
     const [row] = await db
       .delete(oauthAccessTokensTable)
       .where(eq(oauthAccessTokensTable.refresh_token, refreshToken))
-      .returning();
-    return row ?? null;
+      .returning()
+    return row ?? null
   }
 
   async deleteAccessToken(token: string): Promise<void> {
     await db
       .delete(oauthAccessTokensTable)
-      .where(eq(oauthAccessTokensTable.access_token, token));
+      .where(eq(oauthAccessTokensTable.access_token, token))
   }
 
   // ===== Cleanup =====
 
   async cleanupExpired(): Promise<void> {
-    const now = new Date();
+    const now = new Date()
     await Promise.all([
       db
         .delete(oauthAuthorizationCodesTable)
@@ -173,8 +173,8 @@ export class OAuthRepository {
             ),
           ),
         ),
-    ]);
+    ])
   }
 }
 
-export const oauthRepository = new OAuthRepository();
+export const oauthRepository = new OAuthRepository()

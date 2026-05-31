@@ -1,4 +1,4 @@
-"use client";
+"use client"
 import {
   ActivitySquare,
   FileText,
@@ -7,24 +7,24 @@ import {
   SearchCode,
   Wrench,
   Zap,
-} from "lucide-react";
-import { useState } from "react";
+} from "lucide-react"
+import { useState } from "react"
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTranslations } from "@/hooks/useTranslations";
-import { MakeRequestFn } from "@/lib/mcp-types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useTranslations } from "@/hooks/useTranslations"
+import type { MakeRequestFn } from "@/lib/mcp-types"
 
-import { InspectorPing } from "./inspector/inspector-ping";
-import { InspectorPrompts } from "./inspector/inspector-prompts";
-import { InspectorResources } from "./inspector/inspector-resources";
-import { InspectorRoots } from "./inspector/inspector-roots";
-import { InspectorSampling } from "./inspector/inspector-sampling";
-import { InspectorTools } from "./inspector/inspector-tools";
+import { InspectorPing } from "./inspector/inspector-ping"
+import { InspectorPrompts } from "./inspector/inspector-prompts"
+import { InspectorResources } from "./inspector/inspector-resources"
+import { InspectorRoots } from "./inspector/inspector-roots"
+import { InspectorSampling } from "./inspector/inspector-sampling"
+import { InspectorTools } from "./inspector/inspector-tools"
 
 interface InspectorProps {
-  mcpServerUuid: string;
-  makeRequest: MakeRequestFn;
-  serverCapabilities?: Record<string, unknown> | null;
+  mcpServerUuid: string
+  makeRequest: MakeRequestFn
+  serverCapabilities?: Record<string, unknown> | null
 }
 
 export function Inspector({
@@ -32,15 +32,15 @@ export function Inspector({
   makeRequest,
   serverCapabilities,
 }: InspectorProps) {
-  const { t } = useTranslations();
-  const [activeTab, setActiveTab] = useState("tools");
+  const { t } = useTranslations()
+  const [activeTab, setActiveTab] = useState("tools")
 
   // Check server capabilities to determine which tabs to show
-  const hasTools = serverCapabilities?.tools !== undefined;
-  const hasResources = serverCapabilities?.resources !== undefined;
-  const hasPrompts = serverCapabilities?.prompts !== undefined;
-  const hasRoots = serverCapabilities?.roots !== undefined;
-  const hasSampling = serverCapabilities?.sampling !== undefined;
+  const hasTools = serverCapabilities?.tools !== undefined
+  const hasResources = serverCapabilities?.resources !== undefined
+  const hasPrompts = serverCapabilities?.prompts !== undefined
+  const hasRoots = serverCapabilities?.roots !== undefined
+  const hasSampling = serverCapabilities?.sampling !== undefined
 
   return (
     <div className="space-y-4">
@@ -114,5 +114,5 @@ export function Inspector({
         </div>
       </Tabs>
     </div>
-  );
+  )
 }

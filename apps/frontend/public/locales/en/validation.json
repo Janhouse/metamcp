@@ -45,7 +45,7 @@
     "tooShort": "Too short",
     "tooLong": "Too long"
   },
-  "maxRateSeconds":{
+  "maxRateSeconds": {
     "required": "Max rate seconds is required",
     "tooSmall": "Max rate must be greater than 0",
     "tooLarge": "Max rate must be less than 1000000"
@@ -55,7 +55,7 @@
     "tooSmall": "Max rate must be greater than 0",
     "tooLarge": "Max rate must be less than 1000000"
   },
-  "clientMaxRateSeconds":{
+  "clientMaxRateSeconds": {
     "required": "Max rate seconds is required",
     "tooSmall": "Max rate must be greater than 0",
     "tooLarge": "Max rate must be less than 1000000"

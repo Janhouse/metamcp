@@ -1,9 +1,9 @@
-import { z } from "zod";
+import { z } from "zod"
 
-export const McpServerTypeEnum = z.enum(["STDIO", "SSE", "STREAMABLE_HTTP"]);
-export const McpServerStatusEnum = z.enum(["ACTIVE", "INACTIVE"]);
+export const McpServerTypeEnum = z.enum(["STDIO", "SSE", "STREAMABLE_HTTP"])
+export const McpServerStatusEnum = z.enum(["ACTIVE", "INACTIVE"])
 
-export const McpServerErrorStatusEnum = z.enum(["NONE", "ERROR"]);
+export const McpServerErrorStatusEnum = z.enum(["NONE", "ERROR"])
 
 // Define the form schema (includes UI-specific fields)
 export const createServerFormSchema = z
@@ -30,9 +30,9 @@ export const createServerFormSchema = z
     (data) => {
       // Command is required for stdio type
       if (data.type === McpServerTypeEnum.enum.STDIO) {
-        return data.command && data.command.trim() !== "";
+        return data.command && data.command.trim() !== ""
       }
-      return true;
+      return true
     },
     {
       message: "validation:command.required",
@@ -47,25 +47,25 @@ export const createServerFormSchema = z
         data.type === McpServerTypeEnum.enum.STREAMABLE_HTTP
       ) {
         if (!data.url || data.url.trim() === "") {
-          return false;
+          return false
         }
         // Validate URL format
         try {
-          new URL(data.url);
-          return true;
+          new URL(data.url)
+          return true
         } catch {
-          return false;
+          return false
         }
       }
-      return true;
+      return true
     },
     {
       message: "validation:url.required",
       path: ["url"],
     },
-  );
+  )
 
-export type CreateServerFormData = z.infer<typeof createServerFormSchema>;
+export type CreateServerFormData = z.infer<typeof createServerFormSchema>
 
 // Form schema for editing servers
 export const EditServerFormSchema = z
@@ -92,9 +92,9 @@ export const EditServerFormSchema = z
     (data) => {
       // Command is required for stdio type
       if (data.type === McpServerTypeEnum.enum.STDIO) {
-        return data.command && data.command.trim() !== "";
+        return data.command && data.command.trim() !== ""
       }
-      return true;
+      return true
     },
     {
       message: "validation:command.required",
@@ -109,25 +109,25 @@ export const EditServerFormSchema = z
         data.type === McpServerTypeEnum.enum.STREAMABLE_HTTP
       ) {
         if (!data.url || data.url.trim() === "") {
-          return false;
+          return false
         }
         // Validate URL format
         try {
-          new URL(data.url);
-          return true;
+          new URL(data.url)
+          return true
         } catch {
-          return false;
+          return false
         }
       }
-      return true;
+      return true
     },
     {
       message: "validation:url.required",
       path: ["url"],
     },
-  );
+  )
 
-export type EditServerFormData = z.infer<typeof EditServerFormSchema>;
+export type EditServerFormData = z.infer<typeof EditServerFormSchema>
 
 export const CreateMcpServerRequestSchema = z
   .object({
@@ -156,26 +156,26 @@ export const CreateMcpServerRequestSchema = z
     (data) => {
       // For stdio type, command is required and URL should be empty
       if (data.type === "STDIO") {
-        return data.command && data.command.trim() !== "";
+        return data.command && data.command.trim() !== ""
       }
 
       // For other types, URL should be provided and valid
       if (!data.url || data.url.trim() === "") {
-        return false;
+        return false
       }
 
       try {
-        new URL(data.url);
-        return true;
+        new URL(data.url)
+        return true
       } catch {
-        return false;
+        return false
       }
     },
     {
       message:
         "Command is required for stdio servers. URL is required and must be valid for sse and streamable_http server types",
     },
-  );
+  )
 
 export const McpServerSchema = z.object({
   uuid: z.string(),
@@ -191,25 +191,25 @@ export const McpServerSchema = z.object({
   headers: z.record(z.string(), z.string()),
   user_id: z.string().nullable(),
   error_status: McpServerErrorStatusEnum.optional(),
-});
+})
 
 export const CreateMcpServerResponseSchema = z.object({
   success: z.boolean(),
   data: McpServerSchema.optional(),
   message: z.string().optional(),
-});
+})
 
 export const ListMcpServersResponseSchema = z.object({
   success: z.boolean(),
   data: z.array(McpServerSchema),
   message: z.string().optional(),
-});
+})
 
 export const GetMcpServerResponseSchema = z.object({
   success: z.boolean(),
   data: McpServerSchema.optional(),
   message: z.string().optional(),
-});
+})
 
 // Bulk import schemas
 export const BulkImportMcpServerSchema = z
@@ -224,41 +224,41 @@ export const BulkImportMcpServerSchema = z
       .string()
       .optional()
       .transform((val) => {
-        if (!val) return undefined;
+        if (!val) return undefined
         // Convert to uppercase for case-insensitive matching
-        const upperVal = val.toUpperCase();
+        const upperVal = val.toUpperCase()
         // Map common variations to the correct enum values
-        if (upperVal === "STDIO" || upperVal === "STD") return "STDIO";
-        if (upperVal === "SSE") return "SSE";
+        if (upperVal === "STDIO" || upperVal === "STD") return "STDIO"
+        if (upperVal === "SSE") return "SSE"
         if (
           upperVal === "STREAMABLE_HTTP" ||
           upperVal === "STREAMABLEHTTP" ||
           upperVal === "HTTP"
         )
-          return "STREAMABLE_HTTP";
-        return upperVal; // Return as-is if it doesn't match known patterns
+          return "STREAMABLE_HTTP"
+        return upperVal // Return as-is if it doesn't match known patterns
       })
       .pipe(McpServerTypeEnum.optional()),
   })
   .refine(
     (data) => {
-      const serverType = data.type || McpServerTypeEnum.enum.STDIO;
+      const serverType = data.type || McpServerTypeEnum.enum.STDIO
 
       // For STDIO type, URL can be empty
       if (serverType === McpServerTypeEnum.enum.STDIO) {
-        return true;
+        return true
       }
 
       // For other types, URL should be provided and valid
       if (!data.url || data.url.trim() === "") {
-        return false;
+        return false
       }
 
       try {
-        new URL(data.url);
-        return true;
+        new URL(data.url)
+        return true
       } catch {
-        return false;
+        return false
       }
     },
     {
@@ -266,49 +266,49 @@ export const BulkImportMcpServerSchema = z
         "URL is required and must be valid for sse and streamable_http server types",
       path: ["url"],
     },
-  );
+  )
 
 export const BulkImportMcpServersRequestSchema = z.object({
   mcpServers: z.record(z.string(), BulkImportMcpServerSchema),
-});
+})
 
 export const BulkImportMcpServersResponseSchema = z.object({
   success: z.boolean(),
   imported: z.number(),
   errors: z.array(z.string()).optional(),
   message: z.string().optional(),
-});
+})
 
 // MCP Server types
-export type McpServerType = z.infer<typeof McpServerTypeEnum>;
+export type McpServerType = z.infer<typeof McpServerTypeEnum>
 export type CreateMcpServerRequest = z.infer<
   typeof CreateMcpServerRequestSchema
->;
-export type McpServer = z.infer<typeof McpServerSchema>;
+>
+export type McpServer = z.infer<typeof McpServerSchema>
 export type CreateMcpServerResponse = z.infer<
   typeof CreateMcpServerResponseSchema
->;
+>
 export type ListMcpServersResponse = z.infer<
   typeof ListMcpServersResponseSchema
->;
-export type GetMcpServerResponse = z.infer<typeof GetMcpServerResponseSchema>;
-export type BulkImportMcpServer = z.infer<typeof BulkImportMcpServerSchema>;
+>
+export type GetMcpServerResponse = z.infer<typeof GetMcpServerResponseSchema>
+export type BulkImportMcpServer = z.infer<typeof BulkImportMcpServerSchema>
 export type BulkImportMcpServersRequest = z.infer<
   typeof BulkImportMcpServersRequestSchema
->;
+>
 export type BulkImportMcpServersResponse = z.infer<
   typeof BulkImportMcpServersResponseSchema
->;
+>
 
 export const DeleteMcpServerRequestSchema = z.object({
   uuid: z.string().uuid(),
-});
+})
 
 export const DeleteMcpServerResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
   error: z.string().optional(),
-});
+})
 
 export const UpdateMcpServerRequestSchema = z
   .object({
@@ -338,49 +338,49 @@ export const UpdateMcpServerRequestSchema = z
     (data) => {
       // For stdio type, command is required and URL should be empty
       if (data.type === "STDIO") {
-        return data.command && data.command.trim() !== "";
+        return data.command && data.command.trim() !== ""
       }
 
       // For other types, URL should be provided and valid
       if (!data.url || data.url.trim() === "") {
-        return false;
+        return false
       }
 
       try {
-        new URL(data.url);
-        return true;
+        new URL(data.url)
+        return true
       } catch {
-        return false;
+        return false
       }
     },
     {
       message:
         "Command is required for stdio servers. URL is required and must be valid for sse and streamable_http server types",
     },
-  );
+  )
 
 export const UpdateMcpServerResponseSchema = z.object({
   success: z.boolean(),
   data: McpServerSchema.optional(),
   message: z.string().optional(),
   error: z.string().optional(),
-});
+})
 
 export type DeleteMcpServerRequest = z.infer<
   typeof DeleteMcpServerRequestSchema
->;
+>
 
 export type DeleteMcpServerResponse = z.infer<
   typeof DeleteMcpServerResponseSchema
->;
+>
 
 export type UpdateMcpServerRequest = z.infer<
   typeof UpdateMcpServerRequestSchema
->;
+>
 
 export type UpdateMcpServerResponse = z.infer<
   typeof UpdateMcpServerResponseSchema
->;
+>
 
 // Repository-specific schemas
 export const McpServerCreateInputSchema = z.object({
@@ -403,7 +403,7 @@ export const McpServerCreateInputSchema = z.object({
   bearerToken: z.string().nullable().optional(),
   headers: z.record(z.string(), z.string()).optional(),
   user_id: z.string().nullable().optional(),
-});
+})
 
 export const McpServerUpdateInputSchema = z.object({
   uuid: z.string(),
@@ -427,10 +427,10 @@ export const McpServerUpdateInputSchema = z.object({
   bearerToken: z.string().nullable().optional(),
   headers: z.record(z.string(), z.string()).optional(),
   user_id: z.string().nullable().optional(),
-});
+})
 
-export type McpServerCreateInput = z.infer<typeof McpServerCreateInputSchema>;
-export type McpServerUpdateInput = z.infer<typeof McpServerUpdateInputSchema>;
+export type McpServerCreateInput = z.infer<typeof McpServerCreateInputSchema>
+export type McpServerUpdateInput = z.infer<typeof McpServerUpdateInputSchema>
 
 // Database-specific schemas (raw database results with Date objects)
 export const DatabaseMcpServerSchema = z.object({
@@ -447,6 +447,6 @@ export const DatabaseMcpServerSchema = z.object({
   bearerToken: z.string().nullable(),
   headers: z.record(z.string(), z.string()),
   user_id: z.string().nullable(),
-});
+})
 
-export type DatabaseMcpServer = z.infer<typeof DatabaseMcpServerSchema>;
+export type DatabaseMcpServer = z.infer<typeof DatabaseMcpServerSchema>

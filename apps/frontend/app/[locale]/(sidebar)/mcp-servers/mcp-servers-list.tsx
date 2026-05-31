@@ -1,19 +1,19 @@
-"use client";
+"use client"
 
 import {
-  McpServer,
+  type McpServer,
   McpServerErrorStatusEnum,
   McpServerTypeEnum,
-} from "@repo/zod-types";
+} from "@repo/zod-types"
 import {
-  ColumnDef,
+  type ColumnDef,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  SortingState,
+  type SortingState,
   useReactTable,
-} from "@tanstack/react-table";
+} from "@tanstack/react-table"
 import {
   ArrowUpDown,
   Copy,
@@ -25,15 +25,15 @@ import {
   SearchCode,
   Server,
   Trash2,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
+} from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { toast } from "sonner"
 
-import { EditMcpServer } from "@/components/edit-mcp-server";
-import { McpServersListSkeleton } from "@/components/skeletons/mcp-servers-list-skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { EditMcpServer } from "@/components/edit-mcp-server"
+import { McpServersListSkeleton } from "@/components/skeletons/mcp-servers-list-skeleton"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -41,14 +41,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -56,33 +56,33 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { copyToClipboard } from "@/lib/utils";
+} from "@/components/ui/table"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { copyToClipboard } from "@/lib/utils"
 
 interface McpServersListProps {
-  onRefresh?: () => void;
+  onRefresh?: () => void
 }
 
 export function McpServersList({ onRefresh }: McpServersListProps) {
-  const { t } = useTranslations();
-  const router = useRouter();
+  const { t } = useTranslations()
+  const router = useRouter()
   const [sorting, setSorting] = useState<SortingState>([
     {
       id: "created_at",
       desc: true,
     },
-  ]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [serverToDelete, setServerToDelete] = useState<McpServer | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [serverToEdit, setServerToEdit] = useState<McpServer | null>(null);
+  ])
+  const [globalFilter, setGlobalFilter] = useState("")
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [serverToDelete, setServerToDelete] = useState<McpServer | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [serverToEdit, setServerToEdit] = useState<McpServer | null>(null)
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Use tRPC query for data fetching
   const {
@@ -90,7 +90,7 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
     error,
     isLoading,
     refetch,
-  } = trpc.frontend.mcpServers.list.useQuery();
+  } = trpc.frontend.mcpServers.list.useQuery()
 
   // tRPC mutation for deleting server
   const deleteServerMutation = trpc.frontend.mcpServers.delete.useMutation({
@@ -98,47 +98,47 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
       // Check if the operation was actually successful
       if (result.success) {
         // Invalidate and refetch the server list
-        utils.frontend.mcpServers.list.invalidate();
-        setDeleteDialogOpen(false);
-        setServerToDelete(null);
-        toast.success(t("mcp-servers:list.deleteServerSuccess"));
+        utils.frontend.mcpServers.list.invalidate()
+        setDeleteDialogOpen(false)
+        setServerToDelete(null)
+        toast.success(t("mcp-servers:list.deleteServerSuccess"))
       } else {
         // Handle business logic failures
-        console.error("Delete failed:", result.message);
+        console.error("Delete failed:", result.message)
         toast.error(t("mcp-servers:list.deleteServerError"), {
           description:
             result.message || t("mcp-servers:list.deleteServerError"),
-        });
+        })
       }
     },
     onError: (error) => {
-      console.error("Error deleting server:", error);
+      console.error("Error deleting server:", error)
       toast.error(t("mcp-servers:list.deleteServerError"), {
         description: error.message,
-      });
+      })
     },
     onSettled: () => {
-      setIsDeleting(false);
+      setIsDeleting(false)
     },
-  });
+  })
 
-  const servers = serversResponse?.success ? serversResponse.data : [];
+  const servers = serversResponse?.success ? serversResponse.data : []
 
   // Handle delete server
   const handleDeleteServer = async (server: McpServer) => {
-    setIsDeleting(true);
+    setIsDeleting(true)
     deleteServerMutation.mutate({
       uuid: server.uuid,
-    });
-  };
+    })
+  }
 
   // Handle successful edit
   const handleEditSuccess = () => {
     // Invalidate and refetch the server list
-    utils.frontend.mcpServers.list.invalidate();
-    setEditDialogOpen(false);
-    setServerToEdit(null);
-  };
+    utils.frontend.mcpServers.list.invalidate()
+    setEditDialogOpen(false)
+    setServerToEdit(null)
+  }
 
   // Define columns for the data table
   const columns: ColumnDef<McpServer>[] = [
@@ -154,10 +154,10 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
             {t("common:name")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const server = row.original;
+        const server = row.original
         return (
           <div className="space-y-1 px-3 py-2">
             <div
@@ -167,7 +167,7 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
               {server.name}
             </div>
           </div>
-        );
+        )
       },
     },
     {
@@ -182,15 +182,15 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
             {t("common:type")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const type = row.getValue("type") as string;
+        const type = row.getValue("type") as string
         return (
           <div className="px-3 py-2">
             <Badge variant="info">{type.toUpperCase()}</Badge>
           </div>
-        );
+        )
       },
     },
     {
@@ -205,11 +205,11 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
             {t("mcp-servers:list.errorStatus")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const errorStatus = row.getValue("error_status") as string;
-        const hasError = errorStatus === McpServerErrorStatusEnum.enum.ERROR;
+        const errorStatus = row.getValue("error_status") as string
+        const hasError = errorStatus === McpServerErrorStatusEnum.enum.ERROR
         return (
           <div className="px-3 py-2">
             <Badge variant={hasError ? "destructive" : "success"}>
@@ -218,7 +218,7 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
                 : t("mcp-servers:list.noError")}
             </Badge>
           </div>
-        );
+        )
       },
     },
     {
@@ -233,46 +233,46 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
             {t("mcp-servers:list.ownership")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const server = row.original;
-        const isPublic = server.user_id === null;
+        const server = row.original
+        const isPublic = server.user_id === null
         return (
           <div className="px-3 py-2">
             <Badge variant={isPublic ? "success" : "neutral"}>
               {isPublic ? t("mcp-servers:public") : t("mcp-servers:private")}
             </Badge>
           </div>
-        );
+        )
       },
     },
     {
       accessorKey: "details",
       header: t("mcp-servers:list.configuration"),
       cell: ({ row }) => {
-        const server = row.original;
-        const details = [];
+        const server = row.original
+        const details = []
 
         if (server.command) {
           details.push(
             t("mcp-servers:list.command", { command: server.command }),
-          );
+          )
         }
         if (server.args.length > 0) {
           details.push(
             t("mcp-servers:list.args", { args: server.args.join(" ") }),
-          );
+          )
         }
         if (server.url) {
-          details.push(t("mcp-servers:list.url", { url: server.url }));
+          details.push(t("mcp-servers:list.url", { url: server.url }))
         }
         if (Object.keys(server.env).length > 0) {
           details.push(
             t("mcp-servers:list.envVars", {
               count: Object.keys(server.env).length,
             }),
-          );
+          )
         }
 
         return (
@@ -286,7 +286,7 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
               </div>
             ))}
           </div>
-        );
+        )
       },
     },
     {
@@ -301,15 +301,15 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
             {t("mcp-servers:list.created")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"));
+        const date = new Date(row.getValue("created_at"))
         return (
           <div className="text-sm text-muted-foreground px-3 py-2">
             {date.toLocaleDateString()} {date.toLocaleTimeString()}
           </div>
-        );
+        )
       },
     },
     {
@@ -317,39 +317,39 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
       size: 100,
       header: t("mcp-servers:list.actions"),
       cell: ({ row }) => {
-        const server = row.original;
+        const server = row.original
 
         const copyServerJson = () => {
           const config: Record<string, unknown> = {
             type: server.type,
-          };
+          }
 
           if (server.description) {
-            config.description = server.description;
+            config.description = server.description
           }
 
           if (server.type === McpServerTypeEnum.enum.STDIO) {
             if (server.command) {
-              config.command = server.command;
+              config.command = server.command
             }
             if (server.args && server.args.length > 0) {
-              config.args = server.args;
+              config.args = server.args
             }
             if (server.env && Object.keys(server.env).length > 0) {
-              config.env = server.env;
+              config.env = server.env
             }
           } else if (
             server.type === McpServerTypeEnum.enum.SSE ||
             server.type === McpServerTypeEnum.enum.STREAMABLE_HTTP
           ) {
             if (server.url) {
-              config.url = server.url;
+              config.url = server.url
             }
             if (server.bearerToken) {
-              config.bearerToken = server.bearerToken;
+              config.bearerToken = server.bearerToken
             }
             if (server.headers && Object.keys(server.headers).length > 0) {
-              config.headers = server.headers;
+              config.headers = server.headers
             }
           }
 
@@ -357,31 +357,31 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
             mcpServers: {
               [server.name]: config,
             },
-          };
+          }
 
-          const serverJson = JSON.stringify(exportFormat, null, 2);
-          copyToClipboard(serverJson);
-        };
+          const serverJson = JSON.stringify(exportFormat, null, 2)
+          copyToClipboard(serverJson)
+        }
 
         const handleInspect = () => {
           router.push(
             `/mcp-inspector?server=${encodeURIComponent(server.uuid)}`,
-          );
-        };
+          )
+        }
 
         const handleViewDetails = () => {
-          router.push(`/mcp-servers/${server.uuid}`);
-        };
+          router.push(`/mcp-servers/${server.uuid}`)
+        }
 
         const handleDeleteClick = () => {
-          setServerToDelete(server);
-          setDeleteDialogOpen(true);
-        };
+          setServerToDelete(server)
+          setDeleteDialogOpen(true)
+        }
 
         const handleEditClick = () => {
-          setServerToEdit(server);
-          setEditDialogOpen(true);
-        };
+          setServerToEdit(server)
+          setEditDialogOpen(true)
+        }
 
         return (
           <DropdownMenu>
@@ -421,10 +421,10 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: servers,
@@ -440,13 +440,13 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
       sorting,
       globalFilter,
     },
-  });
+  })
 
   // Expose mutate function for parent component
   const handleRefresh = () => {
-    refetch();
-    onRefresh?.();
-  };
+    refetch()
+    onRefresh?.()
+  }
 
   if (error) {
     return (
@@ -464,11 +464,11 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
           </Button>
         </div>
       </div>
-    );
+    )
   }
 
   if (isLoading) {
-    return <McpServersListSkeleton />;
+    return <McpServersListSkeleton />
   }
 
   if (servers.length === 0) {
@@ -484,7 +484,7 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -494,8 +494,8 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
         server={serverToEdit}
         isOpen={editDialogOpen}
         onClose={() => {
-          setEditDialogOpen(false);
-          setServerToEdit(null);
+          setEditDialogOpen(false)
+          setServerToEdit(null)
         }}
         onSuccess={handleEditSuccess}
       />
@@ -517,8 +517,8 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
             <Button
               variant="outline"
               onClick={() => {
-                setDeleteDialogOpen(false);
-                setServerToDelete(null);
+                setDeleteDialogOpen(false)
+                setServerToDelete(null)
               }}
               disabled={isDeleting}
             >
@@ -573,7 +573,7 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
                               header.getContext(),
                             )}
                       </TableHead>
-                    );
+                    )
                   })}
                 </TableRow>
               ))}
@@ -624,5 +624,5 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
         </div>
       </div>
     </>
-  );
+  )
 }

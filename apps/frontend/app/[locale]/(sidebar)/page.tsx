@@ -1,18 +1,18 @@
-"use client";
+"use client"
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
-import { useTranslations } from "@/hooks/useTranslations";
+import { useTranslations } from "@/hooks/useTranslations"
 
 export default function RootPage() {
-  const { t } = useTranslations();
-  const router = useRouter();
+  const { t } = useTranslations()
+  const router = useRouter()
 
   useEffect(() => {
     // Redirect to MCP servers page as the new default
-    router.replace("/mcp-servers");
-  }, [router]);
+    router.replace("/mcp-servers")
+  }, [router])
 
   // Return a loading state while redirecting
   return (
@@ -23,5 +23,5 @@ export default function RootPage() {
         </h1>
       </div>
     </div>
-  );
+  )
 }

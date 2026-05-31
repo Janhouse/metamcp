@@ -1,67 +1,67 @@
-import { DatabaseEndpoint } from "@repo/zod-types";
-import express from "express";
-import { NextFunction, Request, Response } from "express";
+import type { DatabaseEndpoint } from "@repo/zod-types"
+import type express from "express"
+import type { NextFunction, Request, Response } from "express"
 
 import {
   RateLimitError,
   RateLimiting,
   SlidingWindowRateLimiting,
-} from "@/lib/rate-limit";
+} from "@/lib/rate-limit"
 
-const slidingWindowRateLimit = new SlidingWindowRateLimiting();
-const tokenBucketRateLimit = new RateLimiting();
+const slidingWindowRateLimit = new SlidingWindowRateLimiting()
+const tokenBucketRateLimit = new RateLimiting()
 
 interface RateLimitOptions extends express.Request {
-  endpoint: DatabaseEndpoint;
+  endpoint: DatabaseEndpoint
 }
 
 /**
  * Express adapter for TokenBucket rate limiting middleware
  */
 const tokenBucketRateLimiter = () => {
-  const limiter = tokenBucketRateLimit;
+  const limiter = tokenBucketRateLimit
 
-  return async function (req: Request, res: Response, next: NextFunction) {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       await limiter.onRequest({ req }, async () => {
-        return next();
-      });
+        return next()
+      })
     } catch (err) {
       if (err instanceof RateLimitError) {
-        res.status(429).json({ error: err.message });
+        res.status(429).json({ error: err.message })
       } else {
-        next(err);
+        next(err)
       }
     }
-  };
-};
+  }
+}
 
 /**
  * Express adapter for Sliding Window rate limiting middleware
  */
 const slidingWindowRateLimiter = () => {
-  const limiter = slidingWindowRateLimit;
+  const limiter = slidingWindowRateLimit
 
-  return async function (req: Request, res: Response, next: NextFunction) {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       await limiter.onRequest({ req }, async () => {
-        return next();
-      });
+        return next()
+      })
     } catch (err) {
       if (err instanceof RateLimitError) {
-        res.status(429).json({ error: err.message });
+        res.status(429).json({ error: err.message })
       } else {
-        next(err);
+        next(err)
       }
     }
-  };
-};
+  }
+}
 
 /**
  * Combined rate limiter that runs both sliding window and token bucket limiters sequentially
  */
 const rateLimiter = () => {
-  return async function (req: Request, res: Response, next: NextFunction) {
+  return async (req: Request, res: Response, next: NextFunction) => {
     // First, run sliding window rate limiter
     try {
       await slidingWindowRateLimit.onRequest({ req }, async () => {
@@ -69,39 +69,39 @@ const rateLimiter = () => {
         try {
           await tokenBucketRateLimit.onRequest({ req }, async () => {
             // Both limiters passed, proceed to next middleware
-            return next();
-          });
+            return next()
+          })
         } catch (err) {
           if (err instanceof RateLimitError) {
-            res.status(429).json({ error: err.message });
+            res.status(429).json({ error: err.message })
           } else {
-            next(err);
+            next(err)
           }
         }
-      });
+      })
     } catch (err) {
       if (err instanceof RateLimitError) {
-        res.status(429).json({ error: err.message });
+        res.status(429).json({ error: err.message })
       } else {
-        next(err);
+        next(err)
       }
     }
-  };
-};
+  }
+}
 
 export const rateLimitMiddleware = (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction,
 ) => {
-  const { endpoint } = req as RateLimitOptions;
+  const { endpoint } = req as RateLimitOptions
   if (endpoint.enable_client_max_rate && endpoint.enable_max_rate) {
-    rateLimiter()(req, res, next);
+    rateLimiter()(req, res, next)
   } else if (endpoint.enable_client_max_rate) {
-    slidingWindowRateLimiter()(req, res, next);
+    slidingWindowRateLimiter()(req, res, next)
   } else if (endpoint.enable_max_rate) {
-    tokenBucketRateLimiter()(req, res, next);
+    tokenBucketRateLimiter()(req, res, next)
   } else {
-    next();
+    next()
   }
-};
+}

@@ -1,42 +1,42 @@
-"use client";
+"use client"
 
 import {
-  EditServerFormData,
+  type EditServerFormData,
   EditServerFormSchema,
-  McpServer,
+  type McpServer,
   McpServerTypeEnum,
-  UpdateMcpServerRequest,
-} from "@repo/zod-types";
-import { ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+  type UpdateMcpServerRequest,
+} from "@repo/zod-types"
+import { ChevronDown } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { createTranslatedZodResolver } from "@/lib/zod-resolver";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { createTranslatedZodResolver } from "@/lib/zod-resolver"
 
 interface EditMcpServerProps {
-  server: McpServer | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: (updatedServer: McpServer) => void;
+  server: McpServer | null
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: (updatedServer: McpServer) => void
 }
 
 export function EditMcpServer({
@@ -45,33 +45,33 @@ export function EditMcpServer({
   onClose,
   onSuccess,
 }: EditMcpServerProps) {
-  const [isUpdating, setIsUpdating] = useState(false);
-  const { t } = useTranslations();
+  const [isUpdating, setIsUpdating] = useState(false)
+  const { t } = useTranslations()
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // tRPC mutation for updating MCP server
   const updateServerMutation = trpc.frontend.mcpServers.update.useMutation({
     onSuccess: (data) => {
       if (data.success && data.data) {
         // Invalidate both the list and individual server queries
-        utils.frontend.mcpServers.list.invalidate();
+        utils.frontend.mcpServers.list.invalidate()
         if (server) {
-          utils.frontend.mcpServers.get.invalidate({ uuid: server.uuid });
+          utils.frontend.mcpServers.get.invalidate({ uuid: server.uuid })
         }
 
         toast.success(t("mcp-servers:serverUpdated"), {
           description: t("mcp-servers:serverUpdateSuccess", {
             name: data.data.name,
           }),
-        });
-        onSuccess(data.data);
-        onClose();
-        editForm.reset();
+        })
+        onSuccess(data.data)
+        onClose()
+        editForm.reset()
       } else {
         // Handle business logic errors returned by the backend
-        const errorMessage = data.message || t("mcp-servers:serverUpdateError");
+        const errorMessage = data.message || t("mcp-servers:serverUpdateError")
 
         // Check if this is a unique constraint violation for server name
         if (
@@ -82,10 +82,10 @@ export function EditMcpServer({
           editForm.setError("name", {
             type: "manual",
             message: errorMessage,
-          });
+          })
           toast.error(t("mcp-servers:serverNameExists"), {
             description: t("mcp-servers:serverNameExistsDesc"),
-          });
+          })
         } else if (
           errorMessage.includes("is invalid") &&
           errorMessage.includes("Server names must only contain")
@@ -94,20 +94,20 @@ export function EditMcpServer({
           editForm.setError("name", {
             type: "manual",
             message: errorMessage,
-          });
+          })
           toast.error(t("mcp-servers:invalidServerName"), {
             description: t("mcp-servers:invalidServerNameDesc"),
-          });
+          })
         } else {
           // Generic error handling
           toast.error(t("mcp-servers:serverUpdateError"), {
             description: errorMessage,
-          });
+          })
         }
       }
     },
     onError: (error) => {
-      console.error("Error updating server:", error);
+      console.error("Error updating server:", error)
 
       // Check if this is a unique constraint violation for server name
       if (
@@ -118,10 +118,10 @@ export function EditMcpServer({
         editForm.setError("name", {
           type: "manual",
           message: error.message,
-        });
+        })
         toast.error(t("mcp-servers:serverNameExists"), {
           description: t("mcp-servers:serverNameExistsDesc"),
-        });
+        })
       } else if (
         error.message.includes("is invalid") &&
         error.message.includes("Server names must only contain")
@@ -130,21 +130,21 @@ export function EditMcpServer({
         editForm.setError("name", {
           type: "manual",
           message: error.message,
-        });
+        })
         toast.error(t("mcp-servers:invalidServerName"), {
           description: t("mcp-servers:invalidServerNameDesc"),
-        });
+        })
       } else {
         // Generic error handling
         toast.error(t("mcp-servers:serverUpdateError"), {
           description: error.message || t("common:unexpectedError"),
-        });
+        })
       }
     },
     onSettled: () => {
-      setIsUpdating(false);
+      setIsUpdating(false)
     },
-  });
+  })
 
   const editForm = useForm<EditServerFormData>({
     resolver: createTranslatedZodResolver(EditServerFormSchema, t),
@@ -160,7 +160,7 @@ export function EditMcpServer({
       env: "",
       user_id: undefined,
     },
-  });
+  })
 
   // Watch for type changes in edit form and clear irrelevant fields
   useEffect(() => {
@@ -168,22 +168,22 @@ export function EditMcpServer({
       if (name === "type" && value.type) {
         if (value.type === McpServerTypeEnum.enum.STDIO) {
           // Clear URL, bearer token, and headers when switching to stdio
-          editForm.setValue("url", "");
-          editForm.setValue("bearerToken", "");
-          editForm.setValue("headers", "");
+          editForm.setValue("url", "")
+          editForm.setValue("bearerToken", "")
+          editForm.setValue("headers", "")
         } else if (
           value.type === McpServerTypeEnum.enum.SSE ||
           value.type === McpServerTypeEnum.enum.STREAMABLE_HTTP
         ) {
           // Clear command, args, and env when switching to sse or streamable_http
-          editForm.setValue("command", "");
-          editForm.setValue("args", "");
-          editForm.setValue("env", "");
+          editForm.setValue("command", "")
+          editForm.setValue("args", "")
+          editForm.setValue("env", "")
         }
       }
-    });
-    return () => subscription.unsubscribe();
-  }, [editForm]);
+    })
+    return () => subscription.unsubscribe()
+  }, [editForm])
 
   // Pre-populate form when server changes
   useEffect(() => {
@@ -203,15 +203,15 @@ export function EditMcpServer({
           .map(([key, value]) => `${key}=${value}`)
           .join("\n"),
         user_id: server.user_id,
-      });
+      })
     }
-  }, [server, isOpen, editForm]);
+  }, [server, isOpen, editForm])
 
   // Handle edit server
   const handleEditServer = async (data: EditServerFormData) => {
-    if (!server) return;
+    if (!server) return
 
-    setIsUpdating(true);
+    setIsUpdating(true)
     try {
       // Parse args string into array by splitting on spaces
       const argsArray = data.args
@@ -219,35 +219,35 @@ export function EditMcpServer({
             .trim()
             .split(/\s+/)
             .filter((arg) => arg.length > 0)
-        : [];
+        : []
 
       // Parse env string into object
-      const envObject: Record<string, string> = {};
+      const envObject: Record<string, string> = {}
       if (data.env) {
-        const envLines = data.env.trim().split("\n");
+        const envLines = data.env.trim().split("\n")
         for (const line of envLines) {
-          const trimmedLine = line.trim();
-          if (trimmedLine && trimmedLine.includes("=")) {
-            const [key, ...valueParts] = trimmedLine.split("=");
-            const value = valueParts.join("="); // Handle values that contain '='
+          const trimmedLine = line.trim()
+          if (trimmedLine?.includes("=")) {
+            const [key, ...valueParts] = trimmedLine.split("=")
+            const value = valueParts.join("=") // Handle values that contain '='
             if (key?.trim()) {
-              envObject[key.trim()] = value;
+              envObject[key.trim()] = value
             }
           }
         }
       }
 
       // Parse headers string into object
-      const headersObject: Record<string, string> = {};
+      const headersObject: Record<string, string> = {}
       if (data.headers) {
-        const headersLines = data.headers.trim().split("\n");
+        const headersLines = data.headers.trim().split("\n")
         for (const line of headersLines) {
-          const trimmedLine = line.trim();
-          if (trimmedLine && trimmedLine.includes("=")) {
-            const [key, ...valueParts] = trimmedLine.split("=");
-            const value = valueParts.join("="); // Handle values that contain '='
+          const trimmedLine = line.trim()
+          if (trimmedLine?.includes("=")) {
+            const [key, ...valueParts] = trimmedLine.split("=")
+            const value = valueParts.join("=") // Handle values that contain '='
             if (key?.trim()) {
-              headersObject[key.trim()] = value;
+              headersObject[key.trim()] = value
             }
           }
         }
@@ -266,24 +266,24 @@ export function EditMcpServer({
         bearerToken: data.bearerToken,
         headers: headersObject,
         user_id: data.user_id,
-      };
+      }
 
       // Use tRPC mutation instead of direct fetch
-      updateServerMutation.mutate(apiPayload);
+      updateServerMutation.mutate(apiPayload)
     } catch (error) {
-      setIsUpdating(false);
-      console.error("Error preparing server data:", error);
+      setIsUpdating(false)
+      console.error("Error preparing server data:", error)
       toast.error(t("mcp-servers:serverUpdateError"), {
         description:
           error instanceof Error ? error.message : t("common:unexpectedError"),
-      });
+      })
     }
-  };
+  }
 
   const handleClose = () => {
-    onClose();
-    editForm.reset();
-  };
+    onClose()
+    editForm.reset()
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -528,5 +528,5 @@ export function EditMcpServer({
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

@@ -10,9 +10,9 @@ We welcome contributions to MetaMCP! This guide will help you get started.
    cd metamcp
    ```
 
-2. Install dependencies:
+2. Install dependencies (requires [Bun](https://bun.sh); the canary/Rust build is used in CI and Docker):
    ```bash
-   pnpm install
+   bun install
    ```
 
 3. Set up environment:
@@ -22,7 +22,7 @@ We welcome contributions to MetaMCP! This guide will help you get started.
 
 4. Start development:
    ```bash
-   pnpm dev
+   bun run dev
    ```
 ### **🐳 Docker Development with Hot Reload**
 
@@ -30,13 +30,13 @@ For development with Docker that includes hot reloading for both frontend and ba
 
 ```bash
 # Start development environment with hot reload
-pnpm run dev:docker
+bun run dev:docker
 
 # Stop development environment
-pnpm run dev:docker:down
+bun run dev:docker:down
 
 # Clean up development environment (removes volumes)
-pnpm run dev:docker:clean
+bun run dev:docker:clean
 ```
 
 **Features:**

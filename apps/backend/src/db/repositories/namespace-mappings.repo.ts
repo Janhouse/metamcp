@@ -1,15 +1,15 @@
-import {
+import type {
   NamespaceServerStatusUpdate,
   NamespaceToolOverridesUpdate,
   NamespaceToolStatusUpdate,
-} from "@repo/zod-types";
-import { and, eq, sql } from "drizzle-orm";
+} from "@repo/zod-types"
+import { and, eq, sql } from "drizzle-orm"
 
-import { db } from "../index";
+import { db } from "../index"
 import {
   namespaceServerMappingsTable,
   namespaceToolMappingsTable,
-} from "../schema";
+} from "../schema"
 
 export class NamespaceMappingsRepository {
   async updateServerStatus(input: NamespaceServerStatusUpdate) {
@@ -24,9 +24,9 @@ export class NamespaceMappingsRepository {
           eq(namespaceServerMappingsTable.mcp_server_uuid, input.serverUuid),
         ),
       )
-      .returning();
+      .returning()
 
-    return updatedMapping;
+    return updatedMapping
   }
 
   async updateToolStatus(input: NamespaceToolStatusUpdate) {
@@ -42,9 +42,9 @@ export class NamespaceMappingsRepository {
           eq(namespaceToolMappingsTable.mcp_server_uuid, input.serverUuid),
         ),
       )
-      .returning();
+      .returning()
 
-    return updatedMapping;
+    return updatedMapping
   }
 
   async updateToolOverrides(input: NamespaceToolOverridesUpdate) {
@@ -63,9 +63,9 @@ export class NamespaceMappingsRepository {
           eq(namespaceToolMappingsTable.mcp_server_uuid, input.serverUuid),
         ),
       )
-      .returning();
+      .returning()
 
-    return updatedMapping;
+    return updatedMapping
   }
 
   async findServerMapping(namespaceUuid: string, serverUuid: string) {
@@ -77,9 +77,9 @@ export class NamespaceMappingsRepository {
           eq(namespaceServerMappingsTable.namespace_uuid, namespaceUuid),
           eq(namespaceServerMappingsTable.mcp_server_uuid, serverUuid),
         ),
-      );
+      )
 
-    return mapping;
+    return mapping
   }
 
   /**
@@ -91,9 +91,9 @@ export class NamespaceMappingsRepository {
         namespace_uuid: namespaceServerMappingsTable.namespace_uuid,
       })
       .from(namespaceServerMappingsTable)
-      .where(eq(namespaceServerMappingsTable.mcp_server_uuid, serverUuid));
+      .where(eq(namespaceServerMappingsTable.mcp_server_uuid, serverUuid))
 
-    return mappings.map((mapping) => mapping.namespace_uuid);
+    return mappings.map((mapping) => mapping.namespace_uuid)
   }
 
   /**
@@ -103,9 +103,9 @@ export class NamespaceMappingsRepository {
     const mappings = await db
       .select()
       .from(namespaceToolMappingsTable)
-      .where(eq(namespaceToolMappingsTable.namespace_uuid, namespaceUuid));
+      .where(eq(namespaceToolMappingsTable.namespace_uuid, namespaceUuid))
 
-    return mappings;
+    return mappings
   }
 
   async findToolMapping(
@@ -122,9 +122,9 @@ export class NamespaceMappingsRepository {
           eq(namespaceToolMappingsTable.tool_uuid, toolUuid),
           eq(namespaceToolMappingsTable.mcp_server_uuid, serverUuid),
         ),
-      );
+      )
 
-    return mapping;
+    return mapping
   }
 
   /**
@@ -132,15 +132,15 @@ export class NamespaceMappingsRepository {
    * Used when refreshing tools from MetaMCP connection
    */
   async bulkUpsertNamespaceToolMappings(input: {
-    namespaceUuid: string;
+    namespaceUuid: string
     toolMappings: Array<{
-      toolUuid: string;
-      serverUuid: string;
-      status?: "ACTIVE" | "INACTIVE";
-    }>;
+      toolUuid: string
+      serverUuid: string
+      status?: "ACTIVE" | "INACTIVE"
+    }>
   }) {
     if (!input.toolMappings || input.toolMappings.length === 0) {
-      return [];
+      return []
     }
 
     const mappingsToInsert = input.toolMappings.map((mapping) => ({
@@ -148,7 +148,7 @@ export class NamespaceMappingsRepository {
       tool_uuid: mapping.toolUuid,
       mcp_server_uuid: mapping.serverUuid,
       status: (mapping.status || "ACTIVE") as "ACTIVE" | "INACTIVE",
-    }));
+    }))
 
     // Upsert the mappings - if they exist, update the status; if not, insert them
     return await db
@@ -164,8 +164,8 @@ export class NamespaceMappingsRepository {
           mcp_server_uuid: sql`excluded.mcp_server_uuid`,
         },
       })
-      .returning();
+      .returning()
   }
 }
 
-export const namespaceMappingsRepository = new NamespaceMappingsRepository();
+export const namespaceMappingsRepository = new NamespaceMappingsRepository()

@@ -119,7 +119,7 @@ DATABASE_URL=${DB_CONNECTION_STRING}
 
 > **🔒 Security Note**: Environment variable references (`${VAR_NAME}`) are resolved from the MetaMCP container's environment at runtime. This keeps actual secret values out of your configuration and git repository.
 
-> **⚙️ Development Note**: For local development with `pnpm run dev:docker`, ensure your environment variables are listed in `turbo.json` under `globalEnv` to be passed to the development processes. This is not required for production Docker deployments.
+> **⚙️ Development Note**: For local development with `bun run dev:docker`, ensure your environment variables are listed in `turbo.json` under `globalEnv` to be passed to the development processes. This is not required for production Docker deployments.
 
 ### 🏷️ **MetaMCP Namespace**
 - Group one or more MCP servers into a namespace
@@ -162,7 +162,7 @@ docker compose up -d
 
 If you modify APP_URL env vars, make sure you only access from the APP_URL, because MetaMCP enforces CORS policy on the URL, so no other URL is accessible.
 
-Note that the pg volume name may collide with your other pg dockers, which is global, consider rename it in `docker-compose.yml`:
+Note that the pg volume name may collide with your other pg dockers, which is global, consider renaming it in `docker/docker-compose.prod.yml`:
 
 ```
 volumes:
@@ -193,15 +193,15 @@ VSCode will open the Dev Containers project in a new window, where it will build
 Wait some minutes, depending on the internet connection or computer performance, it may take from a few minutes to tens of minutes, you can click on the Progress Bar in the bottom right corner to view a live log where you will be able to check unusual stuck.
 <img width="732" height="173" alt="image" src="https://github.com/user-attachments/assets/6e5752f8-7353-4a8f-b489-c13daef6700e" />
 
-After finished, you can run `pnpm dev` to start the development server.
+After finished, you can run `bun run dev` to start the development server.
 
 ### **💻 Local Development**
 
 Still recommend running postgres through docker for easy setup:
 
 ```bash
-pnpm install
-pnpm dev
+bun install
+bun run dev
 ```
 
 ## 🔌 MCP Protocol Compatibility
@@ -315,7 +315,7 @@ MetaMCP’s backend writes logs to files and optionally mirrors selected levels 
     ```bash
     LOG_LEVEL='errors-only' # 'all', 'info', 'errors-only', 'none'
     ```
-  - `docker-compose.dev.yml` uses: `LOG_LEVEL: ${LOG_LEVEL:-all}`
+  - `docker/docker-compose.dev.yml` uses: `LOG_LEVEL: ${LOG_LEVEL:-all}`
 
 ## 🔐 Authentication
 

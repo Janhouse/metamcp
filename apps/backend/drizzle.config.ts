@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { defineConfig } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit"
 export default defineConfig({
   out: "./drizzle",
   schema: "./src/db/schema.ts",
@@ -9,4 +9,4 @@ export default defineConfig({
     // @ts-expect-error outside dir
     url: process.env.DATABASE_URL!,
   },
-});
+})

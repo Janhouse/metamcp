@@ -1,39 +1,39 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { genericOAuth, GenericOAuthConfig } from "better-auth/plugins";
+import { betterAuth } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { type GenericOAuthConfig, genericOAuth } from "better-auth/plugins"
 
-import { db } from "./db/index";
-import * as schema from "./db/schema";
-import { configService } from "./lib/config.service";
-import { assertSecureAuthSecret } from "./lib/secret-validation";
-import logger from "./utils/logger";
+import { db } from "./db/index"
+import * as schema from "./db/schema"
+import { configService } from "./lib/config.service"
+import { assertSecureAuthSecret } from "./lib/secret-validation"
+import logger from "./utils/logger"
 
 // Refuse to start with a missing, default, or weak auth secret — otherwise
 // session cookies and tokens are forgeable by anyone who knows the default.
 const BETTER_AUTH_SECRET = assertSecureAuthSecret(
   process.env.BETTER_AUTH_SECRET,
-);
+)
 if (!process.env.APP_URL) {
-  throw new Error("APP_URL environment variable is required");
+  throw new Error("APP_URL environment variable is required")
 }
 
-const BETTER_AUTH_URL = process.env.APP_URL;
+const BETTER_AUTH_URL = process.env.APP_URL
 
 // Helper function to create basic auth middleware
 const createBasicAuthCheckMiddleware = () => {
   return async (request: unknown) => {
-    const isBasicAuthDisabled = await configService.isBasicAuthDisabled();
+    const isBasicAuthDisabled = await configService.isBasicAuthDisabled()
     if (isBasicAuthDisabled) {
       throw new Error(
         "Basic email/password authentication is currently disabled. Please use SSO/OIDC authentication instead.",
-      );
+      )
     }
-    return { request };
-  };
-};
+    return { request }
+  }
+}
 
 // OIDC Provider configuration - optional, only if environment variables are provided
-const oidcProviders: GenericOAuthConfig[] = [];
+const oidcProviders: GenericOAuthConfig[] = []
 
 // Add OIDC provider if configured
 if (process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET) {
@@ -45,10 +45,10 @@ if (process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET) {
     pkce: process.env.OIDC_PKCE !== "false", // Enable PKCE by default for security
     discoveryUrl: process.env.OIDC_DISCOVERY_URL,
     authorizationUrl: process.env.OIDC_AUTHORIZATION_URL, //this is required due to a bug in better-auth: https://github.com/better-auth/better-auth/issues/3278
-  };
+  }
 
-  oidcProviders.push(oidcConfig);
-  logger.info(`✓ OIDC Provider configured: ${oidcConfig.providerId}`);
+  oidcProviders.push(oidcConfig)
+  logger.info(`✓ OIDC Provider configured: ${oidcConfig.providerId}`)
 }
 
 // Default trusted origins for development
@@ -62,16 +62,16 @@ const DEFAULT_TRUSTED_ORIGINS = [
   "http://0.0.0.0",
   "http://0.0.0.0:3000",
   "http://0.0.0.0:12008",
-];
+]
 
 // Parse extra trusted origins from environment variable (comma-separated)
 const extraTrustedOrigins = process.env.EXTRA_TRUSTED_ORIGINS
   ? process.env.EXTRA_TRUSTED_ORIGINS.split(",")
       .map((origin: string) => origin.trim())
       .filter(Boolean)
-  : [];
+  : []
 
-const trustedOrigins = [...DEFAULT_TRUSTED_ORIGINS, ...extraTrustedOrigins];
+const trustedOrigins = [...DEFAULT_TRUSTED_ORIGINS, ...extraTrustedOrigins]
 
 export const auth = betterAuth({
   secret: BETTER_AUTH_SECRET,
@@ -142,29 +142,29 @@ export const auth = betterAuth({
       create: {
         before: async (user, context) => {
           // Check if signup is disabled based on the registration method
-          const isSignupDisabled = await configService.isSignupDisabled();
-          const isSsoSignupDisabled = await configService.isSsoSignupDisabled();
+          const isSignupDisabled = await configService.isSignupDisabled()
+          const isSsoSignupDisabled = await configService.isSsoSignupDisabled()
 
           // Determine if this is an SSO/OAuth registration by checking the request path
           // OAuth/SSO registrations typically come through callback endpoints
           const isSsoRegistration =
             context?.path?.includes("/callback/") ||
             context?.path?.includes("/oauth/") ||
-            context?.path?.includes("/oidc/");
+            context?.path?.includes("/oidc/")
 
           if (isSsoRegistration) {
             if (isSsoSignupDisabled) {
               throw new Error(
                 "New user registration via SSO/OAuth is currently disabled.",
-              );
+              )
             }
           } else {
             if (isSignupDisabled) {
-              throw new Error("New user registration is currently disabled.");
+              throw new Error("New user registration is currently disabled.")
             }
           }
 
-          return { data: user };
+          return { data: user }
         },
       },
     },
@@ -188,11 +188,11 @@ export const auth = betterAuth({
       middleware: createBasicAuthCheckMiddleware(),
     },
   ],
-});
+})
 
-console.log("✓ Better Auth instance created successfully");
-console.log(`✓ OIDC Providers configured: ${oidcProviders.length}`);
+console.log("✓ Better Auth instance created successfully")
+console.log(`✓ OIDC Providers configured: ${oidcProviders.length}`)
 
-export type Session = typeof auth.$Infer.Session;
+export type Session = typeof auth.$Infer.Session
 // Note: User type needs to be inferred from Session.user
-export type User = typeof auth.$Infer.Session.user;
+export type User = typeof auth.$Infer.Session.user

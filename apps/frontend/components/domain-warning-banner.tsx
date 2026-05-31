@@ -1,72 +1,72 @@
-"use client";
+"use client"
 
-import { AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { getAppUrl } from "@/lib/env";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { getAppUrl } from "@/lib/env"
 
 interface DomainWarningBannerProps {
-  className?: string;
+  className?: string
 }
 
 export function DomainWarningBanner({
   className = "",
 }: DomainWarningBannerProps) {
-  const [showDomainWarning, setShowDomainWarning] = useState(false);
+  const [showDomainWarning, setShowDomainWarning] = useState(false)
   const [domainInfo, setDomainInfo] = useState<{
-    current: string;
-    expected: string;
-  } | null>(null);
+    current: string
+    expected: string
+  } | null>(null)
 
   // Function to check domain validation
-  const checkDomainValidation = () => {
+  const checkDomainValidation = useCallback(() => {
     try {
-      const configuredAppUrl = getAppUrl();
-      const currentOrigin = window.location.origin;
-      const configuredOrigin = new URL(configuredAppUrl).origin;
+      const configuredAppUrl = getAppUrl()
+      const currentOrigin = window.location.origin
+      const configuredOrigin = new URL(configuredAppUrl).origin
 
       if (currentOrigin !== configuredOrigin) {
-        setShowDomainWarning(true);
+        setShowDomainWarning(true)
         setDomainInfo({
           current: currentOrigin,
           expected: configuredOrigin,
-        });
-        return false;
+        })
+        return false
       }
-      setShowDomainWarning(false);
-      setDomainInfo(null);
-      return true;
+      setShowDomainWarning(false)
+      setDomainInfo(null)
+      return true
     } catch (error) {
-      console.error("Error checking domain validation:", error);
+      console.error("Error checking domain validation:", error)
       // If we can't check, don't show warning (fail open)
-      setShowDomainWarning(false);
-      setDomainInfo(null);
-      return true;
+      setShowDomainWarning(false)
+      setDomainInfo(null)
+      return true
     }
-  };
+  }, [])
 
   // Check domain validation once on load
   useEffect(() => {
-    checkDomainValidation();
-  }, []);
+    checkDomainValidation()
+  }, [checkDomainValidation])
 
   const handleDismissWarning = () => {
-    setShowDomainWarning(false);
-  };
+    setShowDomainWarning(false)
+  }
 
   const handleViewDetails = () => {
-    const corsErrorUrl = new URL("/cors-error", window.location.origin);
+    const corsErrorUrl = new URL("/cors-error", window.location.origin)
     corsErrorUrl.searchParams.set(
       "callbackUrl",
       window.location.pathname + window.location.search,
-    );
-    window.location.href = corsErrorUrl.toString();
-  };
+    )
+    window.location.href = corsErrorUrl.toString()
+  }
 
   if (!showDomainWarning || !domainInfo) {
-    return null;
+    return null
   }
 
   return (
@@ -107,5 +107,5 @@ export function DomainWarningBanner({
         </div>
       </AlertDescription>
     </Alert>
-  );
+  )
 }

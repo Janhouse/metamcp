@@ -30,7 +30,7 @@ jobs:
       - name: Build MetaMCP image
         env:
           REPOSITORY_IMAGE: ${{ vars.REPOSITORY_IMAGE }}
-        run: docker build -t "${REPOSITORY_IMAGE}" .
+        run: docker build -f docker/dockerfiles/Dockerfile -t "${REPOSITORY_IMAGE}" .
 
       - name: Push MetaMCP to Gitea
         env:

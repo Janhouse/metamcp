@@ -6,10 +6,10 @@ import {
   ListEndpointsResponseSchema,
   UpdateEndpointRequestSchema,
   UpdateEndpointResponseSchema,
-} from "@repo/zod-types";
-import { z } from "zod";
+} from "@repo/zod-types"
+import { z } from "zod"
 
-import { protectedProcedure, router } from "../../trpc";
+import { protectedProcedure, router } from "../../trpc"
 
 // Define the endpoints router with procedure definitions
 // The actual implementation will be provided by the backend
@@ -19,26 +19,26 @@ export const createEndpointsRouter = (
     create: (
       input: z.infer<typeof CreateEndpointRequestSchema>,
       userId: string,
-    ) => Promise<z.infer<typeof CreateEndpointResponseSchema>>;
+    ) => Promise<z.infer<typeof CreateEndpointResponseSchema>>
     list: (
       userId: string,
-    ) => Promise<z.infer<typeof ListEndpointsResponseSchema>>;
+    ) => Promise<z.infer<typeof ListEndpointsResponseSchema>>
     get: (
       input: {
-        uuid: string;
+        uuid: string
       },
       userId: string,
-    ) => Promise<z.infer<typeof GetEndpointResponseSchema>>;
+    ) => Promise<z.infer<typeof GetEndpointResponseSchema>>
     delete: (
       input: {
-        uuid: string;
+        uuid: string
       },
       userId: string,
-    ) => Promise<z.infer<typeof DeleteEndpointResponseSchema>>;
+    ) => Promise<z.infer<typeof DeleteEndpointResponseSchema>>
     update: (
       input: z.infer<typeof UpdateEndpointRequestSchema>,
       userId: string,
-    ) => Promise<z.infer<typeof UpdateEndpointResponseSchema>>;
+    ) => Promise<z.infer<typeof UpdateEndpointResponseSchema>>
   },
 ) => {
   return router({
@@ -46,7 +46,7 @@ export const createEndpointsRouter = (
     list: protectedProcedure
       .output(ListEndpointsResponseSchema)
       .query(async ({ ctx }) => {
-        return await implementations.list(ctx.user.id);
+        return await implementations.list(ctx.user.id)
       }),
 
     // Protected: Get single endpoint by UUID
@@ -54,7 +54,7 @@ export const createEndpointsRouter = (
       .input(z.object({ uuid: z.string() }))
       .output(GetEndpointResponseSchema)
       .query(async ({ input, ctx }) => {
-        return await implementations.get(input, ctx.user.id);
+        return await implementations.get(input, ctx.user.id)
       }),
 
     // Protected: Create endpoint
@@ -62,7 +62,7 @@ export const createEndpointsRouter = (
       .input(CreateEndpointRequestSchema)
       .output(CreateEndpointResponseSchema)
       .mutation(async ({ input, ctx }) => {
-        return await implementations.create(input, ctx.user.id);
+        return await implementations.create(input, ctx.user.id)
       }),
 
     // Protected: Delete endpoint
@@ -70,7 +70,7 @@ export const createEndpointsRouter = (
       .input(z.object({ uuid: z.string() }))
       .output(DeleteEndpointResponseSchema)
       .mutation(async ({ input, ctx }) => {
-        return await implementations.delete(input, ctx.user.id);
+        return await implementations.delete(input, ctx.user.id)
       }),
 
     // Protected: Update endpoint
@@ -78,7 +78,7 @@ export const createEndpointsRouter = (
       .input(UpdateEndpointRequestSchema)
       .output(UpdateEndpointResponseSchema)
       .mutation(async ({ input, ctx }) => {
-        return await implementations.update(input, ctx.user.id);
+        return await implementations.update(input, ctx.user.id)
       }),
-  });
-};
+  })
+}

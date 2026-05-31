@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton"
 
 export function InspectorSkeleton() {
   return (
@@ -30,5 +30,5 @@ export function InspectorSkeleton() {
         <Skeleton className="h-4 w-56" />
       </div>
     </div>
-  );
+  )
 }

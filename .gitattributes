@@ -1,0 +1,5 @@
+# Treat the Bun lockfile as generated: collapse it in diffs/code review and
+# exclude it from language statistics. It stays COMMITTED on purpose — CI and
+# the Docker build run `bun install --frozen-lockfile`, which requires the
+# lockfile to be present in the repository.
+bun.lock -diff linguist-generated=true

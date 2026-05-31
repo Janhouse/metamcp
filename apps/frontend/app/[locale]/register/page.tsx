@@ -1,20 +1,20 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Suspense, useCallback, useEffect, useState } from "react"
 
-import { DomainWarningBanner } from "@/components/domain-warning-banner";
-import { LanguageSwitcher } from "@/components/language-switcher";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useTranslations } from "@/hooks/useTranslations";
-import { authClient } from "@/lib/auth-client";
-import { vanillaTrpcClient } from "@/lib/trpc";
+import { DomainWarningBanner } from "@/components/domain-warning-banner"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { useTranslations } from "@/hooks/useTranslations"
+import { authClient } from "@/lib/auth-client"
+import { vanillaTrpcClient } from "@/lib/trpc"
 
 function LoadingFallback() {
-  const { t } = useTranslations();
+  const { t } = useTranslations()
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
@@ -23,66 +23,66 @@ function LoadingFallback() {
         </h1>
       </div>
     </div>
-  );
+  )
 }
 
 function RegisterForm() {
-  const { t } = useTranslations();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isSignupDisabled, setIsSignupDisabled] = useState(false);
-  const [checkingSignupStatus, setCheckingSignupStatus] = useState(true);
+  const { t } = useTranslations()
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [isSignupDisabled, setIsSignupDisabled] = useState(false)
+  const [checkingSignupStatus, setCheckingSignupStatus] = useState(true)
 
-  const router = useRouter();
+  const router = useRouter()
 
   // Function to check signup status
-  const checkSignupStatus = async () => {
+  const checkSignupStatus = useCallback(async () => {
     try {
       const isDisabled =
-        await vanillaTrpcClient.frontend.config.getSignupDisabled.query();
-      setIsSignupDisabled(isDisabled);
+        await vanillaTrpcClient.frontend.config.getSignupDisabled.query()
+      setIsSignupDisabled(isDisabled)
     } catch (error) {
-      console.error("Failed to check signup status:", error);
+      console.error("Failed to check signup status:", error)
       // If we can't check, allow signup to proceed (fail open)
-      setIsSignupDisabled(false);
+      setIsSignupDisabled(false)
     } finally {
-      setCheckingSignupStatus(false);
+      setCheckingSignupStatus(false)
     }
-  };
+  }, [])
 
   // Check signup status on mount
   useEffect(() => {
-    checkSignupStatus();
-  }, []);
+    checkSignupStatus()
+  }, [checkSignupStatus])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     // Re-check signup status before attempting to register
-    await checkSignupStatus();
+    await checkSignupStatus()
 
     if (isSignupDisabled) {
-      setError(t("auth:registrationDisabledError"));
-      return;
+      setError(t("auth:registrationDisabledError"))
+      return
     }
 
-    setIsLoading(true);
-    setError("");
+    setIsLoading(true)
+    setError("")
 
     if (password !== confirmPassword) {
-      setError(t("auth:passwordsDoNotMatch"));
-      setIsLoading(false);
-      return;
+      setError(t("auth:passwordsDoNotMatch"))
+      setIsLoading(false)
+      return
     }
 
     if (password.length < 8) {
-      setError(t("auth:passwordTooShort"));
-      setIsLoading(false);
-      return;
+      setError(t("auth:passwordTooShort"))
+      setIsLoading(false)
+      return
     }
 
     try {
@@ -91,50 +91,50 @@ function RegisterForm() {
         password,
         name,
         callbackURL: "/",
-      });
+      })
 
       if (error) {
         // Check if signup is actually disabled by checking the current status
         const currentSignupStatus =
-          await vanillaTrpcClient.frontend.config.getSignupDisabled.query();
+          await vanillaTrpcClient.frontend.config.getSignupDisabled.query()
 
         if (currentSignupStatus) {
           // Signup is actually disabled, show that message
-          setError(t("auth:registrationDisabledError"));
-          setIsSignupDisabled(true);
+          setError(t("auth:registrationDisabledError"))
+          setIsSignupDisabled(true)
         } else {
           // Signup is enabled but registration failed for other reasons (validation, etc.)
           // Show the actual error message from the backend
-          setError(error.message || t("auth:registrationFailed"));
+          setError(error.message || t("auth:registrationFailed"))
         }
       } else {
-        router.push("/");
-        router.refresh();
+        router.push("/")
+        router.refresh()
       }
     } catch (err) {
       // Handle any other errors
-      console.error("Registration error:", err);
+      console.error("Registration error:", err)
 
       // Check if signup is actually disabled
       try {
         const currentSignupStatus =
-          await vanillaTrpcClient.frontend.config.getSignupDisabled.query();
+          await vanillaTrpcClient.frontend.config.getSignupDisabled.query()
 
         if (currentSignupStatus) {
-          setError(t("auth:registrationDisabledError"));
-          setIsSignupDisabled(true);
+          setError(t("auth:registrationDisabledError"))
+          setIsSignupDisabled(true)
         } else {
           // Show the actual error message or a generic fallback
-          setError((err as Error)?.message || t("auth:registrationFailed"));
+          setError((err as Error)?.message || t("auth:registrationFailed"))
         }
       } catch (_statusCheckError) {
         // If we can't check status, just show the original error
-        setError((err as Error)?.message || t("auth:registrationFailed"));
+        setError((err as Error)?.message || t("auth:registrationFailed"))
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   if (checkingSignupStatus) {
     return (
@@ -145,7 +145,7 @@ function RegisterForm() {
           </h1>
         </div>
       </div>
-    );
+    )
   }
 
   if (isSignupDisabled) {
@@ -168,7 +168,7 @@ function RegisterForm() {
           </Link>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -273,7 +273,7 @@ function RegisterForm() {
         </Link>
       </div>
     </div>
-  );
+  )
 }
 
 export default function RegisterPage() {
@@ -290,5 +290,5 @@ export default function RegisterPage() {
         </Suspense>
       </div>
     </div>
-  );
+  )
 }

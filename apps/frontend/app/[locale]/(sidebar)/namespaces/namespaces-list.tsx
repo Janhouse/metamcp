@@ -1,15 +1,15 @@
-"use client";
+"use client"
 
-import { Namespace } from "@repo/zod-types";
+import type { Namespace } from "@repo/zod-types"
 import {
-  ColumnDef,
+  type ColumnDef,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  SortingState,
+  type SortingState,
   useReactTable,
-} from "@tanstack/react-table";
+} from "@tanstack/react-table"
 import {
   ArrowUpDown,
   Eye,
@@ -17,13 +17,13 @@ import {
   Package,
   Search,
   Trash2,
-} from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
-import { toast } from "sonner";
+} from "lucide-react"
+import Link from "next/link"
+import { useState } from "react"
+import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -31,14 +31,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -46,34 +46,34 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
+} from "@/components/ui/table"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
 
 export function NamespacesList() {
-  const { t } = useTranslations();
+  const { t } = useTranslations()
   const [sorting, setSorting] = useState<SortingState>([
     {
       id: "created_at",
       desc: true,
     },
-  ]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  ])
+  const [globalFilter, setGlobalFilter] = useState("")
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [namespaceToDelete, setNamespaceToDelete] = useState<Namespace | null>(
     null,
-  );
-  const [isDeleting, setIsDeleting] = useState(false);
+  )
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Use tRPC query for data fetching
   const {
     data: namespacesResponse,
     error,
     isLoading,
-  } = trpc.frontend.namespaces.list.useQuery();
+  } = trpc.frontend.namespaces.list.useQuery()
 
   // tRPC mutation for deleting namespace
   const deleteNamespaceMutation = trpc.frontend.namespaces.delete.useMutation({
@@ -81,38 +81,38 @@ export function NamespacesList() {
       // Check if the operation was actually successful
       if (result.success) {
         // Invalidate and refetch the namespace list
-        utils.frontend.namespaces.list.invalidate();
-        setDeleteDialogOpen(false);
-        setNamespaceToDelete(null);
-        toast.success(t("namespaces.namespaceDeletedSuccess"));
+        utils.frontend.namespaces.list.invalidate()
+        setDeleteDialogOpen(false)
+        setNamespaceToDelete(null)
+        toast.success(t("namespaces.namespaceDeletedSuccess"))
       } else {
         // Handle business logic failures
-        console.error("Delete failed:", result.message);
+        console.error("Delete failed:", result.message)
         toast.error(t("namespaces.failedToDeleteNamespace"), {
           description: result.message || t("common.unexpectedError"),
-        });
+        })
       }
     },
     onError: (error) => {
-      console.error("Error deleting namespace:", error);
+      console.error("Error deleting namespace:", error)
       toast.error(t("namespaces.failedToDeleteNamespace"), {
         description: error.message,
-      });
+      })
     },
     onSettled: () => {
-      setIsDeleting(false);
+      setIsDeleting(false)
     },
-  });
+  })
 
-  const namespaces = namespacesResponse?.success ? namespacesResponse.data : [];
+  const namespaces = namespacesResponse?.success ? namespacesResponse.data : []
 
   // Handle delete namespace
   const handleDeleteNamespace = async (namespace: Namespace) => {
-    setIsDeleting(true);
+    setIsDeleting(true)
     deleteNamespaceMutation.mutate({
       uuid: namespace.uuid,
-    });
-  };
+    })
+  }
 
   // Define columns for the data table
   const columns: ColumnDef<Namespace>[] = [
@@ -127,10 +127,10 @@ export function NamespacesList() {
             {t("namespaces.name")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const namespace = row.original;
+        const namespace = row.original
         return (
           <div className="px-3 py-2">
             <Link
@@ -140,7 +140,7 @@ export function NamespacesList() {
               {namespace.name}
             </Link>
           </div>
-        );
+        )
       },
     },
     {
@@ -154,10 +154,10 @@ export function NamespacesList() {
             {t("common.description")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const namespace = row.original;
+        const namespace = row.original
         return (
           <div className="px-3 py-2">
             {namespace.description ? (
@@ -170,22 +170,22 @@ export function NamespacesList() {
               </div>
             )}
           </div>
-        );
+        )
       },
     },
     {
       accessorKey: "user_id",
       header: t("namespaces.ownership"),
       cell: ({ row }) => {
-        const namespace = row.original;
-        const isPublic = namespace.user_id === null;
+        const namespace = row.original
+        const isPublic = namespace.user_id === null
         return (
           <div className="py-2">
             <Badge variant={isPublic ? "success" : "neutral"}>
               {isPublic ? t("namespaces.public") : t("namespaces.private")}
             </Badge>
           </div>
-        );
+        )
       },
     },
     {
@@ -199,10 +199,10 @@ export function NamespacesList() {
             {t("namespaces.created")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"));
+        const date = new Date(row.getValue("created_at"))
         return (
           <div className="px-3 py-2">
             <div className="text-sm">{date.toLocaleDateString()}</div>
@@ -210,19 +210,19 @@ export function NamespacesList() {
               {date.toLocaleTimeString()}
             </div>
           </div>
-        );
+        )
       },
     },
     {
       id: "actions",
       enableHiding: false,
       cell: ({ row }) => {
-        const namespace = row.original;
+        const namespace = row.original
 
         const handleDeleteClick = () => {
-          setNamespaceToDelete(namespace);
-          setDeleteDialogOpen(true);
-        };
+          setNamespaceToDelete(namespace)
+          setDeleteDialogOpen(true)
+        }
 
         return (
           <div className="px-3 py-2">
@@ -253,10 +253,10 @@ export function NamespacesList() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        );
+        )
       },
     },
-  ];
+  ]
 
   // Table configuration
   const table = useReactTable({
@@ -271,7 +271,7 @@ export function NamespacesList() {
       sorting,
       globalFilter,
     },
-  });
+  })
 
   if (isLoading) {
     return (
@@ -293,7 +293,7 @@ export function NamespacesList() {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -316,7 +316,7 @@ export function NamespacesList() {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -348,7 +348,7 @@ export function NamespacesList() {
                             header.getContext(),
                           )}
                     </TableHead>
-                  );
+                  )
                 })}
               </TableRow>
             ))}
@@ -414,8 +414,8 @@ export function NamespacesList() {
             <Button
               variant="outline"
               onClick={() => {
-                setDeleteDialogOpen(false);
-                setNamespaceToDelete(null);
+                setDeleteDialogOpen(false)
+                setNamespaceToDelete(null)
               }}
               disabled={isDeleting}
             >
@@ -425,7 +425,7 @@ export function NamespacesList() {
               variant="destructive"
               onClick={() => {
                 if (namespaceToDelete) {
-                  handleDeleteNamespace(namespaceToDelete);
+                  handleDeleteNamespace(namespaceToDelete)
                 }
               }}
               disabled={isDeleting}
@@ -436,5 +436,5 @@ export function NamespacesList() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

@@ -1,4 +1,4 @@
-import { usersRepository } from "../db/repositories/users.repo";
+import { usersRepository } from "../db/repositories/users.repo"
 
 /**
  * Resolve the owner (`user_id`) for a create/update operation where the client
@@ -26,16 +26,16 @@ export async function resolveOwnerUserId(
   // No explicit owner requested → keep the fallback (self for create, existing
   // owner for update). No admin lookup needed.
   if (requestedUserId === undefined) {
-    return fallback;
+    return fallback
   }
 
   // An explicit owner (or public) was requested; only admins may honor it.
   if (await usersRepository.isAdmin(requesterId)) {
-    return requestedUserId;
+    return requestedUserId
   }
 
   // Non-admins cannot reassign ownership: scope to the fallback.
-  return fallback;
+  return fallback
 }
 
 /**
@@ -52,9 +52,9 @@ export async function canManageResource(
   requesterId: string,
 ): Promise<boolean> {
   if (resourceUserId !== null && resourceUserId === requesterId) {
-    return true;
+    return true
   }
-  return usersRepository.isAdmin(requesterId);
+  return usersRepository.isAdmin(requesterId)
 }
 
 /**
@@ -67,7 +67,7 @@ export async function canAccessResource(
   resourceUserId: string | null,
   requesterId: string,
 ): Promise<boolean> {
-  if (resourceUserId === null) return true; // public → usable by all
-  if (resourceUserId === requesterId) return true;
-  return usersRepository.isAdmin(requesterId);
+  if (resourceUserId === null) return true // public → usable by all
+  if (resourceUserId === requesterId) return true
+  return usersRepository.isAdmin(requesterId)
 }

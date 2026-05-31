@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import {
   Activity,
@@ -9,35 +9,35 @@ import {
   Info,
   Trash2,
   X,
-} from "lucide-react";
-import React, { useMemo, useState } from "react";
+} from "lucide-react"
+import { useMemo, useState } from "react"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Notification } from "@/lib/notificationTypes";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { Notification } from "@/lib/notificationTypes"
 
 interface NotificationEntry {
-  id: string;
-  notification: Notification;
-  timestamp: Date;
-  type: "notification" | "stderr";
+  id: string
+  notification: Notification
+  timestamp: Date
+  type: "notification" | "stderr"
 }
 
 interface NotificationsPanelProps {
-  notifications: NotificationEntry[];
-  onClearNotifications: () => void;
-  onRemoveNotification: (id: string) => void;
+  notifications: NotificationEntry[]
+  onClearNotifications: () => void
+  onRemoveNotification: (id: string) => void
 }
 
-type NotificationFilterType = "all" | "info" | "progress" | "stderr";
+type NotificationFilterType = "all" | "info" | "progress" | "stderr"
 
 interface NotificationCounts {
-  all: number;
-  info: number;
-  progress: number;
-  stderr: number;
+  all: number
+  info: number
+  progress: number
+  stderr: number
 }
 
 export function NotificationsPanel({
@@ -45,9 +45,9 @@ export function NotificationsPanel({
   onClearNotifications,
   onRemoveNotification,
 }: NotificationsPanelProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(true)
   const [activeFilter, setActiveFilter] =
-    useState<NotificationFilterType>("all");
+    useState<NotificationFilterType>("all")
 
   const { filteredNotifications, counts } = useMemo(() => {
     const counts: NotificationCounts = {
@@ -55,41 +55,41 @@ export function NotificationsPanel({
       info: 0,
       progress: 0,
       stderr: 0,
-    };
+    }
 
     // Count notifications by type
     notifications.forEach((notification) => {
       if (notification.type === "stderr") {
-        counts.stderr++;
+        counts.stderr++
       } else if (notification.notification.method?.includes("progress")) {
-        counts.progress++;
+        counts.progress++
       } else {
-        counts.info++;
+        counts.info++
       }
-    });
+    })
 
     // Filter notifications based on active filter
     const filtered = notifications.filter((notification) => {
-      if (activeFilter === "all") return true;
-      if (activeFilter === "stderr") return notification.type === "stderr";
+      if (activeFilter === "all") return true
+      if (activeFilter === "stderr") return notification.type === "stderr"
       if (activeFilter === "progress") {
-        return notification.notification.method?.includes("progress");
+        return notification.notification.method?.includes("progress")
       }
       if (activeFilter === "info") {
         return (
           notification.type !== "stderr" &&
           !notification.notification.method?.includes("progress")
-        );
+        )
       }
-      return true;
-    });
+      return true
+    })
 
-    return { filteredNotifications: filtered, counts };
-  }, [notifications, activeFilter]);
+    return { filteredNotifications: filtered, counts }
+  }, [notifications, activeFilter])
 
   const formatTimestamp = (timestamp: Date) => {
-    return timestamp.toLocaleTimeString();
-  };
+    return timestamp.toLocaleTimeString()
+  }
 
   const getNotificationTypeInfo = (notification: NotificationEntry) => {
     if (notification.type === "stderr") {
@@ -100,11 +100,11 @@ export function NotificationsPanel({
         borderColor: "border-red-200 dark:border-red-800",
         badge: "stderr",
         badgeVariant: "destructive" as const,
-      };
+      }
     }
 
     // Handle different notification methods
-    const method = notification.notification.method;
+    const method = notification.notification.method
     if (method?.includes("progress")) {
       return {
         icon: Bell,
@@ -113,7 +113,7 @@ export function NotificationsPanel({
         borderColor: "border-blue-200 dark:border-blue-800",
         badge: "progress",
         badgeVariant: "secondary" as const,
-      };
+      }
     }
 
     return {
@@ -123,8 +123,8 @@ export function NotificationsPanel({
       borderColor: "border-green-200 dark:border-green-800",
       badge: "info",
       badgeVariant: "default" as const,
-    };
-  };
+    }
+  }
 
   const renderNotificationContent = (notification: NotificationEntry) => {
     if (notification.type === "stderr") {
@@ -132,18 +132,18 @@ export function NotificationsPanel({
         <div className="text-xs text-red-700 dark:text-red-300 font-mono bg-red-50 dark:bg-red-950/20 p-1.5 rounded border border-red-200 dark:border-red-800">
           {(
             notification.notification as {
-              params?: { content?: string };
+              params?: { content?: string }
             }
           ).params?.content || "stderr output"}
         </div>
-      );
+      )
     }
 
     // For other notifications, display the method and params
-    const method = notification.notification.method;
+    const method = notification.notification.method
     const params = (
       notification.notification as { params?: Record<string, unknown> }
-    ).params;
+    ).params
 
     return (
       <div className="space-y-1">
@@ -162,11 +162,11 @@ export function NotificationsPanel({
           </div>
         )}
       </div>
-    );
-  };
+    )
+  }
 
   if (notifications.length === 0) {
-    return null;
+    return null
   }
 
   return (
@@ -280,8 +280,8 @@ export function NotificationsPanel({
                   </div>
                 ) : (
                   filteredNotifications.map((notification) => {
-                    const typeInfo = getNotificationTypeInfo(notification);
-                    const Icon = typeInfo.icon;
+                    const typeInfo = getNotificationTypeInfo(notification)
+                    const Icon = typeInfo.icon
 
                     return (
                       <div key={notification.id}>
@@ -319,7 +319,7 @@ export function NotificationsPanel({
                           <div>{renderNotificationContent(notification)}</div>
                         </div>
                       </div>
-                    );
+                    )
                   })
                 )}
               </div>
@@ -328,5 +328,5 @@ export function NotificationsPanel({
         </CardContent>
       )}
     </Card>
-  );
+  )
 }

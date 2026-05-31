@@ -1,17 +1,17 @@
-"use client";
+"use client"
 
 import {
-  CreateMcpServerRequest,
-  CreateServerFormData,
+  type CreateMcpServerRequest,
+  type CreateServerFormData,
   createServerFormSchema,
   McpServerTypeEnum,
-} from "@repo/zod-types";
-import { ChevronDown, Plus, Server } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+} from "@repo/zod-types"
+import { ChevronDown, Plus, Server } from "lucide-react"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -19,13 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
 import {
   Form,
   FormControl,
@@ -33,19 +33,19 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { createTranslatedZodResolver } from "@/lib/zod-resolver";
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { createTranslatedZodResolver } from "@/lib/zod-resolver"
 
-import { ExportImportButtons } from "./export-import-buttons";
-import { McpServersList } from "./mcp-servers-list";
+import { ExportImportButtons } from "./export-import-buttons"
+import { McpServersList } from "./mcp-servers-list"
 
 export default function McpServersPage() {
-  const { t } = useTranslations();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { t } = useTranslations()
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const form = useForm<CreateServerFormData>({
     resolver: createTranslatedZodResolver(createServerFormSchema, t),
@@ -61,28 +61,28 @@ export default function McpServersPage() {
       headers: "",
       user_id: undefined, // Default to private (current user)
     },
-  });
+  })
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   const createMutation = trpc.frontend.mcpServers.create.useMutation({
     onSuccess: (data) => {
       if (data.success) {
         // Invalidate and refetch the server list
-        utils.frontend.mcpServers.list.invalidate();
-        setIsDialogOpen(false);
-        form.reset();
-        toast.success(t("mcp-servers:serverCreated"));
+        utils.frontend.mcpServers.list.invalidate()
+        setIsDialogOpen(false)
+        form.reset()
+        toast.success(t("mcp-servers:serverCreated"))
       } else {
         // Handle backend error response
-        toast.error(data.message || t("mcp-servers:createError"));
+        toast.error(data.message || t("mcp-servers:createError"))
       }
     },
     onError: (error) => {
-      toast.error(t("mcp-servers:createError") + ": " + error.message);
+      toast.error(`${t("mcp-servers:createError")}: ${error.message}`)
     },
-  });
+  })
 
   const onSubmit = (data: CreateServerFormData) => {
     // Parse args string into array by splitting on spaces
@@ -91,35 +91,35 @@ export default function McpServersPage() {
           .trim()
           .split(/\s+/)
           .filter((arg) => arg.length > 0)
-      : [];
+      : []
 
     // Parse env string into object
-    const envObject: Record<string, string> = {};
+    const envObject: Record<string, string> = {}
     if (data.env) {
-      const envLines = data.env.trim().split("\n");
+      const envLines = data.env.trim().split("\n")
       for (const line of envLines) {
-        const trimmedLine = line.trim();
-        if (trimmedLine && trimmedLine.includes("=")) {
-          const [key, ...valueParts] = trimmedLine.split("=");
-          const value = valueParts.join("="); // Handle values that contain '='
+        const trimmedLine = line.trim()
+        if (trimmedLine?.includes("=")) {
+          const [key, ...valueParts] = trimmedLine.split("=")
+          const value = valueParts.join("=") // Handle values that contain '='
           if (key?.trim()) {
-            envObject[key.trim()] = value;
+            envObject[key.trim()] = value
           }
         }
       }
     }
 
     // Parse headers string into object
-    const headersObject: Record<string, string> = {};
+    const headersObject: Record<string, string> = {}
     if (data.headers) {
-      const headersLines = data.headers.trim().split("\n");
+      const headersLines = data.headers.trim().split("\n")
       for (const line of headersLines) {
-        const trimmedLine = line.trim();
-        if (trimmedLine && trimmedLine.includes("=")) {
-          const [key, ...valueParts] = trimmedLine.split("=");
-          const value = valueParts.join("="); // Handle values that contain '='
+        const trimmedLine = line.trim()
+        if (trimmedLine?.includes("=")) {
+          const [key, ...valueParts] = trimmedLine.split("=")
+          const value = valueParts.join("=") // Handle values that contain '='
           if (key?.trim()) {
-            headersObject[key.trim()] = value;
+            headersObject[key.trim()] = value
           }
         }
       }
@@ -136,10 +136,10 @@ export default function McpServersPage() {
       bearerToken: data.bearerToken,
       headers: headersObject,
       user_id: data.user_id,
-    };
+    }
 
-    createMutation.mutate(request);
-  };
+    createMutation.mutate(request)
+  }
 
   return (
     <div className="space-y-6">
@@ -464,5 +464,5 @@ export default function McpServersPage() {
 
       <McpServersList />
     </div>
-  );
+  )
 }

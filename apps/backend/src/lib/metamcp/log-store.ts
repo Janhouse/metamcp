@@ -1,18 +1,18 @@
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
 export interface MetaMcpLogEntry {
-  id: string;
-  timestamp: Date;
-  serverName: string;
-  level: "error" | "info" | "warn";
-  message: string;
-  error?: string;
+  id: string
+  timestamp: Date
+  serverName: string
+  level: "error" | "info" | "warn"
+  message: string
+  error?: string
 }
 
 class MetaMcpLogStore {
-  private logs: MetaMcpLogEntry[] = [];
-  private readonly maxLogs = 1000; // Keep only the last 1000 logs
-  private readonly listeners: Set<(log: MetaMcpLogEntry) => void> = new Set();
+  private logs: MetaMcpLogEntry[] = []
+  private readonly maxLogs = 1000 // Keep only the last 1000 logs
+  private readonly listeners: Set<(log: MetaMcpLogEntry) => void> = new Set()
 
   addLog(
     serverName: string,
@@ -31,58 +31,58 @@ class MetaMcpLogStore {
           ? error.message
           : String(error)
         : undefined,
-    };
+    }
 
     // Add to logs array
-    this.logs.push(logEntry);
+    this.logs.push(logEntry)
 
     // Keep only the last maxLogs entries
     if (this.logs.length > this.maxLogs) {
-      this.logs = this.logs.slice(-this.maxLogs);
+      this.logs = this.logs.slice(-this.maxLogs)
     }
 
     // Also log to console for debugging
-    const fullMessage = `[MetaMCP][${serverName}] ${message}`;
+    const fullMessage = `[MetaMCP][${serverName}] ${message}`
     switch (level) {
       case "error":
-        logger.error(fullMessage, error || "");
-        break;
+        logger.error(fullMessage, error || "")
+        break
       case "warn":
-        logger.warn(fullMessage, error || "");
-        break;
+        logger.warn(fullMessage, error || "")
+        break
       case "info":
-        logger.info(fullMessage, error || "");
-        break;
+        logger.info(fullMessage, error || "")
+        break
     }
 
     // Notify listeners
     this.listeners.forEach((listener) => {
       try {
-        listener(logEntry);
+        listener(logEntry)
       } catch (err) {
-        logger.error("Error notifying log listener:", err);
+        logger.error("Error notifying log listener:", err)
       }
-    });
+    })
   }
 
   getLogs(limit?: number): MetaMcpLogEntry[] {
-    const logsToReturn = limit ? this.logs.slice(-limit) : this.logs;
-    return [...logsToReturn].reverse(); // Return newest first
+    const logsToReturn = limit ? this.logs.slice(-limit) : this.logs
+    return [...logsToReturn].reverse() // Return newest first
   }
 
   clearLogs(): void {
-    this.logs = [];
+    this.logs = []
   }
 
   addListener(listener: (log: MetaMcpLogEntry) => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
   }
 
   getLogCount(): number {
-    return this.logs.length;
+    return this.logs.length
   }
 }
 
 // Singleton instance
-export const metamcpLogStore = new MetaMcpLogStore();
+export const metamcpLogStore = new MetaMcpLogStore()

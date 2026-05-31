@@ -12,10 +12,10 @@
 export function parseTrustProxy(
   value: string | undefined,
 ): boolean | number | string {
-  if (value === undefined || value.trim() === "") return false;
-  const v = value.trim();
-  if (v === "true") return true;
-  if (v === "false") return false;
-  if (/^\d+$/.test(v)) return Number(v);
-  return v;
+  if (value === undefined || value.trim() === "") return false
+  const v = value.trim()
+  if (v === "true") return true
+  if (v === "false") return false
+  if (/^\d+$/.test(v)) return Number(v)
+  return v
 }
