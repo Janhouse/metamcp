@@ -348,15 +348,17 @@ export default function SettingsPage() {
 
   const handleSessionLifetimeToggle = (checked: boolean) => {
     setIsSessionLifetimeEnabled(checked);
+    // Mark the form dirty (shouldDirty) so toggling the switch actually enables
+    // "Save" — without it the change was silently dropped and never persisted.
     if (!checked) {
       // When disabled, set to null for infinite sessions
-      form.setValue("sessionLifetime", null);
+      form.setValue("sessionLifetime", null, { shouldDirty: true });
     } else {
-      // When enabled, set to default 240 minutes (4 hours) if not already set
+      // When enabled, keep any existing value or default to 240 min (4 hours)
       const currentValue = form.getValues("sessionLifetime");
-      if (currentValue === null || currentValue === undefined) {
-        form.setValue("sessionLifetime", 240); // 4 hours in minutes
-      }
+      form.setValue("sessionLifetime", currentValue ?? 240, {
+        shouldDirty: true,
+      });
     }
   };
 
