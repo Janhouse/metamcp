@@ -17,8 +17,10 @@ import logger from "@/utils/logger";
 import {
   mcpServersRepository,
   namespaceMappingsRepository,
+  usersRepository,
 } from "../db/repositories";
 import { McpServersSerializer } from "../db/serializers";
+import { canManageResource, resolveOwnerUserId } from "../lib/authz";
 import { mcpServerPool } from "../lib/metamcp/mcp-server-pool";
 import { clearOverrideCache } from "../lib/metamcp/metamcp-middleware/tool-overrides.functional";
 import { metaMcpServerPool } from "../lib/metamcp/metamcp-server-pool";
@@ -31,9 +33,9 @@ export const mcpServersImplementations = {
     userId: string,
   ): Promise<z.infer<typeof CreateMcpServerResponseSchema>> => {
     try {
-      // Determine user ownership based on input.user_id or default to current user
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : userId;
+      // Owner is the authenticated caller. Only admins may create a server for
+      // another user or a public (user_id = null) server.
+      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId);
 
       const createdServer = await mcpServersRepository.create({
         ...input,
@@ -87,10 +89,16 @@ export const mcpServersImplementations = {
       // Find servers accessible to user (public + user's own)
       const servers =
         await mcpServersRepository.findAllAccessibleToUser(userId);
+      const isAdmin = await usersRepository.isAdmin(userId);
 
       return {
         success: true as const,
-        data: McpServersSerializer.serializeMcpServerList(servers),
+        // Redact secrets (bearerToken/env/headers) on servers the requester
+        // does not own — public servers must not leak their credentials.
+        data: McpServersSerializer.serializeMcpServerList(servers, {
+          requesterId: userId,
+          isAdmin,
+        }),
         message: "MCP servers retrieved successfully",
       };
     } catch (error) {
@@ -224,9 +232,20 @@ export const mcpServersImplementations = {
         };
       }
 
+      // Owner/admin can see secrets; for a public server viewed by a
+      // non-owner, redact bearerToken/env/headers.
+      const isAdmin = await usersRepository.isAdmin(userId);
+      const redactSecrets = !McpServersSerializer.canSeeSecrets(
+        server.user_id,
+        userId,
+        isAdmin,
+      );
+
       return {
         success: true as const,
-        data: McpServersSerializer.serializeMcpServer(server),
+        data: McpServersSerializer.serializeMcpServer(server, {
+          redactSecrets,
+        }),
         message: "MCP server retrieved successfully",
       };
     } catch (error) {
@@ -255,8 +274,9 @@ export const mcpServersImplementations = {
         };
       }
 
-      // Only server owner can delete their own servers, only admin can delete public servers
-      if (server.user_id && server.user_id !== userId) {
+      // Only the server owner (or an admin) may delete it. Public servers are
+      // not world-deletable: they require admin.
+      if (!(await canManageResource(server.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only delete servers you own",
@@ -350,17 +370,22 @@ export const mcpServersImplementations = {
         };
       }
 
-      // Only server owner can update their own servers, only admin can update public servers
-      if (server.user_id && server.user_id !== userId) {
+      // Only the server owner (or an admin) may update it. Public servers are
+      // not world-writable: they require admin.
+      if (!(await canManageResource(server.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only update servers you own",
         };
       }
 
-      // Determine user ownership based on input.user_id or keep existing ownership
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : server.user_id;
+      // Keep existing ownership; only admins may reassign a server to another
+      // user or to public. Non-admins cannot change ownership.
+      const effectiveUserId = await resolveOwnerUserId(
+        input.user_id,
+        userId,
+        server.user_id,
+      );
 
       const updatedServer = await mcpServersRepository.update({
         ...input,

@@ -1,5 +1,34 @@
 import { ZodError, ZodIssue } from "zod";
 
+/**
+ * Sanitize a post-login redirect target to a same-origin relative path.
+ *
+ * Prevents an open redirect: an attacker could craft `?callbackUrl=https://evil`
+ * (or `//evil`, or `/\evil`) and have the victim's browser redirected off-site
+ * after authenticating. Only same-origin absolute paths (starting with a single
+ * "/") are allowed; anything else falls back to "/".
+ */
+export function safeInternalRedirect(
+  raw: string | null | undefined,
+  fallback: string = "/",
+): string {
+  if (!raw) return fallback;
+  // Must be an absolute path on this origin: starts with "/", but not "//"
+  // (protocol-relative) and not "/\" (which some browsers treat as "//").
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) {
+    return fallback;
+  }
+  // Reject any embedded scheme (e.g. "/redirect?to=javascript:...") defensively
+  // by ensuring it parses as a relative URL on a dummy origin.
+  try {
+    const parsed = new URL(raw, "http://localhost");
+    if (parsed.origin !== "http://localhost") return fallback;
+    return parsed.pathname + parsed.search + parsed.hash;
+  } catch {
+    return fallback;
+  }
+}
+
 // Type for translation function
 type TranslationFunction = (
   key: string,

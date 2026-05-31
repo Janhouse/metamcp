@@ -73,6 +73,19 @@ export class OAuthRepository {
       .where(eq(oauthAuthorizationCodesTable.code, code));
   }
 
+  /**
+   * Atomically consume (delete-and-return) an authorization code. Returns the
+   * row to exactly one caller; concurrent callers racing on the same code get
+   * null. Used to make single-use enforcement race-safe (no double issuance).
+   */
+  async consumeAuthCode(code: string): Promise<OAuthAuthorizationCode | null> {
+    const [row] = await db
+      .delete(oauthAuthorizationCodesTable)
+      .where(eq(oauthAuthorizationCodesTable.code, code))
+      .returning();
+    return row ?? null;
+  }
+
   // ===== Access Tokens =====
 
   async getAccessToken(token: string): Promise<OAuthAccessToken | null> {
@@ -116,6 +129,21 @@ export class OAuthRepository {
     await db
       .delete(oauthAccessTokensTable)
       .where(eq(oauthAccessTokensTable.refresh_token, refreshToken));
+  }
+
+  /**
+   * Atomically consume (delete-and-return) the access-token row for a refresh
+   * token. Returns the row to exactly one caller; a concurrent reuse of the
+   * same refresh token gets null. Makes refresh-token rotation race-safe.
+   */
+  async consumeRefreshToken(
+    refreshToken: string,
+  ): Promise<OAuthAccessToken | null> {
+    const [row] = await db
+      .delete(oauthAccessTokensTable)
+      .where(eq(oauthAccessTokensTable.refresh_token, refreshToken))
+      .returning();
+    return row ?? null;
   }
 
   async deleteAccessToken(token: string): Promise<void> {

@@ -18,6 +18,7 @@ import {
   namespacesRepository,
 } from "../db/repositories";
 import { EndpointsSerializer } from "../db/serializers";
+import { canManageResource, resolveOwnerUserId } from "../lib/authz";
 
 const apiKeysRepository = new ApiKeysRepository();
 
@@ -36,9 +37,9 @@ export const endpointsImplementations = {
         };
       }
 
-      // Determine user ownership based on input.user_id or default to current user
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : userId;
+      // Owner is the authenticated caller. Only admins may create an endpoint
+      // for another user or a public (user_id = null) endpoint.
+      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId);
       const isPublicEndpoint = effectiveUserId === null;
 
       // Validate namespace accessibility and relationship rules
@@ -239,8 +240,9 @@ export const endpointsImplementations = {
         };
       }
 
-      // Check if user owns this endpoint (only owners can delete, protect public endpoints)
-      if (existingEndpoint.user_id && existingEndpoint.user_id !== userId) {
+      // Only the endpoint owner (or an admin) may delete it. Public endpoints
+      // require admin.
+      if (!(await canManageResource(existingEndpoint.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only delete endpoints you own",
@@ -288,8 +290,9 @@ export const endpointsImplementations = {
         };
       }
 
-      // Check if user owns this endpoint (only owners can update)
-      if (existingEndpoint.user_id && existingEndpoint.user_id !== userId) {
+      // Only the endpoint owner (or an admin) may update it. Public endpoints
+      // require admin.
+      if (!(await canManageResource(existingEndpoint.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only update endpoints you own",

@@ -14,6 +14,7 @@ import express from "express";
 import { parse as shellParseArgs } from "shell-quote";
 import { findActualExecutable } from "spawn-rx";
 
+import { sendSafeError } from "@/utils/http-errors";
 import logger from "@/utils/logger";
 
 import { mcpServersRepository } from "../../db/repositories";
@@ -380,7 +381,7 @@ serverRouter.get("/mcp", async (req, res) => {
     }
   } catch (error) {
     logger.error("Error in /mcp route:", error);
-    res.status(500).json(error);
+    sendSafeError(res, 500, "Internal server error");
   }
 });
 
@@ -398,7 +399,7 @@ serverRouter.post("/mcp", async (req, res) => {
             "Received 401 Unauthorized from MCP server:",
             error.message,
           );
-          res.status(401).json(error);
+          sendSafeError(res, 401, "Unauthorized");
           return;
         }
 
@@ -484,7 +485,7 @@ serverRouter.post("/mcp", async (req, res) => {
       );
     } catch (error) {
       logger.error("Error in /mcp POST route:", error);
-      res.status(500).json(error);
+      sendSafeError(res, 500, "Internal server error");
     }
   } else {
     // logger.info(`Received POST message for sessionId ${sessionId}`);
@@ -502,7 +503,7 @@ serverRouter.post("/mcp", async (req, res) => {
       }
     } catch (error) {
       logger.error("Error in /mcp route:", error);
-      res.status(500).json(error);
+      sendSafeError(res, 500, "Internal server error");
     }
   }
 });
@@ -539,7 +540,7 @@ serverRouter.delete("/mcp", async (req, res) => {
       res.status(200).end();
     } catch (error) {
       logger.error("Error in /mcp DELETE route:", error);
-      res.status(500).json(error);
+      sendSafeError(res, 500, "Internal server error");
     }
   } else {
     res.status(400).end("Missing sessionId");
@@ -558,7 +559,7 @@ serverRouter.get("/stdio", async (req, res) => {
         logger.error(
           "Received 401 Unauthorized from MCP server. Authentication failure.",
         );
-        res.status(401).json(error);
+        sendSafeError(res, 401, "Unauthorized");
         return;
       }
 
@@ -737,7 +738,7 @@ serverRouter.get("/stdio", async (req, res) => {
     });
   } catch (error) {
     logger.error("Error in /stdio route:", error);
-    res.status(500).json(error);
+    sendSafeError(res, 500, "Internal server error");
   }
 });
 
@@ -754,17 +755,17 @@ serverRouter.get("/sse", async (req, res) => {
         logger.error(
           "Received 401 Unauthorized from MCP server. Authentication failure.",
         );
-        res.status(401).json(error);
+        sendSafeError(res, 401, "Unauthorized");
         return;
       } else if (error instanceof SseError && error.code === 404) {
         logger.error(
           "Received 404 not found from MCP server. Does the MCP server support SSE?",
         );
-        res.status(404).json(error);
+        sendSafeError(res, 404, "Not found");
         return;
       } else if (JSON.stringify(error).includes("ECONNREFUSED")) {
         logger.error("Connection refused. Is the MCP server running?");
-        res.status(500).json(error);
+        sendSafeError(res, 500, "Internal server error");
       } else {
         throw error;
       }
@@ -813,7 +814,7 @@ serverRouter.get("/sse", async (req, res) => {
     }
   } catch (error) {
     logger.error("Error in /sse route:", error);
-    res.status(500).json(error);
+    sendSafeError(res, 500, "Internal server error");
   }
 });
 
@@ -832,7 +833,7 @@ serverRouter.post("/message", async (req, res) => {
     await transport.handlePostMessage(req, res);
   } catch (error) {
     logger.error("Error in /message route:", error);
-    res.status(500).json(error);
+    sendSafeError(res, 500, "Internal server error");
   }
 });
 

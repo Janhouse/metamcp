@@ -13,8 +13,9 @@ import { z } from "zod";
 
 import logger from "@/utils/logger";
 
-import { ApiKeysRepository } from "../db/repositories";
+import { ApiKeysRepository, usersRepository } from "../db/repositories";
 import { ApiKeysSerializer } from "../db/serializers";
+import { resolveOwnerUserId } from "../lib/authz";
 
 const apiKeysRepository = new ApiKeysRepository();
 
@@ -24,8 +25,10 @@ export const apiKeysImplementations = {
     userId: string,
   ): Promise<z.infer<typeof CreateApiKeyResponseSchema>> => {
     try {
-      // Use input.user_id if provided, otherwise default to current user (private)
-      const apiKeyUserId = input.user_id !== undefined ? input.user_id : userId;
+      // Owner is the authenticated caller. Only admins may create a key for
+      // another user or a public (user_id = null) key; non-admins always get a
+      // key scoped to themselves regardless of the supplied user_id.
+      const apiKeyUserId = await resolveOwnerUserId(input.user_id, userId);
 
       const result = await apiKeysRepository.create({
         name: input.name,
@@ -47,9 +50,15 @@ export const apiKeysImplementations = {
   ): Promise<z.infer<typeof ListApiKeysResponseSchema>> => {
     try {
       const apiKeys = await apiKeysRepository.findAccessibleToUser(userId);
+      const isAdmin = await usersRepository.isAdmin(userId);
 
       return {
-        apiKeys: ApiKeysSerializer.serializeApiKeyList(apiKeys),
+        // Mask the secret of any key the requester does not own (public/shared
+        // keys are admin-managed); owners and admins see full values.
+        apiKeys: ApiKeysSerializer.serializeApiKeyList(apiKeys, {
+          requesterId: userId,
+          isAdmin,
+        }),
       };
     } catch (error) {
       logger.error("Error fetching API keys:", error);
@@ -62,10 +71,16 @@ export const apiKeysImplementations = {
     userId: string,
   ): Promise<z.infer<typeof UpdateApiKeyResponseSchema>> => {
     try {
-      const result = await apiKeysRepository.update(input.uuid, userId, {
-        name: input.name,
-        is_active: input.is_active,
-      });
+      const isAdmin = await usersRepository.isAdmin(userId);
+      const result = await apiKeysRepository.update(
+        input.uuid,
+        userId,
+        {
+          name: input.name,
+          is_active: input.is_active,
+        },
+        isAdmin,
+      );
 
       return ApiKeysSerializer.serializeApiKey(result);
     } catch (error) {
@@ -81,7 +96,8 @@ export const apiKeysImplementations = {
     userId: string,
   ): Promise<z.infer<typeof DeleteApiKeyResponseSchema>> => {
     try {
-      await apiKeysRepository.delete(input.uuid, userId);
+      const isAdmin = await usersRepository.isAdmin(userId);
+      await apiKeysRepository.delete(input.uuid, userId, isAdmin);
 
       return {
         success: true,

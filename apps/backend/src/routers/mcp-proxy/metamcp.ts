@@ -5,8 +5,11 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import express from "express";
 
+import { sendSafeError } from "@/utils/http-errors";
 import logger from "@/utils/logger";
 
+import { namespacesRepository } from "../../db/repositories";
+import { canAccessResource } from "../../lib/authz";
 import { createServer } from "../../lib/metamcp/index";
 import { mcpServerPool } from "../../lib/metamcp/mcp-server-pool";
 import { betterAuthMcpMiddleware } from "../../middleware/better-auth-mcp.middleware";
@@ -15,6 +18,38 @@ const metamcpRouter = express.Router();
 
 // Apply better auth middleware to all metamcp routes
 metamcpRouter.use(betterAuthMcpMiddleware);
+
+/**
+ * Verify the authenticated user may open a session against this namespace
+ * (owns it, it is public, or they are an admin). Sends 404/403 and returns
+ * false when access is denied. Prevents a user from proxying into another
+ * tenant's private namespace by guessing its UUID (IDOR).
+ */
+const assertNamespaceAccess = async (
+  req: express.Request,
+  res: express.Response,
+  namespaceUuid: string,
+): Promise<boolean> => {
+  // user is attached by betterAuthMcpMiddleware
+  const userId = (req as unknown as { user?: { id?: string } }).user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required" });
+    return false;
+  }
+  const namespace = await namespacesRepository.findByUuid(namespaceUuid);
+  if (!namespace) {
+    res.status(404).json({ error: "Namespace not found" });
+    return false;
+  }
+  if (!(await canAccessResource(namespace.user_id, userId))) {
+    res.status(403).json({
+      error: "Access denied",
+      message: "You do not have access to this namespace",
+    });
+    return false;
+  }
+  return true;
+};
 
 const webAppTransports: Map<string, Transport> = new Map<string, Transport>(); // Web app transports by sessionId
 const metamcpServers: Map<
@@ -79,7 +114,7 @@ metamcpRouter.get("/:uuid/mcp", async (req, res) => {
     }
   } catch (error) {
     logger.error("Error in MetaMCP /mcp route:", error);
-    res.status(500).json(error);
+    sendSafeError(res, 500, "Internal server error");
   }
 });
 
@@ -95,6 +130,11 @@ metamcpRouter.post("/:uuid/mcp", async (req, res) => {
 
   if (!sessionId) {
     try {
+      // Authorize access to the namespace before creating a new session.
+      if (!(await assertNamespaceAccess(req, res, namespaceUuid))) {
+        return;
+      }
+
       logger.info(
         `New MetaMCP StreamableHttp connection request for namespace ${namespaceUuid}`,
       );
@@ -147,7 +187,7 @@ metamcpRouter.post("/:uuid/mcp", async (req, res) => {
       );
     } catch (error) {
       logger.error("Error in MetaMCP /mcp POST route:", error);
-      res.status(500).json(error);
+      sendSafeError(res, 500, "Internal server error");
     }
   } else {
     // logger.info(
@@ -167,7 +207,7 @@ metamcpRouter.post("/:uuid/mcp", async (req, res) => {
       }
     } catch (error) {
       logger.error("Error in MetaMCP /mcp route:", error);
-      res.status(500).json(error);
+      sendSafeError(res, 500, "Internal server error");
     }
   }
 });
@@ -186,7 +226,7 @@ metamcpRouter.delete("/:uuid/mcp", async (req, res) => {
       res.status(200).end();
     } catch (error) {
       logger.error("Error in MetaMCP /mcp DELETE route:", error);
-      res.status(500).json(error);
+      sendSafeError(res, 500, "Internal server error");
     }
   } else {
     res.status(400).end("Missing sessionId");
@@ -198,6 +238,11 @@ metamcpRouter.get("/:uuid/sse", async (req, res) => {
   const includeInactiveServers = req.query.includeInactiveServers === "true";
 
   try {
+    // Authorize access to the namespace before creating a new session.
+    if (!(await assertNamespaceAccess(req, res, namespaceUuid))) {
+      return;
+    }
+
     logger.info(
       `New MetaMCP SSE connection request for namespace ${namespaceUuid}, includeInactiveServers: ${includeInactiveServers}`,
     );
@@ -230,7 +275,7 @@ metamcpRouter.get("/:uuid/sse", async (req, res) => {
     await mcpServerInstance.server.connect(webAppTransport);
   } catch (error) {
     logger.error("Error in MetaMCP /sse route:", error);
-    res.status(500).json(error);
+    sendSafeError(res, 500, "Internal server error");
   }
 });
 
@@ -252,7 +297,7 @@ metamcpRouter.post("/:uuid/message", async (req, res) => {
     await transport.handlePostMessage(req, res);
   } catch (error) {
     logger.error("Error in MetaMCP /message route:", error);
-    res.status(500).json(error);
+    sendSafeError(res, 500, "Internal server error");
   }
 });
 

@@ -26,8 +26,10 @@ import {
   namespaceMappingsRepository,
   namespacesRepository,
   toolsRepository,
+  usersRepository,
 } from "../db/repositories";
 import { NamespacesSerializer } from "../db/serializers";
+import { canManageResource, resolveOwnerUserId } from "../lib/authz";
 import {
   clearOverrideCache,
   mapOverrideNameToOriginal,
@@ -40,9 +42,9 @@ export const namespacesImplementations = {
     userId: string,
   ): Promise<z.infer<typeof CreateNamespaceResponseSchema>> => {
     try {
-      // Determine user ownership based on input.user_id or default to current user
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : userId;
+      // Owner is the authenticated caller. Only admins may create a namespace
+      // for another user or a public (user_id = null) namespace.
+      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId);
       const isPublicNamespace = effectiveUserId === null;
 
       // Validate server accessibility and relationship rules
@@ -175,10 +177,13 @@ export const namespacesImplementations = {
         };
       }
 
+      const isAdmin = await usersRepository.isAdmin(userId);
       return {
         success: true as const,
+        // Redact secrets on any contained server the requester does not own.
         data: NamespacesSerializer.serializeNamespaceWithServers(
           namespaceWithServers,
+          { requesterId: userId, isAdmin },
         ),
         message: "Namespace retrieved successfully",
       };
@@ -257,8 +262,9 @@ export const namespacesImplementations = {
         };
       }
 
-      // Check if user owns this namespace (only owners can delete, protect public namespaces)
-      if (existingNamespace.user_id && existingNamespace.user_id !== userId) {
+      // Only the namespace owner (or an admin) may delete it. Public namespaces
+      // require admin.
+      if (!(await canManageResource(existingNamespace.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only delete namespaces you own",
@@ -327,17 +333,22 @@ export const namespacesImplementations = {
         };
       }
 
-      // Check if user owns this namespace (only owners can update)
-      if (existingNamespace.user_id && existingNamespace.user_id !== userId) {
+      // Only the namespace owner (or an admin) may update it. Public namespaces
+      // require admin.
+      if (!(await canManageResource(existingNamespace.user_id, userId))) {
         return {
           success: false as const,
           message: "Access denied: You can only update namespaces you own",
         };
       }
 
-      // Determine the effective ownership for validation (use input.user_id if provided, otherwise existing)
-      const effectiveUserId =
-        input.user_id !== undefined ? input.user_id : existingNamespace.user_id;
+      // Keep existing ownership; only admins may reassign the namespace to
+      // another user or to public.
+      const effectiveUserId = await resolveOwnerUserId(
+        input.user_id,
+        userId,
+        existingNamespace.user_id,
+      );
       const isPublicNamespace = effectiveUserId === null;
 
       // Validate server accessibility and relationship rules if servers are being updated
@@ -383,7 +394,7 @@ export const namespacesImplementations = {
         uuid: input.uuid,
         name: input.name,
         description: input.description,
-        user_id: input.user_id,
+        user_id: effectiveUserId,
         mcpServerUuids: input.mcpServerUuids,
       });
 

@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useTranslations } from "@/hooks/useTranslations";
 import { authClient } from "@/lib/auth-client";
 import { vanillaTrpcClient } from "@/lib/trpc";
+import { safeInternalRedirect } from "@/lib/validation-utils";
 
 function LoginForm() {
   const { t } = useTranslations();
@@ -27,7 +28,8 @@ function LoginForm() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  // Sanitize to a same-origin relative path to prevent open redirects.
+  const callbackUrl = safeInternalRedirect(searchParams.get("callbackUrl"));
 
   // Check if signup is disabled
   useEffect(() => {

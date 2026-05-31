@@ -7,6 +7,7 @@ import {
   generateSecureAccessToken,
   generateSecureRefreshToken,
   rateLimitToken,
+  safeCompare,
 } from "./utils";
 
 const tokenRouter = express.Router();
@@ -109,7 +110,7 @@ async function handleAuthorizationCodeGrant(
 
     if (
       authClientId !== client_id ||
-      authClientSecret !== clientData.client_secret
+      !safeCompare(authClientSecret, clientData.client_secret)
     ) {
       return res.status(401).json({
         error: "invalid_client",
@@ -118,7 +119,7 @@ async function handleAuthorizationCodeGrant(
     }
   } else if (clientData.token_endpoint_auth_method === "client_secret_post") {
     const { client_secret } = req.body;
-    if (!client_secret || client_secret !== clientData.client_secret) {
+    if (!safeCompare(client_secret, clientData.client_secret)) {
       return res.status(401).json({
         error: "invalid_client",
         error_description: "Invalid client secret",
@@ -150,12 +151,13 @@ async function handleAuthorizationCodeGrant(
   if (codeData.code_challenge_method === "S256") {
     const hash = crypto.createHash("sha256").update(code_verifier).digest();
     challengeFromVerifier = hash.toString("base64url");
-  } else if (codeData.code_challenge_method === "plain") {
-    challengeFromVerifier = code_verifier;
   } else {
+    // Only S256 is accepted (OAuth 2.1). "plain" — and anything else — is
+    // rejected rather than silently trusting the verifier as the challenge.
     return res.status(400).json({
       error: "invalid_grant",
-      error_description: "Unsupported code challenge method",
+      error_description:
+        "Unsupported code challenge method. Only S256 is supported.",
     });
   }
 
@@ -166,8 +168,16 @@ async function handleAuthorizationCodeGrant(
     });
   }
 
-  // Code is valid, delete it (authorization codes are single-use)
-  await oauthRepository.deleteAuthCode(code);
+  // Atomically consume the code (single-use). If another concurrent request
+  // already consumed it, this returns null and we reject — preventing a replay
+  // race that could issue two token pairs from one code.
+  const consumed = await oauthRepository.consumeAuthCode(code);
+  if (!consumed) {
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description: "Authorization code has already been used",
+    });
+  }
 
   // Issue token pair
   const result = await issueTokenPair(
@@ -240,8 +250,16 @@ async function handleRefreshTokenGrant(
     });
   }
 
-  // Token rotation: delete the old row before issuing a new pair
-  await oauthRepository.deleteAccessTokenByRefreshToken(refresh_token);
+  // Token rotation: atomically consume the old row before issuing a new pair.
+  // If a concurrent request already consumed it, reject instead of issuing a
+  // second token pair from the same refresh token.
+  const consumed = await oauthRepository.consumeRefreshToken(refresh_token);
+  if (!consumed) {
+    return res.status(400).json({
+      error: "invalid_grant",
+      error_description: "Invalid or already-used refresh token",
+    });
+  }
 
   // Issue new token pair
   const result = await issueTokenPair(
