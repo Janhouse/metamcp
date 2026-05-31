@@ -105,18 +105,23 @@ COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./
 # bumped dep (e.g. a turbo platform binary) is younger than the window.
 RUN sed -i '/minimumReleaseAge/d' pnpm-workspace.yaml
 
-# drizzle-kit is a backend devDependency but is needed at runtime for DB
-# migrations. Promote it to a runtime dependency BEFORE pruning, while the
-# copied node_modules still contains devDependencies — running `pnpm add`
-# against the full modules dir avoids ERR_PNPM_INCLUDED_DEPS_CONFLICT.
-RUN cd apps/backend && pnpm add drizzle-kit@0.31.10 --config.confirm-modules-purge=false
-
 # Prune to production-only. --frozen-lockfile installs exactly the locked
 # versions with no re-resolution (so the minimumReleaseAge cooldown can't
 # apply), and --config.confirm-modules-purge=false stops pnpm 10 from aborting
-# on the node_modules purge in a non-TTY build. drizzle-kit is kept because it
-# is now a regular dependency.
+# on the node_modules purge in a non-TTY build.
 RUN pnpm install --prod --frozen-lockfile --config.confirm-modules-purge=false
+
+# drizzle-kit is a backend devDependency but is needed at runtime for DB
+# migrations (the entrypoint runs `pnpm exec drizzle-kit migrate`), so the prod
+# prune above removed it. Remove its devDependencies entry and re-add it as a
+# real production dependency, installed LOCALLY in apps/backend so that
+# drizzle.config.ts (which does `import { defineConfig } from "drizzle-kit"`)
+# can resolve it. --prod keeps the install production-only (matching the pruned
+# tree, avoiding ERR_PNPM_INCLUDED_DEPS_CONFLICT). A bare `pnpm add` is a no-op
+# here because drizzle-kit is already pinned in devDependencies, hence the sed.
+RUN cd apps/backend \
+    && sed -i '/"drizzle-kit":/d' package.json \
+    && pnpm add drizzle-kit@0.31.10 --prod --config.confirm-modules-purge=false
 
 # Copy startup script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
