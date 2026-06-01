@@ -15,17 +15,30 @@ services:
     restart: "no"
     # --- Container hardening (defense-in-depth around spawned MCP servers) ---
     # MCP servers run as child processes in this container; these limits cap the
-    # blast radius of a malicious/buggy server. bubblewrap (MCP_SANDBOX=bwrap)
-    # layers per-process namespace + read-only-fs isolation on top using
-    # unprivileged user namespaces (compatible with no-new-privileges + cap_drop).
-    # Keep Docker's DEFAULT seccomp profile — do NOT set seccomp=unconfined.
+    # blast radius of a malicious/buggy server.
     security_opt:
       - "no-new-privileges:true"
+      # --- Required ONLY for MCP_SANDBOX=bwrap ---------------------------------
+      # bubblewrap needs to create unprivileged user/PID/mount namespaces and
+      # mount a fresh /proc inside them. Docker's defaults block all three steps:
+      #   * default seccomp blocks unshare(CLONE_NEWUSER)  -> seccomp=unconfined
+      #   * docker-default AppArmor denies the mount ops     -> apparmor=unconfined
+      #   * /proc is masked, so a nested procfs mount fails  -> systempaths=unconfined
+      # Uncomment all three to enable bwrap. This relaxes the *container's* outer
+      # seccomp/AppArmor/proc-masking in exchange for bwrap's stronger
+      # *per-process* PID/IPC/UTS/net/fs isolation of each MCP server. It is a
+      # deliberate trade-off — leave MCP_SANDBOX=none (the default) if you do not
+      # want it; prlimit limits and the env scrub still apply either way.
+      # - "seccomp=unconfined"
+      # - "apparmor=unconfined"
+      # - "systempaths=unconfined"
     cap_drop:
       - ALL
     pids_limit: 4096
     # Caps memory for the app AND every MCP server it spawns. Raise via
     # METAMCP_MEM_LIMIT for workloads running many/heavy MCP servers.
+    # NOTE: this is a cgroup memory cap on the whole container — it does NOT use
+    # prlimit --as, so it is safe for Go/Node/Bun/JVM MCP servers.
     mem_limit: ${METAMCP_MEM_LIMIT:-4g}
 
   postgres:
