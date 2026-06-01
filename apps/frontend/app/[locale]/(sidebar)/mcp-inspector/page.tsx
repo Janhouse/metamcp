@@ -101,33 +101,46 @@ function McpInspectorContent() {
     enabled: Boolean(selectedServer && !serversLoading && selectedServerUuid),
   })
 
-  // Handle server connection logic and notifications
+  // Keep the latest connection status in a ref so the auto-connect effect can
+  // read it without depending on it. Depending on connectionStatus — or on the
+  // whole `connection` object, which is a fresh literal every render — would
+  // re-run the effect on every render and, combined with the clearNotifications
+  // setState below, cause an infinite render loop (React error #185).
+  const connectionStatusRef = React.useRef(connection.connectionStatus)
+  connectionStatusRef.current = connection.connectionStatus
+
+  // Whether the selected server's details have loaded. A boolean (rather than
+  // the `selectedServer` object, whose reference churns when the list refetches)
+  // keeps the effect deps stable.
+  const hasSelectedServer = Boolean(selectedServer)
+
+  // `connect`/`disconnect`/`clearNotifications` are stable (useMemoizedFn), so
+  // listing them does not re-trigger the effect; the meaningful triggers are the
+  // URL server id, the loading flag and whether the server has loaded. Run only
+  // when the selected server actually changes: clear notifications and
+  // auto-connect (tearing down a prior connection first).
+  const { connect, disconnect } = connection
   React.useEffect(() => {
-    // Clear notifications when switching servers
     clearNotifications()
 
-    // Auto-connect when hook is enabled and not already connected
-    if (connection && selectedServer && !serversLoading && selectedServerUuid) {
-      if (connection.connectionStatus === "connected") {
-        // If we're connected but to a different server, disconnect first
-        connection.disconnect().then(() => {
-          connection.connect()
-        })
-      } else if (connection.connectionStatus === "disconnected") {
-        // Auto-connect when server is selected and not already connected
-        connection.connect()
-      }
+    if (!selectedServerUuid || serversLoading || !hasSelectedServer) {
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (connectionStatusRef.current === "connected") {
+      // Connected to a previous server — tear it down before reconnecting.
+      disconnect().then(() => {
+        connect()
+      })
+    } else if (connectionStatusRef.current === "disconnected") {
+      connect()
+    }
   }, [
     selectedServerUuid,
-    selectedServer,
     serversLoading,
-    clearNotifications, // Auto-connect when server is selected and not already connected
-    connection.connect, // If we're connected but to a different server, disconnect first
-    connection.disconnect,
-    connection.connectionStatus,
-    connection,
+    hasSelectedServer,
+    clearNotifications,
+    connect,
+    disconnect,
   ])
 
   const handleConnectionToggle = useMemoizedFn(() => {
