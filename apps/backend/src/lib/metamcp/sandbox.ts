@@ -417,6 +417,18 @@ function buildBwrapArgs(cfg: ResolvedSandboxConfig): string[] {
   args.push("--dev", "/dev")
   args.push("--tmpfs", "/tmp")
 
+  // When the root is read-only, the toolchains still need to write their caches
+  // and lock/temp files (uv -> $HOME/.cache/uv, npm -> $HOME/.npm, go ->
+  // $GOPATH/$GOCACHE). Re-bind those specific dirs read-write on top of the
+  // read-only root so `uvx`/`npx`/`go run` keep working while the binaries and
+  // the rest of the fs stay immutable. `--bind-try` is used so a missing dir is
+  // silently skipped rather than aborting the spawn.
+  if (cfg.readOnlyRoot) {
+    for (const dir of getToolchainWritableDirs()) {
+      args.push("--bind-try", dir, dir)
+    }
+  }
+
   // Writable scratch dir + make it the working directory.
   ensureWorkDir(cfg.workDir)
   args.push("--bind", cfg.workDir, cfg.workDir)
@@ -431,6 +443,34 @@ function buildBwrapArgs(cfg: ResolvedSandboxConfig): string[] {
   }
 
   return args
+}
+
+/**
+ * Directories the language toolchains write to (caches, lock/temp files). Bound
+ * read-write inside a read-only-root bwrap sandbox so `uvx`/`npx`/`go run` work.
+ * Derived from env with sensible fallbacks; de-duplicated. Absolute paths only.
+ */
+function getToolchainWritableDirs(): string[] {
+  const home = process.env.HOME || "/home/nextjs"
+  const xdgCache = process.env.XDG_CACHE_HOME || path.join(home, ".cache")
+  const candidates = [
+    home,
+    xdgCache,
+    process.env.UV_CACHE_DIR,
+    process.env.npm_config_cache,
+    process.env.GOPATH || "/go",
+    process.env.GOCACHE,
+    process.env.GOMODCACHE,
+  ]
+  const seen = new Set<string>()
+  const dirs: string[] = []
+  for (const dir of candidates) {
+    if (dir && path.isAbsolute(dir) && !seen.has(dir)) {
+      seen.add(dir)
+      dirs.push(dir)
+    }
+  }
+  return dirs
 }
 
 function buildPrlimitArgs(limits: ResolvedSandboxLimits): string[] {

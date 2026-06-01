@@ -175,6 +175,60 @@ describe("wrapCommand", () => {
     expect(bindRootIdx).toBeGreaterThanOrEqual(0)
   })
 
+  it("re-binds toolchain cache dirs read-write under a read-only root", () => {
+    // Snapshot + clear the toolchain env so the test exercises the documented
+    // fallbacks ($HOME, $GOPATH->/go) deterministically regardless of host env.
+    const snapshot: Record<string, string | undefined> = {}
+    for (const key of [
+      "HOME",
+      "XDG_CACHE_HOME",
+      "UV_CACHE_DIR",
+      "npm_config_cache",
+      "GOPATH",
+      "GOCACHE",
+      "GOMODCACHE",
+    ]) {
+      snapshot[key] = process.env[key]
+      delete process.env[key]
+    }
+    process.env.HOME = "/home/sandbox-test-user"
+    try {
+      const ro = wrapCommand(
+        "node",
+        [],
+        baseCfg({ mode: "bwrap", readOnlyRoot: true }),
+        BOTH_TOOLS,
+      )
+      const join = ro.args.join(" ")
+      // HOME (uv/npm caches) and the Go path are bound writable on top of the
+      // read-only root so uvx/npx/go run can write their caches and lock files.
+      expect(join).toContain(
+        "--bind-try /home/sandbox-test-user /home/sandbox-test-user",
+      )
+      expect(join).toContain("--bind-try /go /go")
+      // The root itself stays read-only.
+      const roIdx = ro.args.indexOf("--ro-bind")
+      expect(ro.args.slice(roIdx, roIdx + 3)).toEqual(["--ro-bind", "/", "/"])
+
+      // With a writable root there is no need for the cache re-binds.
+      const rw = wrapCommand(
+        "node",
+        [],
+        baseCfg({ mode: "bwrap", readOnlyRoot: false }),
+        BOTH_TOOLS,
+      )
+      expect(rw.args).not.toContain("--bind-try")
+    } finally {
+      for (const [key, value] of Object.entries(snapshot)) {
+        if (value === undefined) {
+          delete process.env[key]
+        } else {
+          process.env[key] = value
+        }
+      }
+    }
+  })
+
   it("adds a --bind entry for each allowPath", () => {
     const out = wrapCommand(
       "node",
