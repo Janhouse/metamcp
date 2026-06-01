@@ -18,6 +18,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { useConnection } from "@/hooks/useConnection"
 import { useTranslations } from "@/hooks/useTranslations"
+import { resolveEndpointNamespaceUuid } from "@/lib/endpoint-server"
 import type { Notification } from "@/lib/notificationTypes"
 import { trpc } from "@/lib/trpc"
 
@@ -55,6 +56,20 @@ function McpInspectorContent() {
     (server) => server.uuid === selectedServerUuid,
   )
 
+  // Auto-generated endpoint servers (STREAMABLE_HTTP -> /metamcp/<name>/mcp)
+  // point at the endpoint's auth-gated public URL, which a stored bearer token
+  // often can't satisfy (OAuth-only endpoints / rotated API keys). When the
+  // selected server backs an endpoint, inspect the underlying namespace through
+  // the authenticated metamcp proxy instead (same tools, logged-in session +
+  // namespace access check).
+  const { data: endpointsResponse, isLoading: endpointsLoading } =
+    trpc.frontend.endpoints.list.useQuery()
+  const endpointNamespaceUuid = resolveEndpointNamespaceUuid(
+    selectedServer,
+    endpointsResponse?.success ? endpointsResponse.data : undefined,
+  )
+  const isEndpointServer = endpointNamespaceUuid !== null
+
   // Notification management functions using useMemoizedFn
   const addNotification = useMemoizedFn(
     (notification: Notification, type: "notification" | "stderr") => {
@@ -90,15 +105,32 @@ function McpInspectorContent() {
   // MCP Connection setup - only enable when server data is loaded and valid
   const connection = useConnection({
     mcpServerUuid: selectedServerUuid,
-    transportType: selectedServer?.type || McpServerTypeEnum.enum.STDIO,
+    transportType: isEndpointServer
+      ? McpServerTypeEnum.enum.SSE
+      : selectedServer?.type || McpServerTypeEnum.enum.STDIO,
     command: selectedServer?.command || "",
     args: selectedServer?.args?.join(" ") || "",
-    url: selectedServer?.url || "",
+    // For endpoint servers, connect to the namespace via the authenticated
+    // metamcp proxy rather than the OAuth/API-key-gated public endpoint URL.
+    url: isEndpointServer
+      ? `/mcp-proxy/metamcp/${endpointNamespaceUuid}/sse`
+      : selectedServer?.url || "",
     env: selectedServer?.env || {},
-    bearerToken: selectedServer?.bearerToken || undefined,
+    bearerToken: isEndpointServer
+      ? undefined
+      : selectedServer?.bearerToken || undefined,
+    isMetaMCP: isEndpointServer,
     onNotification,
     onStdErrNotification,
-    enabled: Boolean(selectedServer && !serversLoading && selectedServerUuid),
+    // Wait for the endpoints list too: until it loads we cannot tell whether
+    // this is an endpoint server, and connecting via the wrong URL first would
+    // fail without retrying (connect is a stable callback).
+    enabled: Boolean(
+      selectedServer &&
+        !serversLoading &&
+        !endpointsLoading &&
+        selectedServerUuid,
+    ),
   })
 
   // Keep the latest connection status in a ref so the auto-connect effect can
@@ -123,7 +155,14 @@ function McpInspectorContent() {
   React.useEffect(() => {
     clearNotifications()
 
-    if (!selectedServerUuid || serversLoading || !hasSelectedServer) {
+    // Wait for both the servers list and the endpoints list: the latter decides
+    // whether to connect via the namespace proxy vs the server's own URL.
+    if (
+      !selectedServerUuid ||
+      serversLoading ||
+      endpointsLoading ||
+      !hasSelectedServer
+    ) {
       return
     }
     if (connectionStatusRef.current === "connected") {
@@ -137,6 +176,7 @@ function McpInspectorContent() {
   }, [
     selectedServerUuid,
     serversLoading,
+    endpointsLoading,
     hasSelectedServer,
     clearNotifications,
     connect,

@@ -35,6 +35,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { useConnection } from "@/hooks/useConnection"
 import { useTranslations } from "@/hooks/useTranslations"
+import { resolveEndpointNamespaceUuid } from "@/lib/endpoint-server"
 import { trpc } from "@/lib/trpc"
 
 import { ToolManagement } from "./components/tool-management"
@@ -134,24 +135,51 @@ export default function McpServerDetailPage({
     ? serverResponse.data
     : undefined
 
+  // Auto-generated endpoint servers (STREAMABLE_HTTP -> ${APP_URL}/metamcp/<name>/mcp)
+  // point at the endpoint's own auth-gated public URL, which a stored bearer
+  // token often can't satisfy (OAuth-only endpoints, or rotated API keys). When
+  // this server backs an endpoint, inspect the underlying namespace through the
+  // authenticated metamcp proxy instead (same aggregated tools, uses the
+  // logged-in session + namespace access check).
+  const { data: endpointsResponse, isLoading: endpointsLoading } =
+    trpc.frontend.endpoints.list.useQuery()
+  const endpointNamespaceUuid = resolveEndpointNamespaceUuid(
+    server,
+    endpointsResponse?.success ? endpointsResponse.data : undefined,
+  )
+  const isEndpointServer = endpointNamespaceUuid !== null
+
   // MCP Connection setup - only enable when server data is loaded and not in error state
   const connection = useConnection({
     mcpServerUuid: uuid,
-    transportType: server?.type || McpServerTypeEnum.enum.STDIO,
+    transportType: isEndpointServer
+      ? McpServerTypeEnum.enum.SSE
+      : server?.type || McpServerTypeEnum.enum.STDIO,
     command: server?.command || "",
     args: server?.args?.join(" ") || "",
-    url: server?.url || "",
+    // For endpoint servers, connect to the namespace via the authenticated
+    // metamcp proxy rather than the OAuth/API-key-gated public endpoint URL.
+    url: isEndpointServer
+      ? `/mcp-proxy/metamcp/${endpointNamespaceUuid}/sse`
+      : server?.url || "",
     env: server?.env || {},
-    bearerToken: server?.bearerToken || undefined,
+    bearerToken: isEndpointServer
+      ? undefined
+      : server?.bearerToken || undefined,
+    isMetaMCP: isEndpointServer,
     onNotification: (notification) => {
       console.log("MCP Notification:", notification)
     },
     onStdErrNotification: (notification) => {
       console.error("MCP StdErr:", notification)
     },
+    // Wait for the endpoints list too: until it loads we cannot tell whether
+    // this is an endpoint server, and connecting via the wrong URL first would
+    // fail without retrying.
     enabled: Boolean(
       server &&
         !isLoading &&
+        !endpointsLoading &&
         server.error_status !== McpServerErrorStatusEnum.enum.ERROR,
     ),
   })
@@ -162,12 +190,13 @@ export default function McpServerDetailPage({
       connection &&
       server &&
       !isLoading &&
+      !endpointsLoading &&
       server.error_status !== McpServerErrorStatusEnum.enum.ERROR &&
       connection.connectionStatus === "disconnected"
     ) {
       connection.connect()
     }
-  }, [server, connection, isLoading])
+  }, [server, connection, isLoading, endpointsLoading])
 
   // Handle delete server
   const handleDeleteServer = async () => {
