@@ -1,15 +1,15 @@
-"use client";
+"use client"
 
-import { McpServerTypeEnum } from "@repo/zod-types";
-import { ArrowLeft, Calendar, Edit, Hash, Plug, Server } from "lucide-react";
-import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
-import { use, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { McpServerTypeEnum } from "@repo/zod-types"
+import { ArrowLeft, Calendar, Edit, Hash, Plug, Server } from "lucide-react"
+import Link from "next/link"
+import { notFound, useRouter } from "next/navigation"
+import { use, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
-import { EditNamespace } from "@/components/edit-namespace";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { EditNamespace } from "@/components/edit-namespace"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -17,34 +17,34 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useConnection } from "@/hooks/useConnection";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
+} from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useConnection } from "@/hooks/useConnection"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
 
-import { NamespaceServersTable } from "./components/namespace-servers-table";
-import { NamespaceToolManagement } from "./components/namespace-tool-management";
+import { NamespaceServersTable } from "./components/namespace-servers-table"
+import { NamespaceToolManagement } from "./components/namespace-tool-management"
 
 interface NamespaceDetailPageProps {
   params: Promise<{
-    uuid: string;
-  }>;
+    uuid: string
+  }>
 }
 
 export default function NamespaceDetailPage({
   params,
 }: NamespaceDetailPageProps) {
-  const { uuid } = use(params);
-  const router = useRouter();
-  const { t } = useTranslations();
+  const { uuid } = use(params)
+  const router = useRouter()
+  const { t } = useTranslations()
 
-  const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
-  const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
-  const lastToggleTimeRef = useRef<number>(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false)
+  const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false)
+  const lastToggleTimeRef = useRef<number>(0)
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Use tRPC query for data fetching
   const {
@@ -52,7 +52,7 @@ export default function NamespaceDetailPage({
     error,
     isLoading,
     refetch,
-  } = trpc.frontend.namespaces.get.useQuery({ uuid });
+  } = trpc.frontend.namespaces.get.useQuery({ uuid })
 
   // tRPC mutation for deleting namespace
   const deleteMutation = trpc.frontend.namespaces.delete.useMutation({
@@ -60,33 +60,33 @@ export default function NamespaceDetailPage({
       // Check if the operation was actually successful
       if (result.success) {
         // Invalidate the list cache since namespace was deleted
-        utils.frontend.namespaces.list.invalidate();
-        toast.success(t("namespaces:namespaceDeletedSuccess"));
+        utils.frontend.namespaces.list.invalidate()
+        toast.success(t("namespaces:namespaceDeletedSuccess"))
         // Navigate back to the namespaces list
-        router.push("/namespaces");
+        router.push("/namespaces")
       } else {
         // Handle business logic failures
-        console.error("Delete failed:", result.message);
+        console.error("Delete failed:", result.message)
         toast.error(t("namespaces:failedToDeleteNamespace"), {
           description:
             result.message ||
             t("namespaces:detail.anErrorOccurredWhileDeleting"),
-        });
-        setShowDeleteDialog(false);
+        })
+        setShowDeleteDialog(false)
       }
     },
     onError: (error) => {
-      console.error("Error deleting namespace:", error);
+      console.error("Error deleting namespace:", error)
       toast.error(t("namespaces:failedToDeleteNamespace"), {
         description: error.message,
-      });
-      setShowDeleteDialog(false);
+      })
+      setShowDeleteDialog(false)
     },
-  });
+  })
 
   const namespace = namespaceResponse?.success
     ? namespaceResponse.data
-    : undefined;
+    : undefined
 
   // MetaMCP Connection setup - connect to the metamcp proxy endpoint for this namespace
   const connection = useConnection({
@@ -100,13 +100,13 @@ export default function NamespaceDetailPage({
     isMetaMCP: true, // Indicate this is a MetaMCP connection
     includeInactiveServers: true, // Include all servers regardless of status in namespace management
     onNotification: (notification) => {
-      console.log("MetaMCP Notification:", notification);
+      console.log("MetaMCP Notification:", notification)
     },
     onStdErrNotification: (notification) => {
-      console.error("MetaMCP StdErr:", notification);
+      console.error("MetaMCP StdErr:", notification)
     },
     enabled: Boolean(namespace && !isLoading),
-  });
+  })
 
   // Auto-connect when hook is enabled and not already connected
   useEffect(() => {
@@ -116,55 +116,55 @@ export default function NamespaceDetailPage({
       !isLoading &&
       connection.connectionStatus === "disconnected"
     ) {
-      connection.connect();
+      connection.connect()
     }
-  }, [namespace, connection, isLoading]);
+  }, [namespace, connection, isLoading])
 
   // Handle delete namespace
   const handleDeleteNamespace = async () => {
-    deleteMutation.mutate({ uuid });
-  };
+    deleteMutation.mutate({ uuid })
+  }
 
   // Handle successful edit
   const handleEditSuccess = () => {
-    setEditDialogOpen(false);
+    setEditDialogOpen(false)
     // The EditNamespace component already handles cache invalidation
     // So we just need to close the dialog
 
     // Refresh the MetaMCP connection to pick up server changes
-    handleConnectionRefresh();
-  };
+    handleConnectionRefresh()
+  }
 
   // Handle manual connect/disconnect
   const handleConnectionToggle = () => {
     if (connection.connectionStatus === "connected") {
-      connection.disconnect();
+      connection.disconnect()
     } else {
-      connection.connect();
+      connection.connect()
     }
-  };
+  }
 
   // Handle server status change - backend handles server pool invalidation automatically
   const handleServerStatusChange = () => {
-    const now = Date.now();
-    const timeSinceLastToggle = now - lastToggleTimeRef.current;
+    const now = Date.now()
+    const timeSinceLastToggle = now - lastToggleTimeRef.current
 
     // Prevent rapid successive toggles (minimum 2 seconds between toggles)
     if (timeSinceLastToggle < 2000) {
       toast.warning(t("namespaces:detail.toggleTooFast"), {
         description: t("namespaces:detail.toggleTooFastDescription"),
-      });
-      return;
+      })
+      return
     }
 
-    lastToggleTimeRef.current = now;
+    lastToggleTimeRef.current = now
 
     // No need to refresh connection - backend handles server pool invalidation
     // This prevents unnecessary reinitialization of all MCP servers
     console.log(
       "Server status changed - backend will handle server pool invalidation",
-    );
-  };
+    )
+  }
 
   // Handle connection refresh (disconnect and reconnect to pick up server changes)
   const handleConnectionRefresh = () => {
@@ -172,13 +172,13 @@ export default function NamespaceDetailPage({
       connection.disconnect().then(() => {
         // Small delay to ensure clean disconnect before reconnecting
         setTimeout(() => {
-          connection.connect();
-        }, 100);
-      });
+          connection.connect()
+        }, 100)
+      })
     } else {
-      connection.connect();
+      connection.connect()
     }
-  };
+  }
 
   // Get connection status display info
   const getConnectionStatusInfo = () => {
@@ -188,28 +188,28 @@ export default function NamespaceDetailPage({
           text: t("namespaces:detail.connected"),
           color: "text-green-600",
           icon: Plug,
-        };
+        }
       case "disconnected":
         return {
           text: t("namespaces:detail.disconnected"),
           color: "text-gray-500",
           icon: Server,
-        };
+        }
       case "error":
       case "error-connecting-to-proxy":
         return {
           text: t("namespaces:detail.connectionError"),
           color: "text-red-600",
           icon: Server,
-        };
+        }
       default:
         return {
           text: t("namespaces:detail.connecting"),
           color: "text-yellow-600",
           icon: Plug,
-        };
+        }
     }
-  };
+  }
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -219,14 +219,14 @@ export default function NamespaceDetailPage({
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    });
-  };
+    })
+  }
 
   if (error) {
     const isNotFound =
-      error.message.includes("not found") || error.message.includes("404");
+      error.message.includes("not found") || error.message.includes("404")
     if (isNotFound) {
-      notFound();
+      notFound()
     }
     return (
       <div className="space-y-6">
@@ -258,7 +258,7 @@ export default function NamespaceDetailPage({
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (isLoading) {
@@ -330,15 +330,15 @@ export default function NamespaceDetailPage({
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (!namespace) {
-    notFound();
+    notFound()
   }
 
-  const connectionInfo = getConnectionStatusInfo();
-  const ConnectionIcon = connectionInfo.icon;
+  const connectionInfo = getConnectionStatusInfo()
+  const ConnectionIcon = connectionInfo.icon
 
   return (
     <div className="space-y-6">
@@ -593,5 +593,5 @@ export default function NamespaceDetailPage({
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,33 +1,33 @@
-import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js"
 import {
-  CallToolResult,
+  type CallToolResult,
   CompatibilityCallToolResultSchema,
   ListToolsResultSchema,
-  Tool,
-} from "@modelcontextprotocol/sdk/types.js";
+  type Tool,
+} from "@modelcontextprotocol/sdk/types.js"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
-import { configService } from "../../../lib/config.service";
-import { ConnectedClient } from "../../../lib/metamcp";
-import { getMcpServers } from "../../../lib/metamcp/fetch-metamcp";
-import { mcpServerPool } from "../../../lib/metamcp/mcp-server-pool";
+import { configService } from "../../../lib/config.service"
+import type { ConnectedClient } from "../../../lib/metamcp"
+import { getMcpServers } from "../../../lib/metamcp/fetch-metamcp"
+import { mcpServerPool } from "../../../lib/metamcp/mcp-server-pool"
 import {
   createFilterCallToolMiddleware,
   createFilterListToolsMiddleware,
-} from "../../../lib/metamcp/metamcp-middleware/filter-tools.functional";
+} from "../../../lib/metamcp/metamcp-middleware/filter-tools.functional"
 import {
-  CallToolHandler,
+  type CallToolHandler,
   compose,
-  ListToolsHandler,
-  MetaMCPHandlerContext,
-} from "../../../lib/metamcp/metamcp-middleware/functional-middleware";
+  type ListToolsHandler,
+  type MetaMCPHandlerContext,
+} from "../../../lib/metamcp/metamcp-middleware/functional-middleware"
 import {
   createToolOverridesCallToolMiddleware,
   createToolOverridesListToolsMiddleware,
-} from "../../../lib/metamcp/metamcp-middleware/tool-overrides.functional";
-import { createToolName } from "../../../lib/metamcp/tool-name-parser";
-import { sanitizeName } from "../../../lib/metamcp/utils";
+} from "../../../lib/metamcp/metamcp-middleware/tool-overrides.functional"
+import { createToolName } from "../../../lib/metamcp/tool-name-parser"
+import { sanitizeName } from "../../../lib/metamcp/utils"
 
 // Original List Tools Handler (adapted from metamcp-proxy.ts)
 export const createOriginalListToolsHandler = (
@@ -37,8 +37,8 @@ export const createOriginalListToolsHandler = (
     const serverParams = await getMcpServers(
       context.namespaceUuid,
       includeInactiveServers,
-    );
-    const allTools: Tool[] = [];
+    )
+    const allTools: Tool[] = []
 
     await Promise.allSettled(
       Object.entries(serverParams).map(async ([mcpServerUuid, params]) => {
@@ -47,27 +47,27 @@ export const createOriginalListToolsHandler = (
           mcpServerUuid,
           params,
           context.namespaceUuid,
-        );
-        if (!session) return;
+        )
+        if (!session) return
 
-        const capabilities = session.client.getServerCapabilities();
-        if (!capabilities?.tools) return;
+        const capabilities = session.client.getServerCapabilities()
+        if (!capabilities?.tools) return
 
         // Use name assigned by user, fallback to name from server
         const serverName =
-          params.name || session.client.getServerVersion()?.name || "";
+          params.name || session.client.getServerVersion()?.name || ""
         try {
           // Get configurable timeout values to bypass MCP SDK default enforcement
           const resetTimeoutOnProgress =
-            await configService.getMcpResetTimeoutOnProgress();
-          const timeout = await configService.getMcpTimeout();
-          const maxTotalTimeout = await configService.getMcpMaxTotalTimeout();
+            await configService.getMcpResetTimeoutOnProgress()
+          const timeout = await configService.getMcpTimeout()
+          const maxTotalTimeout = await configService.getMcpMaxTotalTimeout()
 
           const mcpRequestOptions: RequestOptions = {
             resetTimeoutOnProgress,
             timeout,
             maxTotalTimeout,
-          };
+          }
 
           const result = await session.client.request(
             {
@@ -76,52 +76,52 @@ export const createOriginalListToolsHandler = (
             },
             ListToolsResultSchema,
             mcpRequestOptions,
-          );
+          )
 
           const toolsWithSource =
             result.tools?.map((tool) => {
               const toolName = createToolName(
                 sanitizeName(serverName),
                 tool.name,
-              );
+              )
               return {
                 ...tool,
                 name: toolName,
                 description: tool.description,
-              };
-            }) || [];
+              }
+            }) || []
 
-          allTools.push(...toolsWithSource);
+          allTools.push(...toolsWithSource)
         } catch (error) {
-          logger.error(`Error fetching tools from: ${serverName}`, error);
+          logger.error(`Error fetching tools from: ${serverName}`, error)
         }
       }),
-    );
+    )
 
-    return { tools: allTools };
-  };
-};
+    return { tools: allTools }
+  }
+}
 
 // Original Call Tool Handler (adapted from metamcp-proxy.ts)
 export const createOriginalCallToolHandler = (): CallToolHandler => {
-  const toolToClient: Record<string, ConnectedClient> = {};
-  const toolToServerUuid: Record<string, string> = {};
+  const toolToClient: Record<string, ConnectedClient> = {}
+  const toolToServerUuid: Record<string, string> = {}
 
   return async (request, context) => {
-    const { name, arguments: args } = request.params;
+    const { name, arguments: args } = request.params
 
     // Extract the original tool name by removing the server prefix
-    const firstDoubleUnderscoreIndex = name.indexOf("__");
+    const firstDoubleUnderscoreIndex = name.indexOf("__")
     if (firstDoubleUnderscoreIndex === -1) {
-      throw new Error(`Invalid tool name format: ${name}`);
+      throw new Error(`Invalid tool name format: ${name}`)
     }
 
-    const serverPrefix = name.substring(0, firstDoubleUnderscoreIndex);
-    const originalToolName = name.substring(firstDoubleUnderscoreIndex + 2);
+    const serverPrefix = name.substring(0, firstDoubleUnderscoreIndex)
+    const originalToolName = name.substring(firstDoubleUnderscoreIndex + 2)
 
     // Get server parameters and find the right session for this tool
-    const serverParams = await getMcpServers(context.namespaceUuid);
-    let targetSession = null;
+    const serverParams = await getMcpServers(context.namespaceUuid)
+    let targetSession = null
 
     for (const [mcpServerUuid, params] of Object.entries(serverParams)) {
       const session = await mcpServerPool.getSession(
@@ -129,40 +129,40 @@ export const createOriginalCallToolHandler = (): CallToolHandler => {
         mcpServerUuid,
         params,
         context.namespaceUuid,
-      );
-      if (!session) continue;
+      )
+      if (!session) continue
 
-      const capabilities = session.client.getServerCapabilities();
-      if (!capabilities?.tools) continue;
+      const capabilities = session.client.getServerCapabilities()
+      if (!capabilities?.tools) continue
 
       // Use name assigned by user, fallback to name from server
       const serverName =
-        params.name || session.client.getServerVersion()?.name || "";
+        params.name || session.client.getServerVersion()?.name || ""
 
       if (sanitizeName(serverName) === serverPrefix) {
-        targetSession = session;
-        toolToClient[name] = session;
-        toolToServerUuid[name] = mcpServerUuid;
-        break;
+        targetSession = session
+        toolToClient[name] = session
+        toolToServerUuid[name] = mcpServerUuid
+        break
       }
     }
 
     if (!targetSession) {
-      throw new Error(`Unknown tool: ${name}`);
+      throw new Error(`Unknown tool: ${name}`)
     }
 
     try {
       // Get configurable timeout values to bypass MCP SDK default enforcement
       const resetTimeoutOnProgress =
-        await configService.getMcpResetTimeoutOnProgress();
-      const timeout = await configService.getMcpTimeout();
-      const maxTotalTimeout = await configService.getMcpMaxTotalTimeout();
+        await configService.getMcpResetTimeoutOnProgress()
+      const timeout = await configService.getMcpTimeout()
+      const maxTotalTimeout = await configService.getMcpMaxTotalTimeout()
 
       const mcpRequestOptions: RequestOptions = {
         resetTimeoutOnProgress,
         timeout,
         maxTotalTimeout,
-      };
+      }
 
       // Use the correct schema for tool calls with timeout options
       const result = await targetSession.client.request(
@@ -178,21 +178,21 @@ export const createOriginalCallToolHandler = (): CallToolHandler => {
         },
         CompatibilityCallToolResultSchema,
         mcpRequestOptions,
-      );
+      )
 
       // Cast the result to CallToolResult type
-      return result as CallToolResult;
+      return result as CallToolResult
     } catch (error) {
       logger.error(
         `Error calling tool "${name}" through ${
           targetSession.client.getServerVersion()?.name || "unknown"
         }:`,
         error,
-      );
-      throw error;
+      )
+      throw error
     }
-  };
-};
+  }
+}
 
 // Helper function to create middleware-enabled handlers
 export const createMiddlewareEnabledHandlers = (
@@ -203,11 +203,11 @@ export const createMiddlewareEnabledHandlers = (
   const handlerContext: MetaMCPHandlerContext = {
     namespaceUuid,
     sessionId,
-  };
+  }
 
   // Create original handlers
-  const originalListToolsHandler = createOriginalListToolsHandler();
-  const originalCallToolHandler = createOriginalCallToolHandler();
+  const originalListToolsHandler = createOriginalListToolsHandler()
+  const originalCallToolHandler = createOriginalCallToolHandler()
 
   // Compose middleware with handlers
   const listToolsWithMiddleware = compose(
@@ -216,7 +216,7 @@ export const createMiddlewareEnabledHandlers = (
     // Add more middleware here as needed
     // createLoggingMiddleware(),
     // createRateLimitingMiddleware(),
-  )(originalListToolsHandler);
+  )(originalListToolsHandler)
 
   const callToolWithMiddleware = compose(
     createFilterCallToolMiddleware({
@@ -228,11 +228,11 @@ export const createMiddlewareEnabledHandlers = (
     // Add more middleware here as needed
     // createAuditingMiddleware(),
     // createAuthorizationMiddleware(),
-  )(originalCallToolHandler);
+  )(originalCallToolHandler)
 
   return {
     handlerContext,
     listToolsWithMiddleware,
     callToolWithMiddleware,
-  };
-};
+  }
+}

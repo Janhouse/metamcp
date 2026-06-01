@@ -1,4 +1,4 @@
-import { DatabaseMcpServer, McpServer } from "@repo/zod-types";
+import type { DatabaseMcpServer, McpServer } from "@repo/zod-types"
 
 export class McpServersSerializer {
   /**
@@ -11,7 +11,7 @@ export class McpServersSerializer {
     dbServer: DatabaseMcpServer,
     options: { redactSecrets?: boolean } = {},
   ): McpServer {
-    const redact = options.redactSecrets === true;
+    const redact = options.redactSecrets === true
     return {
       uuid: dbServer.uuid,
       name: dbServer.name,
@@ -26,7 +26,9 @@ export class McpServersSerializer {
       bearerToken: redact ? undefined : dbServer.bearerToken,
       headers: redact ? {} : dbServer.headers,
       user_id: dbServer.user_id,
-    };
+      // Sandbox config is not a secret (no credentials) — never redacted.
+      sandbox: dbServer.sandbox ?? null,
+    }
   }
 
   /**
@@ -37,7 +39,7 @@ export class McpServersSerializer {
     dbServers: DatabaseMcpServer[],
     options: { requesterId?: string; isAdmin?: boolean } = {},
   ): McpServer[] {
-    const { requesterId, isAdmin = false } = options;
+    const { requesterId, isAdmin = false } = options
     return dbServers.map((server) =>
       McpServersSerializer.serializeMcpServer(server, {
         redactSecrets: !McpServersSerializer.canSeeSecrets(
@@ -46,7 +48,7 @@ export class McpServersSerializer {
           isAdmin,
         ),
       }),
-    );
+    )
   }
 
   /** A requester may see a server's secrets only if they own it or are admin. */
@@ -55,7 +57,7 @@ export class McpServersSerializer {
     requesterId: string | undefined,
     isAdmin: boolean,
   ): boolean {
-    if (isAdmin) return true;
-    return ownerId !== null && ownerId === requesterId;
+    if (isAdmin) return true
+    return ownerId !== null && ownerId === requesterId
   }
 }

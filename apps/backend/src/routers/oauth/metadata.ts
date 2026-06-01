@@ -1,10 +1,10 @@
-import express from "express";
+import express from "express"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
-import { getBaseUrl } from "./utils";
+import { getBaseUrl } from "./utils"
 
-const metadataRouter = express.Router();
+const metadataRouter = express.Router()
 
 /**
  * OAuth 2.0 Protected Resource Metadata endpoint
@@ -16,15 +16,15 @@ metadataRouter.get(
   "/.well-known/oauth-protected-resource",
   async (req, res) => {
     try {
-      const baseUrl = getBaseUrl(req);
+      const baseUrl = getBaseUrl(req)
 
       // For MCP implementation, we point to our better-auth OAuth server
       // The authorization server is hosted at the same base URL
-      const authServerUrl = baseUrl;
+      const authServerUrl = baseUrl
 
       // Ensure the resource URL has a trailing slash for OAuth validation
       // This is required by RFC 9728 for exact resource matching
-      const resourceUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+      const resourceUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`
 
       const metadata = {
         // Resource identifier - the protected resource's canonical URI
@@ -63,7 +63,7 @@ metadataRouter.get(
           // Revocation support (proxied through frontend)
           revocation_endpoint: `${baseUrl}/oauth/revoke`,
         },
-      };
+      }
 
       res.set({
         "Content-Type": "application/json",
@@ -71,21 +71,18 @@ metadataRouter.get(
         "Access-Control-Allow-Origin": "*", // Allow CORS for discovery
         "Access-Control-Allow-Methods": "GET",
         "Access-Control-Allow-Headers": "Content-Type",
-      });
+      })
 
-      return res.json(metadata);
+      return res.json(metadata)
     } catch (error) {
-      logger.error(
-        "Error generating OAuth protected resource metadata:",
-        error,
-      );
+      logger.error("Error generating OAuth protected resource metadata:", error)
       return res.status(500).json({
         error: "internal_server_error",
         error_description: "Failed to generate OAuth metadata",
-      });
+      })
     }
   },
-);
+)
 
 /**
  * OAuth 2.0 Authorization Server Metadata endpoint
@@ -96,11 +93,11 @@ metadataRouter.get(
   "/.well-known/oauth-authorization-server",
   async (req, res) => {
     try {
-      const baseUrl = getBaseUrl(req);
+      const baseUrl = getBaseUrl(req)
 
       // Ensure the issuer URL has a trailing slash for OAuth validation
       // This is required by RFC 8414 and RFC 9728 for exact matching
-      const issuerUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+      const issuerUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`
 
       const metadata = {
         // Issuer identifier (required by RFC 8414)
@@ -137,7 +134,7 @@ metadataRouter.get(
         // OAuth 2.1 compliance indicators
         require_pushed_authorization_requests: false,
         require_request_uri_registration: false,
-      };
+      }
 
       res.set({
         "Content-Type": "application/json",
@@ -145,20 +142,20 @@ metadataRouter.get(
         "Access-Control-Allow-Origin": "*", // Allow CORS for discovery
         "Access-Control-Allow-Methods": "GET",
         "Access-Control-Allow-Headers": "Content-Type",
-      });
+      })
 
-      return res.json(metadata);
+      return res.json(metadata)
     } catch (error) {
       logger.error(
         "Error generating OAuth authorization server metadata:",
         error,
-      );
+      )
       return res.status(500).json({
         error: "server_error",
         error_description: "Failed to generate authorization server metadata",
-      });
+      })
     }
   },
-);
+)
 
-export default metadataRouter;
+export default metadataRouter

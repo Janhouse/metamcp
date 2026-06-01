@@ -1,80 +1,22 @@
-import { DatabaseMcpServer, ServerParameters } from "@repo/zod-types";
+import type { DatabaseMcpServer, ServerParameters } from "@repo/zod-types"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
-import { oauthSessionsRepository } from "../../db/repositories/oauth-sessions.repo";
+import { oauthSessionsRepository } from "../../db/repositories/oauth-sessions.repo"
+import { getDefaultEnvironment } from "./sandbox"
 
-/**
- * Environment variables to inherit by default, if an environment is not explicitly given.
- */
-export const DEFAULT_INHERITED_ENV_VARS =
-  process.platform === "win32"
-    ? [
-        "APPDATA",
-        "HOMEDRIVE",
-        "HOMEPATH",
-        "LOCALAPPDATA",
-        "PATH",
-        "PROCESSOR_ARCHITECTURE",
-        "SYSTEMDRIVE",
-        "SYSTEMROOT",
-        "TEMP",
-        "USERNAME",
-        "USERPROFILE",
-      ]
-    : /* list inspired by the default env inheritance of sudo */
-      [
-        "HOME",
-        "LOGNAME",
-        "PATH",
-        "SHELL",
-        "TERM",
-        "USER",
-        // SSL/Certificate variables for corporate proxies and custom CA certificates
-        "NODE_EXTRA_CA_CERTS",
-        "NODE_TLS_REJECT_UNAUTHORIZED",
-        "SSL_CERT_FILE",
-        "CERT_FILE",
-        "REQUESTS_CA_BUNDLE",
-        "REQUESTS_CERT_FILE",
-        "CURL_CA_BUNDLE",
-        "PIP_CERT",
-        "UV_CERT",
-        "PYTHONHTTPSVERIFY",
-        // Proxy variables
-        "HTTP_PROXY",
-        "HTTPS_PROXY",
-        "NO_PROXY",
-        "http_proxy",
-        "https_proxy",
-        "no_proxy",
-      ];
-
-/**
- * Returns a default environment object including only environment variables deemed safe to inherit.
- */
-export function getDefaultEnvironment(): Record<string, string> {
-  const env: Record<string, string> = {};
-
-  for (const key of DEFAULT_INHERITED_ENV_VARS) {
-    const value = process.env[key];
-    if (value === undefined) {
-      continue;
-    }
-
-    if (value.startsWith("()")) {
-      // Skip functions, which are a security risk.
-      continue;
-    }
-
-    env[key] = value;
-  }
-
-  return env;
-}
+// The env whitelist + scrubbing helpers now live in `sandbox.ts` (the single
+// source of truth for the spawn environment). Re-exported here so the existing
+// import sites (`./utils`) keep working.
+export {
+  buildChildEnv,
+  DEFAULT_INHERITED_ENV_VARS,
+  getDefaultEnvironment,
+  resolveEnvVariables,
+} from "./sandbox"
 
 export function sanitizeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9_-]/g, "");
+  return name.replace(/[^a-zA-Z0-9_-]/g, "")
 }
 
 /**
@@ -89,17 +31,17 @@ export async function convertDbServerToParams(
     // Fetch OAuth tokens from OAuth sessions table
     const oauthSession = await oauthSessionsRepository.findByMcpServerUuid(
       server.uuid,
-    );
-    let oauthTokens = null;
+    )
+    let oauthTokens = null
 
-    if (oauthSession && oauthSession.tokens) {
+    if (oauthSession?.tokens) {
       oauthTokens = {
         access_token: oauthSession.tokens.access_token,
         token_type: oauthSession.tokens.token_type,
         expires_in: oauthSession.tokens.expires_in,
         scope: oauthSession.tokens.scope,
         refresh_token: oauthSession.tokens.refresh_token,
-      };
+      }
     }
 
     const params: ServerParameters = {
@@ -117,71 +59,32 @@ export async function convertDbServerToParams(
       oauth_tokens: oauthTokens,
       bearerToken: server.bearerToken,
       headers: server.headers || {},
-    };
+      sandbox: server.sandbox ?? null,
+    }
 
     // Process based on server type
     if (params.type === "STDIO") {
       if ("args" in params && !params.args) {
-        params.args = undefined;
+        params.args = undefined
       }
 
       params.env = {
         ...getDefaultEnvironment(),
         ...(params.env || {}),
-      };
+      }
     } else if (params.type === "SSE" || params.type === "STREAMABLE_HTTP") {
       // For SSE or STREAMABLE_HTTP servers, ensure url is present
       if (!params.url) {
         logger.warn(
           `${params.type} server ${params.uuid} is missing url field, skipping`,
-        );
-        return null;
+        )
+        return null
       }
     }
 
-    return params;
+    return params
   } catch (error) {
-    logger.error(
-      `Error converting server ${server.uuid} to parameters:`,
-      error,
-    );
-    return null;
+    logger.error(`Error converting server ${server.uuid} to parameters:`, error)
+    return null
   }
-}
-
-/**
- * Resolves environment variable placeholders in an environment object.
- * Replaces values like "${VAR_NAME}" with the actual environment variable value.
- * @param envObject Environment object that may contain placeholder values
- * @returns Environment object with resolved values
- */
-export function resolveEnvVariables(
-  envObject: Record<string, unknown>,
-): Record<string, unknown> {
-  const resolved: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(envObject)) {
-    if (
-      typeof value === "string" &&
-      value.startsWith("${") &&
-      value.endsWith("}")
-    ) {
-      const varName = value.slice(2, -1);
-      if (process.env[varName]) {
-        resolved[key] = process.env[varName];
-        logger.info(
-          `Resolved environment variable: ${key}=${value} -> ${varName}=[REDACTED]`,
-        );
-      } else {
-        resolved[key] = value; // Keep original value if env var not found
-        logger.warn(
-          `Environment variable not found: ${varName}, keeping original value: ${value}`,
-        );
-      }
-    } else {
-      resolved[key] = value;
-    }
-  }
-
-  return resolved;
 }

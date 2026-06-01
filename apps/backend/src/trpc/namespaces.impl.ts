@@ -1,4 +1,4 @@
-import {
+import type {
   CreateNamespaceRequestSchema,
   CreateNamespaceResponseSchema,
   DeleteNamespaceResponseSchema,
@@ -16,10 +16,10 @@ import {
   UpdateNamespaceToolOverridesResponseSchema,
   UpdateNamespaceToolStatusRequestSchema,
   UpdateNamespaceToolStatusResponseSchema,
-} from "@repo/zod-types";
-import { z } from "zod";
+} from "@repo/zod-types"
+import type { z } from "zod"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
 import {
   mcpServersRepository,
@@ -27,14 +27,14 @@ import {
   namespacesRepository,
   toolsRepository,
   usersRepository,
-} from "../db/repositories";
-import { NamespacesSerializer } from "../db/serializers";
-import { canManageResource, resolveOwnerUserId } from "../lib/authz";
+} from "../db/repositories"
+import { NamespacesSerializer } from "../db/serializers"
+import { canManageResource, resolveOwnerUserId } from "../lib/authz"
 import {
   clearOverrideCache,
   mapOverrideNameToOriginal,
-} from "../lib/metamcp/metamcp-middleware/tool-overrides.functional";
-import { metaMcpServerPool } from "../lib/metamcp/metamcp-server-pool";
+} from "../lib/metamcp/metamcp-middleware/tool-overrides.functional"
+import { metaMcpServerPool } from "../lib/metamcp/metamcp-server-pool"
 
 export const namespacesImplementations = {
   create: async (
@@ -44,36 +44,36 @@ export const namespacesImplementations = {
     try {
       // Owner is the authenticated caller. Only admins may create a namespace
       // for another user or a public (user_id = null) namespace.
-      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId);
-      const isPublicNamespace = effectiveUserId === null;
+      const effectiveUserId = await resolveOwnerUserId(input.user_id, userId)
+      const isPublicNamespace = effectiveUserId === null
 
       // Validate server accessibility and relationship rules
       if (input.mcpServerUuids && input.mcpServerUuids.length > 0) {
         // Get detailed server information to validate access and ownership
         const serverPromises = input.mcpServerUuids.map((uuid) =>
           mcpServersRepository.findByUuid(uuid),
-        );
-        const servers = await Promise.all(serverPromises);
+        )
+        const servers = await Promise.all(serverPromises)
 
         // Check if any servers don't exist
-        const missingServers = servers.some((server) => !server);
+        const missingServers = servers.some((server) => !server)
         if (missingServers) {
           return {
             success: false as const,
             message: "One or more selected MCP servers could not be found",
-          };
+          }
         }
 
         // Validate access and relationship rules
         for (const server of servers) {
-          if (!server) continue;
+          if (!server) continue
 
           // Check if user has access to this server (own server or public server)
           if (server.user_id && server.user_id !== userId) {
             return {
               success: false as const,
               message: `Access denied: You don't have permission to use server "${server.name}"`,
-            };
+            }
           }
 
           // Enforce relationship rules: public namespaces can only contain public servers
@@ -81,7 +81,7 @@ export const namespacesImplementations = {
             return {
               success: false as const,
               message: `Access denied: Public namespaces can only contain public MCP servers. Server "${server.name}" is private`,
-            };
+            }
           }
         }
       }
@@ -91,7 +91,7 @@ export const namespacesImplementations = {
         description: input.description,
         mcpServerUuids: input.mcpServerUuids,
         user_id: effectiveUserId,
-      });
+      })
 
       // Ensure idle MetaMCP server exists for the new namespace to improve performance
       // Run this asynchronously to avoid blocking the response
@@ -100,28 +100,28 @@ export const namespacesImplementations = {
         .then(() => {
           logger.info(
             `Ensured idle MetaMCP server exists for new namespace ${result.uuid}`,
-          );
+          )
         })
         .catch((error) => {
           logger.error(
             `Error ensuring idle MetaMCP server for new namespace ${result.uuid}:`,
             error,
-          );
+          )
           // Don't fail the entire create operation if idle server creation fails
-        });
+        })
 
       return {
         success: true as const,
         data: NamespacesSerializer.serializeNamespace(result),
         message: "Namespace created successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error creating namespace:", error);
+      logger.error("Error creating namespace:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
 
@@ -131,38 +131,38 @@ export const namespacesImplementations = {
     try {
       // Find namespaces accessible to user (public + user's own)
       const namespaces =
-        await namespacesRepository.findAllAccessibleToUser(userId);
+        await namespacesRepository.findAllAccessibleToUser(userId)
 
       return {
         success: true as const,
         data: NamespacesSerializer.serializeNamespaceList(namespaces),
         message: "Namespaces retrieved successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error fetching namespaces:", error);
+      logger.error("Error fetching namespaces:", error)
       return {
         success: false as const,
         data: [],
         message: "Failed to fetch namespaces",
-      };
+      }
     }
   },
 
   get: async (
     input: {
-      uuid: string;
+      uuid: string
     },
     userId: string,
   ): Promise<z.infer<typeof GetNamespaceResponseSchema>> => {
     try {
       const namespaceWithServers =
-        await namespacesRepository.findByUuidWithServers(input.uuid);
+        await namespacesRepository.findByUuidWithServers(input.uuid)
 
       if (!namespaceWithServers) {
         return {
           success: false as const,
           message: "Namespace not found",
-        };
+        }
       }
 
       // Check if user has access to this namespace (own namespace or public namespace)
@@ -174,10 +174,10 @@ export const namespacesImplementations = {
           success: false as const,
           message:
             "Access denied: You can only view namespaces you own or public namespaces",
-        };
+        }
       }
 
-      const isAdmin = await usersRepository.isAdmin(userId);
+      const isAdmin = await usersRepository.isAdmin(userId)
       return {
         success: true as const,
         // Redact secrets on any contained server the requester does not own.
@@ -186,13 +186,13 @@ export const namespacesImplementations = {
           { requesterId: userId, isAdmin },
         ),
         message: "Namespace retrieved successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error fetching namespace:", error);
+      logger.error("Error fetching namespace:", error)
       return {
         success: false as const,
         message: "Failed to fetch namespace",
-      };
+      }
     }
   },
 
@@ -204,14 +204,14 @@ export const namespacesImplementations = {
       // First, check if user has access to this namespace
       const namespace = await namespacesRepository.findByUuid(
         input.namespaceUuid,
-      );
+      )
 
       if (!namespace) {
         return {
           success: false as const,
           data: [],
           message: "Namespace not found",
-        };
+        }
       }
 
       // Check if user has access to this namespace (own namespace or public namespace)
@@ -221,31 +221,31 @@ export const namespacesImplementations = {
           data: [],
           message:
             "Access denied: You can only view tools for namespaces you own or public namespaces",
-        };
+        }
       }
 
       const toolsData = await namespacesRepository.findToolsByNamespaceUuid(
         input.namespaceUuid,
-      );
+      )
 
       return {
         success: true as const,
         data: NamespacesSerializer.serializeNamespaceTools(toolsData),
         message: "Namespace tools retrieved successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error fetching namespace tools:", error);
+      logger.error("Error fetching namespace tools:", error)
       return {
         success: false as const,
         data: [],
         message: "Failed to fetch namespace tools",
-      };
+      }
     }
   },
 
   delete: async (
     input: {
-      uuid: string;
+      uuid: string
     },
     userId: string,
   ): Promise<z.infer<typeof DeleteNamespaceResponseSchema>> => {
@@ -253,13 +253,13 @@ export const namespacesImplementations = {
       // First, check if the namespace exists and user has permission to delete it
       const existingNamespace = await namespacesRepository.findByUuid(
         input.uuid,
-      );
+      )
 
       if (!existingNamespace) {
         return {
           success: false as const,
           message: "Namespace not found",
-        };
+        }
       }
 
       // Only the namespace owner (or an admin) may delete it. Public namespaces
@@ -268,51 +268,51 @@ export const namespacesImplementations = {
         return {
           success: false as const,
           message: "Access denied: You can only delete namespaces you own",
-        };
+        }
       }
 
       const deletedNamespace = await namespacesRepository.deleteByUuid(
         input.uuid,
-      );
+      )
 
       if (!deletedNamespace) {
         return {
           success: false as const,
           message: "Namespace not found",
-        };
+        }
       }
 
       // Clean up idle MetaMCP server for the deleted namespace
       try {
-        await metaMcpServerPool.cleanupIdleServer(input.uuid);
+        await metaMcpServerPool.cleanupIdleServer(input.uuid)
         logger.info(
           `Cleaned up idle MetaMCP server for deleted namespace ${input.uuid}`,
-        );
+        )
       } catch (error) {
         logger.error(
           `Error cleaning up idle MetaMCP server for deleted namespace ${input.uuid}:`,
           error,
-        );
+        )
         // Don't fail the entire delete operation if idle server cleanup fails
       }
 
       // Clear the tool overrides cache for the deleted namespace
-      clearOverrideCache(input.uuid);
+      clearOverrideCache(input.uuid)
       logger.info(
         `Cleared tool overrides cache for deleted namespace ${input.uuid}`,
-      );
+      )
 
       return {
         success: true as const,
         message: "Namespace deleted successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error deleting namespace:", error);
+      logger.error("Error deleting namespace:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
 
@@ -324,13 +324,13 @@ export const namespacesImplementations = {
       // First, check if the namespace exists and user has permission to update it
       const existingNamespace = await namespacesRepository.findByUuid(
         input.uuid,
-      );
+      )
 
       if (!existingNamespace) {
         return {
           success: false as const,
           message: "Namespace not found",
-        };
+        }
       }
 
       // Only the namespace owner (or an admin) may update it. Public namespaces
@@ -339,7 +339,7 @@ export const namespacesImplementations = {
         return {
           success: false as const,
           message: "Access denied: You can only update namespaces you own",
-        };
+        }
       }
 
       // Keep existing ownership; only admins may reassign the namespace to
@@ -348,36 +348,36 @@ export const namespacesImplementations = {
         input.user_id,
         userId,
         existingNamespace.user_id,
-      );
-      const isPublicNamespace = effectiveUserId === null;
+      )
+      const isPublicNamespace = effectiveUserId === null
 
       // Validate server accessibility and relationship rules if servers are being updated
       if (input.mcpServerUuids && input.mcpServerUuids.length > 0) {
         // Get detailed server information to validate access and ownership
         const serverPromises = input.mcpServerUuids.map((uuid) =>
           mcpServersRepository.findByUuid(uuid),
-        );
-        const servers = await Promise.all(serverPromises);
+        )
+        const servers = await Promise.all(serverPromises)
 
         // Check if any servers don't exist
-        const missingServers = servers.some((server) => !server);
+        const missingServers = servers.some((server) => !server)
         if (missingServers) {
           return {
             success: false as const,
             message: "One or more selected MCP servers could not be found",
-          };
+          }
         }
 
         // Validate access and relationship rules
         for (const server of servers) {
-          if (!server) continue;
+          if (!server) continue
 
           // Check if user has access to this server (own server or public server)
           if (server.user_id && server.user_id !== userId) {
             return {
               success: false as const,
               message: `Access denied: You don't have permission to use server "${server.name}"`,
-            };
+            }
           }
 
           // Enforce relationship rules: public namespaces can only contain public servers
@@ -385,7 +385,7 @@ export const namespacesImplementations = {
             return {
               success: false as const,
               message: `Access denied: Public namespaces can only contain public MCP servers. Server "${server.name}" is private`,
-            };
+            }
           }
         }
       }
@@ -396,7 +396,7 @@ export const namespacesImplementations = {
         description: input.description,
         user_id: effectiveUserId,
         mcpServerUuids: input.mcpServerUuids,
-      });
+      })
 
       // Invalidate idle MetaMCP server for this namespace since the MCP servers list may have changed
       // Run this asynchronously to avoid blocking the response
@@ -405,15 +405,15 @@ export const namespacesImplementations = {
         .then(() => {
           logger.info(
             `Invalidated idle MetaMCP server for updated namespace ${input.uuid}`,
-          );
+          )
         })
         .catch((error) => {
           logger.error(
             `Error invalidating idle MetaMCP server for namespace ${input.uuid}:`,
             error,
-          );
+          )
           // Don't fail the entire update operation if idle server invalidation fails
-        });
+        })
 
       // Also invalidate OpenAPI sessions for this namespace
       metaMcpServerPool
@@ -421,34 +421,34 @@ export const namespacesImplementations = {
         .then(() => {
           logger.info(
             `Invalidated OpenAPI session for updated namespace ${input.uuid}`,
-          );
+          )
         })
         .catch((error) => {
           logger.error(
             `Error invalidating OpenAPI session for namespace ${input.uuid}:`,
             error,
-          );
+          )
           // Don't fail the entire update operation if OpenAPI session invalidation fails
-        });
+        })
 
       // Clear tool overrides cache for this namespace since MCP servers list may have changed
-      clearOverrideCache(input.uuid);
+      clearOverrideCache(input.uuid)
       logger.info(
         `Cleared tool overrides cache for updated namespace ${input.uuid}`,
-      );
+      )
 
       return {
         success: true as const,
         data: NamespacesSerializer.serializeNamespace(result),
         message: "Namespace updated successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error updating namespace:", error);
+      logger.error("Error updating namespace:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
 
@@ -460,13 +460,13 @@ export const namespacesImplementations = {
       // First, check if user has permission to update this namespace
       const namespace = await namespacesRepository.findByUuid(
         input.namespaceUuid,
-      );
+      )
 
       if (!namespace) {
         return {
           success: false as const,
           message: "Namespace not found",
-        };
+        }
       }
 
       // Check if user owns this namespace (only owners can update server status)
@@ -475,7 +475,7 @@ export const namespacesImplementations = {
           success: false as const,
           message:
             "Access denied: You can only update server status for namespaces you own",
-        };
+        }
       }
 
       const updatedMapping =
@@ -483,13 +483,13 @@ export const namespacesImplementations = {
           namespaceUuid: input.namespaceUuid,
           serverUuid: input.serverUuid,
           status: input.status,
-        });
+        })
 
       if (!updatedMapping) {
         return {
           success: false as const,
           message: "Server not found in namespace",
-        };
+        }
       }
 
       // Invalidate idle MetaMCP server for this namespace since server status changed
@@ -499,15 +499,15 @@ export const namespacesImplementations = {
         .then(() => {
           logger.info(
             `Invalidated idle MetaMCP server for namespace ${input.namespaceUuid} after server status update`,
-          );
+          )
         })
         .catch((error) => {
           logger.error(
             `Error invalidating idle MetaMCP server for namespace ${input.namespaceUuid}:`,
             error,
-          );
+          )
           // Don't fail the entire operation if idle server invalidation fails
-        });
+        })
 
       // Also invalidate OpenAPI sessions for this namespace
       metaMcpServerPool
@@ -515,27 +515,27 @@ export const namespacesImplementations = {
         .then(() => {
           logger.info(
             `Invalidated OpenAPI session for namespace ${input.namespaceUuid} after server status update`,
-          );
+          )
         })
         .catch((error) => {
           logger.error(
             `Error invalidating OpenAPI session for namespace ${input.namespaceUuid}:`,
             error,
-          );
+          )
           // Don't fail the entire operation if OpenAPI session invalidation fails
-        });
+        })
 
       return {
         success: true as const,
         message: "Server status updated successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error updating server status:", error);
+      logger.error("Error updating server status:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
 
@@ -547,13 +547,13 @@ export const namespacesImplementations = {
       // First, check if user has permission to update this namespace
       const namespace = await namespacesRepository.findByUuid(
         input.namespaceUuid,
-      );
+      )
 
       if (!namespace) {
         return {
           success: false as const,
           message: "Namespace not found",
-        };
+        }
       }
 
       // Check if user owns this namespace (only owners can update tool status)
@@ -562,7 +562,7 @@ export const namespacesImplementations = {
           success: false as const,
           message:
             "Access denied: You can only update tool status for namespaces you own",
-        };
+        }
       }
 
       const updatedMapping = await namespaceMappingsRepository.updateToolStatus(
@@ -572,26 +572,26 @@ export const namespacesImplementations = {
           serverUuid: input.serverUuid,
           status: input.status,
         },
-      );
+      )
 
       if (!updatedMapping) {
         return {
           success: false as const,
           message: "Tool not found in namespace",
-        };
+        }
       }
 
       return {
         success: true as const,
         message: "Tool status updated successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error updating tool status:", error);
+      logger.error("Error updating tool status:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
 
@@ -603,13 +603,13 @@ export const namespacesImplementations = {
       // First, check if user has permission to update this namespace
       const namespace = await namespacesRepository.findByUuid(
         input.namespaceUuid,
-      );
+      )
 
       if (!namespace) {
         return {
           success: false as const,
           message: "Namespace not found",
-        };
+        }
       }
 
       // Check if user owns this namespace (only owners can update tool overrides)
@@ -618,7 +618,7 @@ export const namespacesImplementations = {
           success: false as const,
           message:
             "Access denied: You can only update tool overrides for namespaces you own",
-        };
+        }
       }
 
       const updatedMapping =
@@ -630,32 +630,32 @@ export const namespacesImplementations = {
           overrideTitle: input.overrideTitle,
           overrideDescription: input.overrideDescription,
           overrideAnnotations: input.overrideAnnotations,
-        });
+        })
 
       if (!updatedMapping) {
         return {
           success: false as const,
           message: "Tool not found in namespace",
-        };
+        }
       }
 
       // Clear the tool overrides cache for this namespace to ensure fresh data is loaded
-      clearOverrideCache(input.namespaceUuid);
+      clearOverrideCache(input.namespaceUuid)
       logger.info(
         `Cleared tool overrides cache for namespace ${input.namespaceUuid} after updating tool overrides`,
-      );
+      )
 
       return {
         success: true as const,
         message: "Tool overrides updated successfully",
-      };
+      }
     } catch (error) {
-      logger.error("Error updating tool overrides:", error);
+      logger.error("Error updating tool overrides:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
 
@@ -667,13 +667,13 @@ export const namespacesImplementations = {
       // First, check if user has permission to refresh tools for this namespace
       const namespace = await namespacesRepository.findByUuid(
         input.namespaceUuid,
-      );
+      )
 
       if (!namespace) {
         return {
           success: false as const,
           message: "Namespace not found",
-        };
+        }
       }
 
       // Check if user owns this namespace (only owners can refresh tools)
@@ -682,7 +682,7 @@ export const namespacesImplementations = {
           success: false as const,
           message:
             "Access denied: You can only refresh tools for namespaces you own",
-        };
+        }
       }
 
       if (!input.tools || input.tools.length === 0) {
@@ -691,61 +691,61 @@ export const namespacesImplementations = {
           message: "No tools to refresh",
           toolsCreated: 0,
           mappingsCreated: 0,
-        };
+        }
       }
 
       // Parse tool names to extract server names and actual tool names
       // Important: The input tools may have overridden names applied by MetaMCP middleware
       // We need to map them back to original names to avoid overwriting original names in the database
       const parsedTools: Array<{
-        serverName: string;
-        toolName: string;
-        description: string;
-        inputSchema: Record<string, unknown>;
-      }> = [];
+        serverName: string
+        toolName: string
+        description: string
+        inputSchema: Record<string, unknown>
+      }> = []
 
       for (const tool of input.tools) {
         // Split by "__" - use last occurrence if there are multiple
-        const lastDoubleUnderscoreIndex = tool.name.lastIndexOf("__");
+        const lastDoubleUnderscoreIndex = tool.name.lastIndexOf("__")
 
         if (lastDoubleUnderscoreIndex === -1) {
           logger.warn(
             `Tool name "${tool.name}" does not contain "__" separator, skipping`,
-          );
-          continue;
+          )
+          continue
         }
 
-        const serverName = tool.name.substring(0, lastDoubleUnderscoreIndex);
-        const toolName = tool.name.substring(lastDoubleUnderscoreIndex + 2);
+        const serverName = tool.name.substring(0, lastDoubleUnderscoreIndex)
+        const toolName = tool.name.substring(lastDoubleUnderscoreIndex + 2)
 
         // Check if this tool name might be an override name by looking up the original name
         // If it is an override name, skip this tool entirely to avoid duplicates
         try {
-          const fullToolName = `${serverName}__${toolName}`;
+          const fullToolName = `${serverName}__${toolName}`
           const originalToolName = await mapOverrideNameToOriginal(
             fullToolName,
             input.namespaceUuid,
-          );
+          )
 
           // If we found an original name mapping, this means the current toolName is an override
           // Skip this tool to avoid creating duplicates
           if (originalToolName !== fullToolName) {
             logger.info(
               `Skipping override tool "${fullToolName}" as it maps to original "${originalToolName}"`,
-            );
-            continue;
+            )
+            continue
           }
         } catch (error) {
           // If mapping fails, continue with the parsed name (it's likely an original tool)
           logger.warn(
             `Failed to map override name for tool "${toolName}":`,
             error,
-          );
+          )
         }
 
         if (!serverName || !toolName) {
-          logger.warn(`Invalid tool name format "${tool.name}", skipping`);
-          continue;
+          logger.warn(`Invalid tool name format "${tool.name}", skipping`)
+          continue
         }
 
         parsedTools.push({
@@ -753,7 +753,7 @@ export const namespacesImplementations = {
           toolName,
           description: tool.description || "",
           inputSchema: tool.inputSchema,
-        });
+        })
       }
 
       if (parsedTools.length === 0) {
@@ -762,91 +762,90 @@ export const namespacesImplementations = {
           message: "No valid tools to refresh after parsing",
           toolsCreated: 0,
           mappingsCreated: 0,
-        };
+        }
       }
 
       // Group tools by server name and resolve server UUIDs
       const toolsByServerName: Record<
         string,
         {
-          serverUuid: string;
+          serverUuid: string
           tools: Array<{
-            toolName: string;
-            description: string;
-            inputSchema: Record<string, unknown>;
-          }>;
+            toolName: string
+            description: string
+            inputSchema: Record<string, unknown>
+          }>
         }
-      > = {};
+      > = {}
 
       for (const parsedTool of parsedTools) {
         // Find server by name - first try exact match
         let server = await mcpServersRepository.findByName(
           parsedTool.serverName,
-        );
+        )
 
         // If exact match fails, try to handle nested MetaMCP scenarios
         // For nested MetaMCP, tool names may be in format "ParentServer__ChildServer__tool"
         // but we need to find the actual "ParentServer" in the database
         if (!server && parsedTool.serverName.includes("__")) {
           // Try the first part before the first "__" (this would be the actual server)
-          const firstDoubleUnderscoreIndex =
-            parsedTool.serverName.indexOf("__");
+          const firstDoubleUnderscoreIndex = parsedTool.serverName.indexOf("__")
           const actualServerName = parsedTool.serverName.substring(
             0,
             firstDoubleUnderscoreIndex,
-          );
+          )
 
-          server = await mcpServersRepository.findByName(actualServerName);
+          server = await mcpServersRepository.findByName(actualServerName)
 
           if (server) {
             logger.info(
               `Found nested MetaMCP server mapping: "${parsedTool.serverName}" -> "${actualServerName}"`,
-            );
+            )
             // Update the parsed tool to use the correct server name and adjust tool name
             const remainingPart = parsedTool.serverName.substring(
               firstDoubleUnderscoreIndex + 2,
-            );
-            parsedTool.toolName = `${remainingPart}__${parsedTool.toolName}`;
-            parsedTool.serverName = actualServerName;
+            )
+            parsedTool.toolName = `${remainingPart}__${parsedTool.toolName}`
+            parsedTool.serverName = actualServerName
           }
         }
 
         if (!server) {
           logger.warn(
             `Server "${parsedTool.serverName}" not found in database, skipping tool "${parsedTool.toolName}"`,
-          );
-          continue;
+          )
+          continue
         }
 
         if (!toolsByServerName[parsedTool.serverName]) {
           toolsByServerName[parsedTool.serverName] = {
             serverUuid: server.uuid,
             tools: [],
-          };
+          }
         }
 
         toolsByServerName[parsedTool.serverName].tools.push({
           toolName: parsedTool.toolName,
           description: parsedTool.description,
           inputSchema: parsedTool.inputSchema,
-        });
+        })
       }
 
       if (Object.keys(toolsByServerName).length === 0) {
         return {
           success: false as const,
           message: "No servers found for the provided tools",
-        };
+        }
       }
 
-      let totalToolsCreated = 0;
-      let totalMappingsCreated = 0;
+      let totalToolsCreated = 0
+      let totalMappingsCreated = 0
 
       // Process tools for each server
       for (const [serverName, serverData] of Object.entries(
         toolsByServerName,
       )) {
-        const { serverUuid, tools } = serverData;
+        const { serverUuid, tools } = serverData
 
         // Bulk upsert tools to the tools table with the actual tool names
         const upsertedTools = await toolsRepository.bulkUpsert({
@@ -856,28 +855,28 @@ export const namespacesImplementations = {
             description: tool.description,
             inputSchema: tool.inputSchema,
           })),
-        });
+        })
 
-        totalToolsCreated += upsertedTools.length;
+        totalToolsCreated += upsertedTools.length
 
         // Create namespace tool mappings
         const toolMappings = upsertedTools.map((tool) => ({
           toolUuid: tool.uuid,
           serverUuid: serverUuid,
           status: "ACTIVE" as const,
-        }));
+        }))
 
         const createdMappings =
           await namespaceMappingsRepository.bulkUpsertNamespaceToolMappings({
             namespaceUuid: input.namespaceUuid,
             toolMappings,
-          });
+          })
 
-        totalMappingsCreated += createdMappings.length;
+        totalMappingsCreated += createdMappings.length
 
         logger.info(
           `Processed ${tools.length} tools for server "${serverName}" (${serverUuid})`,
-        );
+        )
       }
 
       // Invalidate idle MetaMCP server for this namespace since tools were refreshed
@@ -887,15 +886,15 @@ export const namespacesImplementations = {
         .then(() => {
           logger.info(
             `Invalidated idle MetaMCP server for namespace ${input.namespaceUuid} after tools refresh`,
-          );
+          )
         })
         .catch((error) => {
           logger.error(
             `Error invalidating idle MetaMCP server for namespace ${input.namespaceUuid}:`,
             error,
-          );
+          )
           // Don't fail the entire operation if idle server invalidation fails
-        });
+        })
 
       // Also invalidate OpenAPI sessions for this namespace
       metaMcpServerPool
@@ -903,29 +902,29 @@ export const namespacesImplementations = {
         .then(() => {
           logger.info(
             `Invalidated OpenAPI session for namespace ${input.namespaceUuid} after tools refresh`,
-          );
+          )
         })
         .catch((error) => {
           logger.error(
             `Error invalidating OpenAPI session for namespace ${input.namespaceUuid}:`,
             error,
-          );
+          )
           // Don't fail the entire operation if OpenAPI session invalidation fails
-        });
+        })
 
       return {
         success: true as const,
         message: `Successfully refreshed ${totalToolsCreated} tools with ${totalMappingsCreated} mappings`,
         toolsCreated: totalToolsCreated,
         mappingsCreated: totalMappingsCreated,
-      };
+      }
     } catch (error) {
-      logger.error("Error refreshing namespace tools:", error);
+      logger.error("Error refreshing namespace tools:", error)
       return {
         success: false as const,
         message:
           error instanceof Error ? error.message : "Internal server error",
-      };
+      }
     }
   },
-};
+}

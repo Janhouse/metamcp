@@ -1,12 +1,18 @@
+import path from "node:path"
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  // Monorepo: trace the workspace root so the standalone server bundles the
+  // hoisted node_modules and workspace packages (@repo/*). Without this, Next
+  // guesses the tracing root from the nearest lockfile and can omit files.
+  outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   experimental: {
     proxyTimeout: 1000 * 120,
   },
   async rewrites() {
     // Use localhost for rewrites since frontend and backend run in the same container
-    const backendUrl = "http://localhost:12009";
+    const backendUrl = "http://localhost:12009"
 
     return [
       {
@@ -49,8 +55,8 @@ const nextConfig = {
         source: "/service/:path*",
         destination: "https://metatool-service.jczstudio.workers.dev/:path*",
       },
-    ];
+    ]
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

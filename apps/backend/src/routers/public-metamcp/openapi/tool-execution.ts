@@ -1,11 +1,11 @@
-import { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
-import express from "express";
+import type { CallToolRequest } from "@modelcontextprotocol/sdk/types.js"
+import type express from "express"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
-import { metaMcpServerPool } from "../../../lib/metamcp/metamcp-server-pool";
-import { createMiddlewareEnabledHandlers } from "./handlers";
-import { ToolExecutionRequest } from "./types";
+import { metaMcpServerPool } from "../../../lib/metamcp/metamcp-server-pool"
+import { createMiddlewareEnabledHandlers } from "./handlers"
+import type { ToolExecutionRequest } from "./types"
 
 // Refactored tool execution logic to use middleware
 export const executeToolWithMiddleware = async (
@@ -13,23 +13,23 @@ export const executeToolWithMiddleware = async (
   res: express.Response,
   toolArguments: Record<string, unknown>,
 ) => {
-  const { namespaceUuid } = req;
-  const toolName = req.params.tool_name;
+  const { namespaceUuid } = req
+  const toolName = req.params.tool_name
 
   try {
     // Get or create persistent OpenAPI session for this namespace
     const mcpServerInstance =
-      await metaMcpServerPool.getOpenApiServer(namespaceUuid);
+      await metaMcpServerPool.getOpenApiServer(namespaceUuid)
     if (!mcpServerInstance) {
-      throw new Error("Failed to get MetaMCP server instance from pool");
+      throw new Error("Failed to get MetaMCP server instance from pool")
     }
 
     // Use deterministic session ID for OpenAPI endpoints
-    const sessionId = `openapi_${namespaceUuid}`;
+    const sessionId = `openapi_${namespaceUuid}`
 
     // Create middleware-enabled handlers
     const { handlerContext, callToolWithMiddleware } =
-      createMiddlewareEnabledHandlers(sessionId, namespaceUuid);
+      createMiddlewareEnabledHandlers(sessionId, namespaceUuid)
 
     // Use middleware-enabled call tool handler
     const callToolRequest: CallToolRequest = {
@@ -38,12 +38,9 @@ export const executeToolWithMiddleware = async (
         name: toolName,
         arguments: toolArguments,
       },
-    };
+    }
 
-    const result = await callToolWithMiddleware(
-      callToolRequest,
-      handlerContext,
-    );
+    const result = await callToolWithMiddleware(callToolRequest, handlerContext)
 
     // Check if the result indicates an error (from middleware)
     if (result.isError) {
@@ -51,13 +48,13 @@ export const executeToolWithMiddleware = async (
         error: "Tool access denied",
         message: result.content?.[0]?.text || "Tool is inactive",
         timestamp: new Date().toISOString(),
-      });
+      })
     }
 
     // Return the result directly (simplified format)
-    res.json(result);
+    res.json(result)
   } catch (error) {
-    logger.error(`Error executing tool ${toolName}:`, error);
+    logger.error(`Error executing tool ${toolName}:`, error)
 
     // Handle different types of errors
     if (error instanceof Error) {
@@ -66,20 +63,20 @@ export const executeToolWithMiddleware = async (
           error: "Tool not found",
           message: `Tool '${toolName}' not found`,
           timestamp: new Date().toISOString(),
-        });
+        })
       }
 
       return res.status(500).json({
         error: "Tool execution failed",
         message: error.message,
         timestamp: new Date().toISOString(),
-      });
+      })
     }
 
     res.status(500).json({
       error: "Internal server error",
       message: "Failed to execute tool",
       timestamp: new Date().toISOString(),
-    });
+    })
   }
-};
+}

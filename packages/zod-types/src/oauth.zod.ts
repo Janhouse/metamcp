@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod"
 
 // OAuth Client Information schema (matching MCP SDK)
 export const OAuthClientInformationSchema = z.object({
@@ -6,7 +6,7 @@ export const OAuthClientInformationSchema = z.object({
   client_secret: z.string().optional(),
   client_id_issued_at: z.number().optional(),
   client_secret_expires_at: z.number().optional(),
-});
+})
 
 // OAuth Tokens schema (matching MCP SDK)
 export const OAuthTokensSchema = z.object({
@@ -15,7 +15,7 @@ export const OAuthTokensSchema = z.object({
   expires_in: z.number().optional(),
   scope: z.string().optional(),
   refresh_token: z.string().optional(),
-});
+})
 
 // OAuth Client schema for registered clients
 export const OAuthClientSchema = z.object({
@@ -36,7 +36,7 @@ export const OAuthClientSchema = z.object({
   software_version: z.string().nullable(),
   created_at: z.date(),
   updated_at: z.date().optional(),
-});
+})
 
 // OAuth Authorization Code schema
 export const OAuthAuthorizationCodeSchema = z.object({
@@ -49,7 +49,7 @@ export const OAuthAuthorizationCodeSchema = z.object({
   code_challenge_method: z.string().nullable(),
   expires_at: z.date(),
   created_at: z.date(),
-});
+})
 
 // OAuth Access Token schema
 export const OAuthAccessTokenSchema = z.object({
@@ -61,7 +61,7 @@ export const OAuthAccessTokenSchema = z.object({
   refresh_token: z.string().nullable(),
   refresh_token_expires_at: z.date().nullable(),
   created_at: z.date(),
-});
+})
 
 // Input schemas for repositories
 export const OAuthClientCreateInputSchema = z.object({
@@ -82,7 +82,7 @@ export const OAuthClientCreateInputSchema = z.object({
   software_version: z.string().nullable().optional(),
   created_at: z.date(),
   updated_at: z.date().optional(),
-});
+})
 
 export const OAuthAuthorizationCodeCreateInputSchema = z.object({
   client_id: z.string(),
@@ -92,7 +92,7 @@ export const OAuthAuthorizationCodeCreateInputSchema = z.object({
   code_challenge: z.string().nullable().optional(),
   code_challenge_method: z.string().nullable().optional(),
   expires_at: z.number(), // timestamp
-});
+})
 
 export const OAuthAccessTokenCreateInputSchema = z.object({
   client_id: z.string(),
@@ -101,7 +101,7 @@ export const OAuthAccessTokenCreateInputSchema = z.object({
   expires_at: z.number(), // timestamp
   refresh_token: z.string().nullable().optional(),
   refresh_token_expires_at: z.number().nullable().optional(), // timestamp
-});
+})
 
 // Base OAuth Session schema - client_information can be nullable since DB has default {}
 export const OAuthSessionSchema = z.object({
@@ -112,12 +112,12 @@ export const OAuthSessionSchema = z.object({
   code_verifier: z.string().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
-});
+})
 
 // Get OAuth Session Request
 export const GetOAuthSessionRequestSchema = z.object({
   mcp_server_uuid: z.string().uuid(),
-});
+})
 
 // Get OAuth Session Response
 export const GetOAuthSessionResponseSchema = z.union([
@@ -130,7 +130,7 @@ export const GetOAuthSessionResponseSchema = z.union([
     success: z.literal(false),
     message: z.string(),
   }),
-]);
+])
 
 // Upsert OAuth Session Request - all fields optional for updates
 export const UpsertOAuthSessionRequestSchema = z.object({
@@ -138,7 +138,7 @@ export const UpsertOAuthSessionRequestSchema = z.object({
   client_information: OAuthClientInformationSchema.optional(),
   tokens: OAuthTokensSchema.nullable().optional(),
   code_verifier: z.string().nullable().optional(),
-});
+})
 
 // Upsert OAuth Session Response
 export const UpsertOAuthSessionResponseSchema = z.union([
@@ -151,7 +151,7 @@ export const UpsertOAuthSessionResponseSchema = z.union([
     success: z.literal(false),
     error: z.string(),
   }),
-]);
+])
 
 // Repository-specific schemas
 export const OAuthSessionCreateInputSchema = z.object({
@@ -159,22 +159,22 @@ export const OAuthSessionCreateInputSchema = z.object({
   client_information: OAuthClientInformationSchema.optional(),
   tokens: OAuthTokensSchema.nullable().optional(),
   code_verifier: z.string().nullable().optional(),
-});
+})
 
 export const OAuthSessionUpdateInputSchema = z.object({
   mcp_server_uuid: z.string(),
   client_information: OAuthClientInformationSchema.optional(),
   tokens: OAuthTokensSchema.nullable().optional(),
   code_verifier: z.string().nullable().optional(),
-});
+})
 
 // Export repository types
 export type OAuthSessionCreateInput = z.infer<
   typeof OAuthSessionCreateInputSchema
->;
+>
 export type OAuthSessionUpdateInput = z.infer<
   typeof OAuthSessionUpdateInputSchema
->;
+>
 
 // Database-specific schemas (raw database results with Date objects)
 export const DatabaseOAuthSessionSchema = z.object({
@@ -185,22 +185,22 @@ export const DatabaseOAuthSessionSchema = z.object({
   code_verifier: z.string().nullable(),
   created_at: z.date(),
   updated_at: z.date(),
-});
+})
 
-export type DatabaseOAuthSession = z.infer<typeof DatabaseOAuthSessionSchema>;
+export type DatabaseOAuthSession = z.infer<typeof DatabaseOAuthSessionSchema>
 
 // Export OAuth types
-export type OAuthClient = z.infer<typeof OAuthClientSchema>;
+export type OAuthClient = z.infer<typeof OAuthClientSchema>
 export type OAuthClientCreateInput = z.infer<
   typeof OAuthClientCreateInputSchema
->;
+>
 export type OAuthAuthorizationCode = z.infer<
   typeof OAuthAuthorizationCodeSchema
->;
+>
 export type OAuthAuthorizationCodeCreateInput = z.infer<
   typeof OAuthAuthorizationCodeCreateInputSchema
->;
-export type OAuthAccessToken = z.infer<typeof OAuthAccessTokenSchema>;
+>
+export type OAuthAccessToken = z.infer<typeof OAuthAccessTokenSchema>
 export type OAuthAccessTokenCreateInput = z.infer<
   typeof OAuthAccessTokenCreateInputSchema
->;
+>

@@ -1,43 +1,43 @@
-import { McpServerErrorStatusEnum } from "@repo/zod-types";
+import { McpServerErrorStatusEnum } from "@repo/zod-types"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
-import { mcpServersRepository } from "../../db/repositories/index";
-import { configService } from "../config.service";
+import { mcpServersRepository } from "../../db/repositories/index"
+import { configService } from "../config.service"
 
 export interface ServerCrashInfo {
-  serverUuid: string;
-  exitCode: number | null;
-  signal: string | null;
-  timestamp: Date;
+  serverUuid: string
+  exitCode: number | null
+  signal: string | null
+  timestamp: Date
 }
 
 export class ServerErrorTracker {
-  private static instance: ServerErrorTracker | null = null;
+  private static instance: ServerErrorTracker | null = null
 
   // Track crash attempts per server
-  private crashAttempts: Map<string, number> = new Map();
+  private crashAttempts: Map<string, number> = new Map()
 
   // Default max attempts before marking as ERROR (fallback if config is not available)
-  private readonly fallbackMaxAttempts: number = 3;
+  private readonly fallbackMaxAttempts: number = 3
 
   // Server-specific max attempts (can be configured per server)
-  private serverMaxAttempts: Map<string, number> = new Map();
+  private serverMaxAttempts: Map<string, number> = new Map()
 
   private constructor() {}
 
   static getInstance(): ServerErrorTracker {
     if (!ServerErrorTracker.instance) {
-      ServerErrorTracker.instance = new ServerErrorTracker();
+      ServerErrorTracker.instance = new ServerErrorTracker()
     }
-    return ServerErrorTracker.instance;
+    return ServerErrorTracker.instance
   }
 
   /**
    * Set max attempts for a specific server
    */
   setServerMaxAttempts(serverUuid: string, maxAttempts: number): void {
-    this.serverMaxAttempts.set(serverUuid, maxAttempts);
+    this.serverMaxAttempts.set(serverUuid, maxAttempts)
   }
 
   /**
@@ -45,20 +45,20 @@ export class ServerErrorTracker {
    */
   async getServerMaxAttempts(serverUuid: string): Promise<number> {
     // First check for server-specific configuration
-    const serverSpecific = this.serverMaxAttempts.get(serverUuid);
+    const serverSpecific = this.serverMaxAttempts.get(serverUuid)
     if (serverSpecific !== undefined) {
-      return serverSpecific;
+      return serverSpecific
     }
 
     // Then check global configuration
     try {
-      return await configService.getMcpMaxAttempts();
+      return await configService.getMcpMaxAttempts()
     } catch (error) {
       logger.warn(
         "Failed to get MCP max attempts from config, using fallback:",
         error,
-      );
-      return this.fallbackMaxAttempts;
+      )
+      return this.fallbackMaxAttempts
     }
   }
 
@@ -70,29 +70,29 @@ export class ServerErrorTracker {
     exitCode: number | null,
     signal: string | null,
   ): Promise<void> {
-    logger.info(`recordServerCrash called for server ${serverUuid}`);
+    logger.info(`recordServerCrash called for server ${serverUuid}`)
 
     // Get current attempt count
-    const currentAttempts = this.crashAttempts.get(serverUuid) || 0;
-    const newAttempts = currentAttempts + 1;
+    const currentAttempts = this.crashAttempts.get(serverUuid) || 0
+    const newAttempts = currentAttempts + 1
 
     // Update crash attempts tracking
-    this.crashAttempts.set(serverUuid, newAttempts);
+    this.crashAttempts.set(serverUuid, newAttempts)
 
-    const maxAttempts = await this.getServerMaxAttempts(serverUuid);
+    const maxAttempts = await this.getServerMaxAttempts(serverUuid)
 
     logger.info(
       `Server ${serverUuid} crashed. Attempt ${newAttempts}/${maxAttempts}`,
-    );
+    )
 
     // If we've reached max attempts, mark the server as ERROR
     if (newAttempts >= maxAttempts) {
       logger.warn(
         `Server ${serverUuid} has crashed ${newAttempts} times. Marking as ERROR.`,
-      );
+      )
 
       try {
-        await this.markServerAsError(serverUuid);
+        await this.markServerAsError(serverUuid)
 
         // Log the crash info
         const crashInfo: ServerCrashInfo = {
@@ -100,14 +100,14 @@ export class ServerErrorTracker {
           exitCode,
           signal,
           timestamp: new Date(),
-        };
+        }
 
         logger.error(
           "Server marked as ERROR due to repeated crashes:",
           crashInfo,
-        );
+        )
       } catch (error) {
-        logger.error(`Failed to mark server ${serverUuid} as ERROR:`, error);
+        logger.error(`Failed to mark server ${serverUuid} as ERROR:`, error)
       }
     }
   }
@@ -121,11 +121,11 @@ export class ServerErrorTracker {
       await mcpServersRepository.updateServerErrorStatus({
         serverUuid,
         errorStatus: McpServerErrorStatusEnum.enum.ERROR,
-      });
+      })
 
-      logger.error(`Server ${serverUuid} marked as ERROR at server level`);
+      logger.error(`Server ${serverUuid} marked as ERROR at server level`)
     } catch (error) {
-      logger.error(`Error marking server ${serverUuid} as ERROR:`, error);
+      logger.error(`Error marking server ${serverUuid} as ERROR:`, error)
     }
   }
 
@@ -133,14 +133,14 @@ export class ServerErrorTracker {
    * Reset crash attempts for a server (e.g., after successful recovery)
    */
   resetServerAttempts(serverUuid: string): void {
-    this.crashAttempts.delete(serverUuid);
+    this.crashAttempts.delete(serverUuid)
   }
 
   /**
    * Get current crash attempts for a server
    */
   getServerAttempts(serverUuid: string): number {
-    return this.crashAttempts.get(serverUuid) || 0;
+    return this.crashAttempts.get(serverUuid) || 0
   }
 
   /**
@@ -148,14 +148,14 @@ export class ServerErrorTracker {
    */
   async isServerInErrorState(serverUuid: string): Promise<boolean> {
     try {
-      const server = await mcpServersRepository.findByUuid(serverUuid);
-      return server?.error_status === McpServerErrorStatusEnum.enum.ERROR;
+      const server = await mcpServersRepository.findByUuid(serverUuid)
+      return server?.error_status === McpServerErrorStatusEnum.enum.ERROR
     } catch (error) {
       logger.error(
         `Error checking server error state for ${serverUuid}:`,
         error,
-      );
-      return false;
+      )
+      return false
     }
   }
 
@@ -165,23 +165,23 @@ export class ServerErrorTracker {
   async resetServerErrorState(serverUuid: string): Promise<void> {
     try {
       // Reset crash attempts
-      this.resetServerAttempts(serverUuid);
+      this.resetServerAttempts(serverUuid)
 
       // Update the database to clear the error status
       await mcpServersRepository.updateServerErrorStatus({
         serverUuid,
         errorStatus: McpServerErrorStatusEnum.enum.NONE,
-      });
+      })
 
-      logger.info(`Reset error state for server ${serverUuid}`);
+      logger.info(`Reset error state for server ${serverUuid}`)
     } catch (error) {
       logger.error(
         `Error resetting error state for server ${serverUuid}:`,
         error,
-      );
+      )
     }
   }
 }
 
 // Export singleton instance
-export const serverErrorTracker = ServerErrorTracker.getInstance();
+export const serverErrorTracker = ServerErrorTracker.getInstance()

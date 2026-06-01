@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { eq } from "drizzle-orm"
 
-import { db } from "../index";
-import { usersTable } from "../schema";
+import { db } from "../index"
+import { usersTable } from "../schema"
 
 export class UsersRepository {
   /**
@@ -14,9 +14,9 @@ export class UsersRepository {
     const [user] = await db
       .select({ id: usersTable.id, role: usersTable.role })
       .from(usersTable)
-      .where(eq(usersTable.id, userId));
+      .where(eq(usersTable.id, userId))
 
-    return user;
+    return user
   }
 
   /**
@@ -24,10 +24,10 @@ export class UsersRepository {
    * client-supplied value. Fails closed: a missing user is not an admin.
    */
   async isAdmin(userId: string | null | undefined): Promise<boolean> {
-    if (!userId) return false;
-    const user = await this.getById(userId);
-    return user?.role === "admin";
+    if (!userId) return false
+    const user = await this.getById(userId)
+    return user?.role === "admin"
   }
 }
 
-export const usersRepository = new UsersRepository();
+export const usersRepository = new UsersRepository()

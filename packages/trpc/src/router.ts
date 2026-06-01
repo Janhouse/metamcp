@@ -1,10 +1,10 @@
-import { createFrontendRouter } from "./routers/frontend";
-import { router } from "./trpc";
+import { createFrontendRouter } from "./routers/frontend"
+import { router } from "./trpc"
 
 export const createAppRouter = (implementations: {
-  frontend: Parameters<typeof createFrontendRouter>[0];
+  frontend: Parameters<typeof createFrontendRouter>[0]
 }) => {
-  const frontendRouters = createFrontendRouter(implementations.frontend);
+  const frontendRouters = createFrontendRouter(implementations.frontend)
 
   return router({
     frontend: router({
@@ -17,11 +17,11 @@ export const createAppRouter = (implementations: {
       config: frontendRouters.config,
       logs: frontendRouters.logs,
     }),
-  });
-};
+  })
+}
 
-export type AppRouter = ReturnType<typeof createAppRouter>;
+export type AppRouter = ReturnType<typeof createAppRouter>
 
+export { createFrontendRouter } from "./routers/frontend"
 // Export types for the router
-export type { BaseContext } from "./trpc";
-export { createFrontendRouter } from "./routers/frontend";
+export type { BaseContext } from "./trpc"

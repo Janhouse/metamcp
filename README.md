@@ -119,7 +119,7 @@ DATABASE_URL=${DB_CONNECTION_STRING}
 
 > **🔒 Security Note**: Environment variable references (`${VAR_NAME}`) are resolved from the MetaMCP container's environment at runtime. This keeps actual secret values out of your configuration and git repository.
 
-> **⚙️ Development Note**: For local development with `pnpm run dev:docker`, ensure your environment variables are listed in `turbo.json` under `globalEnv` to be passed to the development processes. This is not required for production Docker deployments.
+> **⚙️ Development Note**: For local development with `bun run dev:docker`, ensure your environment variables are listed in `turbo.json` under `globalEnv` to be passed to the development processes. This is not required for production Docker deployments.
 
 ### 🏷️ **MetaMCP Namespace**
 - Group one or more MCP servers into a namespace
@@ -162,7 +162,7 @@ docker compose up -d
 
 If you modify APP_URL env vars, make sure you only access from the APP_URL, because MetaMCP enforces CORS policy on the URL, so no other URL is accessible.
 
-Note that the pg volume name may collide with your other pg dockers, which is global, consider rename it in `docker-compose.yml`:
+Note that the pg volume name may collide with your other pg dockers, which is global, consider renaming it in `docker/docker-compose.prod.yml`:
 
 ```
 volumes:
@@ -193,15 +193,15 @@ VSCode will open the Dev Containers project in a new window, where it will build
 Wait some minutes, depending on the internet connection or computer performance, it may take from a few minutes to tens of minutes, you can click on the Progress Bar in the bottom right corner to view a live log where you will be able to check unusual stuck.
 <img width="732" height="173" alt="image" src="https://github.com/user-attachments/assets/6e5752f8-7353-4a8f-b489-c13daef6700e" />
 
-After finished, you can run `pnpm dev` to start the development server.
+After finished, you can run `bun run dev` to start the development server.
 
 ### **💻 Local Development**
 
 Still recommend running postgres through docker for easy setup:
 
 ```bash
-pnpm install
-pnpm dev
+bun install
+bun run dev
 ```
 
 ## 🔌 MCP Protocol Compatibility
@@ -295,6 +295,64 @@ For more details and alternative approaches, see [issue #76](https://github.com/
 
 🛠️ **Solution**: Customize the Dockerfile to add dependencies or pre-install packages to reduce cold start time.
 
+## 🛡️ MCP Server Sandboxing (fork addition)
+
+STDIO MCP servers are arbitrary third-party code (`npx`/`node`/`uvx`/`go run`)
+spawned as **child processes inside the app container**. This fork hardens those
+spawns with lightweight, in-container layers — no separate-container or DinD
+orchestration. The container runs as a **non-root user** (`nextjs`, uid 1001).
+
+- **Env scrub (always on):** spawned servers never inherit the full host
+  environment. Only a safe whitelist (`PATH`, `HOME`, proxy/CA vars, …) plus the
+  server's explicitly-configured `env` (with `${VAR}` placeholders resolved) is
+  passed — so secrets like `DATABASE_URL` and `BETTER_AUTH_SECRET` are no longer
+  leaked into MCP servers, including via the MCP Inspector path.
+- **Resource limits (`prlimit`):** optional per-process caps on CPU time
+  (`MCP_LIMIT_CPU_SEC`), process count (`MCP_LIMIT_NPROC`) and open files
+  (`MCP_LIMIT_NOFILE`). ⚠️ The memory cap (`MCP_LIMIT_MEMORY_MB`) maps to
+  `prlimit --as` (virtual address space), which **crashes Go/Node/Bun/JVM
+  runtimes** (e.g. `fatal error: failed to reserve page summary memory`). Prefer
+  the container-level `mem_limit` (cgroup) for memory; leave `MCP_LIMIT_MEMORY_MB`
+  unset unless every server is a native binary that tolerates an `--as` cap.
+- **bubblewrap (`MCP_SANDBOX=bwrap`, opt-in):** wraps each server in PID/IPC/UTS
+  namespaces with a read-only root filesystem and a writable scratch workdir;
+  with `MCP_SANDBOX_ALLOW_NETWORK=false` it also unshares the network namespace
+  (blocking egress, including to Postgres). It degrades **gracefully to
+  limits-only** (with a warning) when bubblewrap or user namespaces are
+  unavailable, so spawning never breaks.
+
+### Making `MCP_SANDBOX=bwrap` work under Docker
+
+bubblewrap needs to create unprivileged user/PID/mount namespaces and mount a
+fresh `/proc`. Docker's defaults block all three, so by default you'll see
+`MCP_SANDBOX=bwrap requested but bubblewrap/userns unavailable — running without
+namespace isolation` and the server runs limits-only. To actually enable bwrap,
+relax three container restrictions on the `app` service (see the commented block
+in `docker/docker-compose.prod.yml`):
+
+```yaml
+security_opt:
+  - "no-new-privileges:true"
+  - "seccomp=unconfined"      # allow unshare(CLONE_NEWUSER)
+  - "apparmor=unconfined"     # allow the mount operations
+  - "systempaths=unconfined"  # unmask /proc so a nested procfs can be mounted
+```
+
+This is a **deliberate trade-off**: it weakens the *container's* outer
+seccomp/AppArmor/proc-masking in exchange for bwrap's stronger *per-process*
+isolation of each MCP server. If you don't want that, leave `MCP_SANDBOX=none`
+(the default) — the env scrub and `prlimit` limits still apply.
+
+- **Container hardening (compose prod):** `no-new-privileges`, `cap_drop: ALL`,
+  `pids_limit`, and a cgroup `mem_limit` (`METAMCP_MEM_LIMIT`).
+
+Configuration is **per-server** (a "Sandbox / Isolation" section in the
+MCP-server create/edit form, backed by a `sandbox` JSON column) merged over
+**global defaults** from env vars (`MCP_SANDBOX`, `MCP_SANDBOX_ALLOW_NETWORK`,
+`MCP_SANDBOX_READONLY_ROOT`, `MCP_SANDBOX_WORKDIR`, `MCP_LIMIT_*`). All variables
+are documented in `example.env`. Filesystem-type MCP servers that need a specific
+directory should add it to the server's **allow-paths** list.
+
 ## 🧾 Log Levels
 
 MetaMCP’s backend writes logs to files and optionally mirrors selected levels to the console. Control console mirroring with the `LOG_LEVEL` environment variable.
@@ -315,7 +373,7 @@ MetaMCP’s backend writes logs to files and optionally mirrors selected levels 
     ```bash
     LOG_LEVEL='errors-only' # 'all', 'info', 'errors-only', 'none'
     ```
-  - `docker-compose.dev.yml` uses: `LOG_LEVEL: ${LOG_LEVEL:-all}`
+  - `docker/docker-compose.dev.yml` uses: `LOG_LEVEL: ${LOG_LEVEL:-all}`
 
 ## 🔐 Authentication
 

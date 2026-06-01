@@ -1,14 +1,19 @@
+# Shared service definitions for MetaMCP.
+#
+# Select an environment overlay via COMPOSE_FILE in .env (see example.env):
+#   - self-host / deploy:  docker/docker-compose.base.yml:docker/docker-compose.prod.yml
+#   - docker hot-reload:   docker/docker-compose.base.yml:docker/docker-compose.dev.yml
+#
+# Run from the repository root (where .env lives): `docker compose up -d`.
 services:
   app:
     container_name: metamcp
+    image: ${DOCKER_IMAGE:-ghcr.io/metatool-ai/metamcp}:${DOCKER_TAG:-latest}
     build:
-      context: .
-      dockerfile: Dockerfile
-    pull_policy: always
+      context: ..
+      dockerfile: docker/dockerfiles/Dockerfile
     env_file:
-      - .env
-    ports:
-      - "12008:12008"
+      - ../.env
     environment:
       # Postgres connection details
       POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
@@ -16,54 +21,45 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-metamcp_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-m3t4mcp}
       POSTGRES_DB: ${POSTGRES_DB:-metamcp_db}
-      
-      # Database configuration (composed from above vars)
+      # Database URL (composed from the above)
       DATABASE_URL: postgresql://${POSTGRES_USER:-metamcp_user}:${POSTGRES_PASSWORD:-m3t4mcp}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-metamcp_db}
-      
       # Application URL configuration
       APP_URL: ${APP_URL:-http://localhost:12008}
       NEXT_PUBLIC_APP_URL: ${APP_URL:-http://localhost:12008}
-      
-      # Auth configuration
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-your-super-secret-key-change-this-in-production}
-      
-      # Docker networking fix
+      # Docker networking fix (rewrite localhost MCP URLs to host.docker.internal)
       TRANSFORM_LOCALHOST_TO_DOCKER_INTERNAL: ${TRANSFORM_LOCALHOST_TO_DOCKER_INTERNAL:-true}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
-    restart: "no"
     networks:
       - metamcp-network
+    logging:
+      options:
+        max-size: "50m"
 
   postgres:
     image: postgres:16-alpine
     container_name: metamcp-pg
-    restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-metamcp_db}
       POSTGRES_USER: ${POSTGRES_USER:-metamcp_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-m3t4mcp}
-    ports:
-      - "${POSTGRES_EXTERNAL_PORT:-9433}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-metamcp_user} -d ${POSTGRES_DB:-metamcp_db}"]
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-metamcp_user} -d ${POSTGRES_DB:-metamcp_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
     networks:
       - metamcp-network
-
-volumes:
-  postgres_data:
-    driver: local
+    logging:
+      options:
+        max-size: "50m"
 
 networks:
   metamcp-network:

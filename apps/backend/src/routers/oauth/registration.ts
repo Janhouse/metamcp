@@ -1,17 +1,17 @@
-import express from "express";
+import express from "express"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
-import { oauthRepository } from "../../db/repositories";
+import { oauthRepository } from "../../db/repositories"
 import {
   generateSecureClientId,
   generateSecureClientSecret,
   getBaseUrl,
   rateLimitToken,
   validateRedirectUri,
-} from "./utils";
+} from "./utils"
 
-const registrationRouter = express.Router();
+const registrationRouter = express.Router()
 
 /**
  * OAuth 2.0 Dynamic Client Registration Endpoint
@@ -25,7 +25,7 @@ registrationRouter.post("/oauth/register", rateLimitToken, async (req, res) => {
       return res.status(400).json({
         error: "invalid_request",
         error_description: "Request body is missing or malformed",
-      });
+      })
     }
 
     const {
@@ -42,7 +42,7 @@ registrationRouter.post("/oauth/register", rateLimitToken, async (req, res) => {
       token_endpoint_auth_method,
       software_id,
       software_version,
-    } = req.body;
+    } = req.body
 
     // Validate required parameters
     if (
@@ -54,7 +54,7 @@ registrationRouter.post("/oauth/register", rateLimitToken, async (req, res) => {
         error: "invalid_redirect_uri",
         error_description:
           "redirect_uris is required and must be a non-empty array",
-      });
+      })
     }
 
     // OAuth 2.1 Security: Validate redirect URIs
@@ -63,7 +63,7 @@ registrationRouter.post("/oauth/register", rateLimitToken, async (req, res) => {
         return res.status(400).json({
           error: "invalid_redirect_uri",
           error_description: `Invalid redirect URI: ${uri}. Must use secure scheme and valid format.`,
-        });
+        })
       }
     }
 
@@ -71,35 +71,35 @@ registrationRouter.post("/oauth/register", rateLimitToken, async (req, res) => {
     const clientGrantTypes =
       grant_types && Array.isArray(grant_types)
         ? grant_types
-        : ["authorization_code"]; // Only authorization_code by default
+        : ["authorization_code"] // Only authorization_code by default
 
     const clientResponseTypes =
       response_types && Array.isArray(response_types)
         ? response_types
-        : ["code"];
+        : ["code"]
 
     // OAuth 2.1 Security: Default to PKCE (none auth method)
-    const clientTokenEndpointAuthMethod = token_endpoint_auth_method || "none";
+    const clientTokenEndpointAuthMethod = token_endpoint_auth_method || "none"
 
     // Validate grant types and response types consistency
     const validGrantTypes = [
       "authorization_code",
       "refresh_token",
       "client_credentials",
-    ];
-    const validResponseTypes = ["code"];
+    ]
+    const validResponseTypes = ["code"]
     const validAuthMethods = [
       "none",
       "client_secret_post",
       "client_secret_basic",
-    ];
+    ]
 
     for (const grantType of clientGrantTypes) {
       if (!validGrantTypes.includes(grantType)) {
         return res.status(400).json({
           error: "invalid_request",
           error_description: `Unsupported grant type: ${grantType}`,
-        });
+        })
       }
     }
 
@@ -108,7 +108,7 @@ registrationRouter.post("/oauth/register", rateLimitToken, async (req, res) => {
         return res.status(400).json({
           error: "invalid_request",
           error_description: `Unsupported response type: ${responseType}`,
-        });
+        })
       }
     }
 
@@ -116,17 +116,17 @@ registrationRouter.post("/oauth/register", rateLimitToken, async (req, res) => {
       return res.status(400).json({
         error: "invalid_request",
         error_description: `Unsupported token endpoint auth method: ${clientTokenEndpointAuthMethod}`,
-      });
+      })
     }
 
     // Generate client credentials
-    const clientId = generateSecureClientId();
+    const clientId = generateSecureClientId()
 
     // OAuth 2.1 Security: Generate client secret only if auth method requires it
     // Recommend PKCE (none) for public clients per OAuth 2.1
-    let clientSecret: string | null = null;
+    let clientSecret: string | null = null
     if (clientTokenEndpointAuthMethod !== "none") {
-      clientSecret = generateSecureClientSecret();
+      clientSecret = generateSecureClientSecret()
     }
 
     // Create client registration
@@ -147,15 +147,15 @@ registrationRouter.post("/oauth/register", rateLimitToken, async (req, res) => {
       software_id: software_id || null,
       software_version: software_version || null,
       created_at: new Date(),
-    };
+    }
 
     // Store the client registration
-    await oauthRepository.upsertClient(clientRegistration);
+    await oauthRepository.upsertClient(clientRegistration)
 
     // Prepare response according to RFC 7591 with OAuth 2.1 guidance
     // Honor APP_URL (and trusted proxy headers) so endpoint URLs are correct
     // behind a reverse proxy / TLS terminator instead of leaking the raw host.
-    const baseUrl = getBaseUrl(req);
+    const baseUrl = getBaseUrl(req)
     const response: Record<string, unknown> = {
       client_id: clientId,
       client_name: clientRegistration.client_name,
@@ -175,36 +175,36 @@ registrationRouter.post("/oauth/register", rateLimitToken, async (req, res) => {
       token_endpoint: `${baseUrl}/oauth/token`,
       userinfo_endpoint: `${baseUrl}/oauth/userinfo`,
       revocation_endpoint: `${baseUrl}/oauth/revoke`,
-    };
+    }
 
     // Include client_secret only if one was generated
     if (clientSecret) {
-      response.client_secret = clientSecret;
+      response.client_secret = clientSecret
       response.security_note =
-        "Store client_secret securely. For public clients, use PKCE instead.";
+        "Store client_secret securely. For public clients, use PKCE instead."
     } else {
       response.security_note =
-        "This client uses PKCE for security. Ensure code_challenge and code_challenge_method are included in authorization requests.";
+        "This client uses PKCE for security. Ensure code_challenge and code_challenge_method are included in authorization requests."
     }
 
     // Include optional metadata if provided
-    if (client_uri) response.client_uri = client_uri;
-    if (logo_uri) response.logo_uri = logo_uri;
-    if (contacts) response.contacts = contacts;
-    if (tos_uri) response.tos_uri = tos_uri;
-    if (policy_uri) response.policy_uri = policy_uri;
-    if (software_id) response.software_id = software_id;
-    if (software_version) response.software_version = software_version;
+    if (client_uri) response.client_uri = client_uri
+    if (logo_uri) response.logo_uri = logo_uri
+    if (contacts) response.contacts = contacts
+    if (tos_uri) response.tos_uri = tos_uri
+    if (policy_uri) response.policy_uri = policy_uri
+    if (software_id) response.software_id = software_id
+    if (software_version) response.software_version = software_version
 
-    res.status(201).json(response);
+    res.status(201).json(response)
   } catch (error) {
-    logger.error("Error in OAuth registration endpoint:", error);
+    logger.error("Error in OAuth registration endpoint:", error)
     res.status(500).json({
       error: "server_error",
       error_description: "Internal server error during client registration",
-    });
+    })
   }
-});
+})
 
 /**
  * OAuth 2.0 Dynamic Client Registration Information Endpoint
@@ -214,7 +214,7 @@ registrationRouter.get("/oauth/register", async (req, res) => {
   try {
     // Honor APP_URL (and trusted proxy headers) so endpoint URLs are correct
     // behind a reverse proxy / TLS terminator instead of leaking the raw host.
-    const baseUrl = getBaseUrl(req);
+    const baseUrl = getBaseUrl(req)
 
     res.json({
       registration_endpoint: `${baseUrl}/oauth/register`,
@@ -271,14 +271,14 @@ registrationRouter.get("/oauth/register", async (req, res) => {
         "Include code_challenge and code_challenge_method=S256",
         "Exchange authorization codes for access tokens",
       ],
-    });
+    })
   } catch (error) {
-    logger.error("Error in OAuth registration info endpoint:", error);
+    logger.error("Error in OAuth registration info endpoint:", error)
     res.status(500).json({
       error: "server_error",
       error_description: "Internal server error",
-    });
+    })
   }
-});
+})
 
-export default registrationRouter;
+export default registrationRouter

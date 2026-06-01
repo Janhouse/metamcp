@@ -136,8 +136,8 @@ volumes:
 仍建议通过 docker 运行 postgres，便于环境搭建：
 
 ```bash
-pnpm install
-pnpm dev
+bun install
+bun run dev
 ```
 
 ## 🔌 MCP 协议兼容性

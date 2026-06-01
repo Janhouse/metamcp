@@ -18,7 +18,7 @@ services:
       - /workspaces/metamcp/apps/frontend/node_modules
       - /workspaces/metamcp/apps/backend/node_modules
       - /workspaces/metamcp/packages/trpc/node_modules
-      - /workspaces/metamcp/packages/eslint-config/node_modules
+      - /workspaces/metamcp/packages/zod-types/node_modules
       - /workspaces/metamcp/packages/typescript-config/node_modules
     working_dir: /workspaces/metamcp
     # Don't override command - let devcontainer.json handle it (sleep infinity)

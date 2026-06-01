@@ -7,8 +7,8 @@
  */
 
 export interface ParsedToolName {
-  serverName: string;
-  originalToolName: string;
+  serverName: string
+  originalToolName: string
 }
 
 /**
@@ -26,21 +26,21 @@ export interface ParsedToolName {
  * // → { serverName: "Parent", originalToolName: "Child__my_tool" }
  */
 export function parseToolName(toolName: string): ParsedToolName | null {
-  const firstDoubleUnderscoreIndex = toolName.indexOf("__");
+  const firstDoubleUnderscoreIndex = toolName.indexOf("__")
   if (firstDoubleUnderscoreIndex === -1) {
-    return null;
+    return null
   }
 
   // The first __ is always the separator between the top-level server prefix and the forwarded tool name
   // Everything before the first __ is the server prefix (which may contain nested servers)
   // Everything after the first __ is the forwarded tool name (which may itself include additional prefixes)
-  const serverName = toolName.substring(0, firstDoubleUnderscoreIndex);
-  const originalToolName = toolName.substring(firstDoubleUnderscoreIndex + 2);
+  const serverName = toolName.substring(0, firstDoubleUnderscoreIndex)
+  const originalToolName = toolName.substring(firstDoubleUnderscoreIndex + 2)
 
   return {
     serverName,
     originalToolName,
-  };
+  }
 }
 
 /**
@@ -54,21 +54,21 @@ export function parseToolName(toolName: string): ParsedToolName | null {
  * createToolName("Hacker-News", "get_stories")
  * // → "Hacker-News__get_stories"
  */
-const MAX_TOOL_NAME_LENGTH = 64;
+const MAX_TOOL_NAME_LENGTH = 64
 
 export function createToolName(serverName: string, toolName: string): string {
-  const fullName = `${serverName}__${toolName}`;
+  const fullName = `${serverName}__${toolName}`
   if (fullName.length <= MAX_TOOL_NAME_LENGTH) {
-    return fullName;
+    return fullName
   }
 
   // Truncate the server prefix to fit, keeping the tool name intact
-  const overhead = 2; // "__" separator
-  const maxPrefixLength = MAX_TOOL_NAME_LENGTH - toolName.length - overhead;
+  const overhead = 2 // "__" separator
+  const maxPrefixLength = MAX_TOOL_NAME_LENGTH - toolName.length - overhead
   if (maxPrefixLength >= 1) {
-    return `${serverName.substring(0, maxPrefixLength)}__${toolName}`;
+    return `${serverName.substring(0, maxPrefixLength)}__${toolName}`
   }
 
   // Tool name itself is too long — truncate the full name
-  return fullName.substring(0, MAX_TOOL_NAME_LENGTH);
+  return fullName.substring(0, MAX_TOOL_NAME_LENGTH)
 }

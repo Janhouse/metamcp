@@ -1,10 +1,10 @@
-"use client";
+"use client"
 
 import {
-  McpServer,
+  type McpServer,
   McpServerErrorStatusEnum,
   McpServerTypeEnum,
-} from "@repo/zod-types";
+} from "@repo/zod-types"
 import {
   ArrowLeft,
   Edit,
@@ -13,17 +13,17 @@ import {
   Plug,
   SearchCode,
   Server,
-} from "lucide-react";
-import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
-import { use, useEffect, useState } from "react";
-import { toast } from "sonner";
+} from "lucide-react"
+import Link from "next/link"
+import { notFound, useRouter } from "next/navigation"
+import { use, useEffect, useState } from "react"
+import { toast } from "sonner"
 
-import { EditMcpServer } from "@/components/edit-mcp-server";
-import { ServerDetailsSkeleton } from "@/components/skeletons/server-details-skeleton";
-import { ToolManagementSkeleton } from "@/components/skeletons/tool-management-skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { EditMcpServer } from "@/components/edit-mcp-server"
+import { ServerDetailsSkeleton } from "@/components/skeletons/server-details-skeleton"
+import { ToolManagementSkeleton } from "@/components/skeletons/tool-management-skeleton"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -31,72 +31,68 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useConnection } from "@/hooks/useConnection";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
+} from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useConnection } from "@/hooks/useConnection"
+import { useTranslations } from "@/hooks/useTranslations"
+import { resolveEndpointNamespaceUuid } from "@/lib/endpoint-server"
+import { trpc } from "@/lib/trpc"
 
-import { ToolManagement } from "./components/tool-management";
+import { ToolManagement } from "./components/tool-management"
 
 interface McpServerDetailPageProps {
   params: Promise<{
-    uuid: string;
-  }>;
+    uuid: string
+  }>
 }
 
 export default function McpServerDetailPage({
   params,
 }: McpServerDetailPageProps) {
-  const { uuid } = use(params);
-  const router = useRouter();
-  const { t } = useTranslations();
+  const { uuid } = use(params)
+  const router = useRouter()
+  const { t } = useTranslations()
 
   // State to track which sensitive fields are revealed
-  const [revealedEnvVars, setRevealedEnvVars] = useState<Set<string>>(
-    new Set(),
-  );
-  const [revealedHeaders, setRevealedHeaders] = useState<Set<string>>(
-    new Set(),
-  );
-  const [bearerTokenRevealed, setBearerTokenRevealed] =
-    useState<boolean>(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
-  const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
+  const [revealedEnvVars, setRevealedEnvVars] = useState<Set<string>>(new Set())
+  const [revealedHeaders, setRevealedHeaders] = useState<Set<string>>(new Set())
+  const [bearerTokenRevealed, setBearerTokenRevealed] = useState<boolean>(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false)
+  const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false)
 
   // Function to toggle env var visibility
   const toggleEnvVarVisibility = (key: string) => {
     setRevealedEnvVars((prev) => {
-      const newSet = new Set(prev);
+      const newSet = new Set(prev)
       if (newSet.has(key)) {
-        newSet.delete(key);
+        newSet.delete(key)
       } else {
-        newSet.add(key);
+        newSet.add(key)
       }
-      return newSet;
-    });
-  };
+      return newSet
+    })
+  }
 
   // Function to toggle header visibility
   const toggleHeaderVisibility = (key: string) => {
     setRevealedHeaders((prev) => {
-      const newSet = new Set(prev);
+      const newSet = new Set(prev)
       if (newSet.has(key)) {
-        newSet.delete(key);
+        newSet.delete(key)
       } else {
-        newSet.add(key);
+        newSet.add(key)
       }
-      return newSet;
-    });
-  };
+      return newSet
+    })
+  }
 
   // Function to mask sensitive values
   const maskSensitiveValue = (value: string) => {
-    return "•".repeat(Math.min(value.length, 12));
-  };
+    return "•".repeat(Math.min(value.length, 12))
+  }
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Use tRPC query for data fetching
   const {
@@ -104,7 +100,7 @@ export default function McpServerDetailPage({
     error,
     isLoading,
     refetch,
-  } = trpc.frontend.mcpServers.get.useQuery({ uuid });
+  } = trpc.frontend.mcpServers.get.useQuery({ uuid })
 
   // tRPC mutation for deleting server
   const deleteMutation = trpc.frontend.mcpServers.delete.useMutation({
@@ -112,54 +108,81 @@ export default function McpServerDetailPage({
       // Check if the operation was actually successful
       if (result.success) {
         // Invalidate the list cache since server was deleted
-        utils.frontend.mcpServers.list.invalidate();
-        toast.success(t("mcp-servers:detail.deleteServerSuccess"));
+        utils.frontend.mcpServers.list.invalidate()
+        toast.success(t("mcp-servers:detail.deleteServerSuccess"))
         // Navigate back to the servers list
-        router.push("/mcp-servers");
+        router.push("/mcp-servers")
       } else {
         // Handle business logic failures
-        console.error("Delete failed:", result.message);
+        console.error("Delete failed:", result.message)
         toast.error(t("mcp-servers:detail.deleteServerError"), {
           description:
             result.message || t("mcp-servers:detail.deleteServerError"),
-        });
-        setShowDeleteDialog(false);
+        })
+        setShowDeleteDialog(false)
       }
     },
     onError: (error) => {
-      console.error("Error deleting server:", error);
+      console.error("Error deleting server:", error)
       toast.error(t("mcp-servers:detail.deleteServerError"), {
         description: error.message,
-      });
-      setShowDeleteDialog(false);
+      })
+      setShowDeleteDialog(false)
     },
-  });
+  })
 
   const server: McpServer | undefined = serverResponse?.success
     ? serverResponse.data
-    : undefined;
+    : undefined
+
+  // Auto-generated endpoint servers (STREAMABLE_HTTP -> ${APP_URL}/metamcp/<name>/mcp)
+  // point at the endpoint's own auth-gated public URL, which a stored bearer
+  // token often can't satisfy (OAuth-only endpoints, or rotated API keys). When
+  // this server backs an endpoint, inspect the underlying namespace through the
+  // authenticated metamcp proxy instead (same aggregated tools, uses the
+  // logged-in session + namespace access check).
+  const { data: endpointsResponse, isLoading: endpointsLoading } =
+    trpc.frontend.endpoints.list.useQuery()
+  const endpointNamespaceUuid = resolveEndpointNamespaceUuid(
+    server,
+    endpointsResponse?.success ? endpointsResponse.data : undefined,
+  )
+  const isEndpointServer = endpointNamespaceUuid !== null
 
   // MCP Connection setup - only enable when server data is loaded and not in error state
   const connection = useConnection({
     mcpServerUuid: uuid,
-    transportType: server?.type || McpServerTypeEnum.enum.STDIO,
+    transportType: isEndpointServer
+      ? McpServerTypeEnum.enum.SSE
+      : server?.type || McpServerTypeEnum.enum.STDIO,
     command: server?.command || "",
     args: server?.args?.join(" ") || "",
-    url: server?.url || "",
+    // For endpoint servers, connect to the namespace via the authenticated
+    // metamcp proxy rather than the OAuth/API-key-gated public endpoint URL.
+    url: isEndpointServer
+      ? `/mcp-proxy/metamcp/${endpointNamespaceUuid}/sse`
+      : server?.url || "",
     env: server?.env || {},
-    bearerToken: server?.bearerToken || undefined,
+    bearerToken: isEndpointServer
+      ? undefined
+      : server?.bearerToken || undefined,
+    isMetaMCP: isEndpointServer,
     onNotification: (notification) => {
-      console.log("MCP Notification:", notification);
+      console.log("MCP Notification:", notification)
     },
     onStdErrNotification: (notification) => {
-      console.error("MCP StdErr:", notification);
+      console.error("MCP StdErr:", notification)
     },
+    // Wait for the endpoints list too: until it loads we cannot tell whether
+    // this is an endpoint server, and connecting via the wrong URL first would
+    // fail without retrying.
     enabled: Boolean(
       server &&
-      !isLoading &&
-      server.error_status !== McpServerErrorStatusEnum.enum.ERROR,
+        !isLoading &&
+        !endpointsLoading &&
+        server.error_status !== McpServerErrorStatusEnum.enum.ERROR,
     ),
-  });
+  })
 
   // Auto-connect when hook is enabled and not already connected
   useEffect(() => {
@@ -167,37 +190,38 @@ export default function McpServerDetailPage({
       connection &&
       server &&
       !isLoading &&
+      !endpointsLoading &&
       server.error_status !== McpServerErrorStatusEnum.enum.ERROR &&
       connection.connectionStatus === "disconnected"
     ) {
-      connection.connect();
+      connection.connect()
     }
-  }, [server, connection, isLoading]);
+  }, [server, connection, isLoading, endpointsLoading])
 
   // Handle delete server
   const handleDeleteServer = async () => {
-    deleteMutation.mutate({ uuid });
-  };
+    deleteMutation.mutate({ uuid })
+  }
 
   // Handle successful edit
   const handleEditSuccess = () => {
     // Invalidate cache to get fresh data (already handled by EditMcpServer component)
-    setEditDialogOpen(false);
+    setEditDialogOpen(false)
     // Toast is handled by the EditMcpServer component
-  };
+  }
 
   // Handle manual connect/disconnect
   const handleConnectionToggle = () => {
     if (server?.error_status === McpServerErrorStatusEnum.enum.ERROR) {
       // Don't allow connection if server is in error state
-      return;
+      return
     }
     if (connection.connectionStatus === "connected") {
-      connection.disconnect();
+      connection.disconnect()
     } else {
-      connection.connect();
+      connection.connect()
     }
-  };
+  }
 
   // Get connection status display info
   const getConnectionStatusInfo = () => {
@@ -207,7 +231,7 @@ export default function McpServerDetailPage({
         text: t("mcp-servers:detail.serverError"),
         color: "text-destructive",
         icon: Server,
-      };
+      }
     }
 
     switch (connection.connectionStatus) {
@@ -216,34 +240,34 @@ export default function McpServerDetailPage({
           text: t("mcp-servers:connected"),
           color: "text-green-600 dark:text-green-400",
           icon: Plug,
-        };
+        }
       case "disconnected":
         return {
           text: t("mcp-servers:disconnected"),
           color: "text-muted-foreground",
           icon: Server,
-        };
+        }
       case "error":
       case "error-connecting-to-proxy":
         return {
           text: t("mcp-servers:detail.connectionError"),
           color: "text-destructive",
           icon: Server,
-        };
+        }
       default:
         return {
           text: t("mcp-servers:detail.connecting"),
           color: "text-yellow-600 dark:text-yellow-400",
           icon: Plug,
-        };
+        }
     }
-  };
+  }
 
   if (error) {
     const isNotFound =
-      error.message.includes("not found") || error.message.includes("404");
+      error.message.includes("not found") || error.message.includes("404")
     if (isNotFound) {
-      notFound();
+      notFound()
     }
     return (
       <div className="space-y-6">
@@ -274,7 +298,7 @@ export default function McpServerDetailPage({
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (isLoading) {
@@ -317,15 +341,15 @@ export default function McpServerDetailPage({
           <ToolManagementSkeleton />
         </div>
       </div>
-    );
+    )
   }
 
   if (!server) {
-    notFound();
+    notFound()
   }
 
-  const connectionInfo = getConnectionStatusInfo();
-  const ConnectionIcon = connectionInfo.icon;
+  const connectionInfo = getConnectionStatusInfo()
+  const ConnectionIcon = connectionInfo.icon
 
   return (
     <div className="space-y-6">
@@ -592,10 +616,10 @@ export default function McpServerDetailPage({
                     </span>
                     <div className="space-y-2">
                       {Object.entries(server.headers).map(([key, value]) => {
-                        const isRevealed = revealedHeaders.has(key);
+                        const isRevealed = revealedHeaders.has(key)
                         const displayValue = isRevealed
                           ? value
-                          : maskSensitiveValue(value);
+                          : maskSensitiveValue(value)
 
                         return (
                           <div
@@ -628,7 +652,7 @@ export default function McpServerDetailPage({
                               )}
                             </Button>
                           </div>
-                        );
+                        )
                       })}
                     </div>
                   </div>
@@ -644,10 +668,10 @@ export default function McpServerDetailPage({
                 </h3>
                 <div className="space-y-3">
                   {Object.entries(server.env).map(([key, value]) => {
-                    const isRevealed = revealedEnvVars.has(key);
+                    const isRevealed = revealedEnvVars.has(key)
                     const displayValue = isRevealed
                       ? value
-                      : maskSensitiveValue(value);
+                      : maskSensitiveValue(value)
 
                     return (
                       <div key={key} className="p-3 bg-muted rounded space-y-2">
@@ -677,7 +701,7 @@ export default function McpServerDetailPage({
                           {displayValue}
                         </div>
                       </div>
-                    );
+                    )
                   })}
                 </div>
               </div>
@@ -731,5 +755,5 @@ export default function McpServerDetailPage({
         )}
       </div>
     </div>
-  );
+  )
 }

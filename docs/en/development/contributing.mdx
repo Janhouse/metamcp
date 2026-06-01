@@ -11,7 +11,7 @@ We welcome contributions to MetaMCP! This comprehensive guide will help you get 
 
 Before contributing, ensure you have:
 
-- **Node.js 18+** and **pnpm** installed
+- **Bun** (the canary/Rust build) and **Node.js 20+** installed
 - **Docker** for running PostgreSQL and testing
 - **Git** for version control
 - **Basic understanding** of TypeScript, React, and MCP protocol
@@ -33,10 +33,10 @@ Before contributing, ensure you have:
   </Accordion>
 
   <Accordion icon="package" title="Install Dependencies">
-    Install project dependencies using pnpm:
+    Install project dependencies using Bun:
     
     ```bash
-    pnpm install
+    bun install
     ```
     
     This will install dependencies for all workspaces in the monorepo.
@@ -65,7 +65,7 @@ Before contributing, ensure you have:
     ```bash
     cd apps/backend
 
-    pnpm db:migrate:dev
+    bun run db:migrate:dev
     ```
   </Accordion>
 </AccordionGroup>
@@ -108,7 +108,7 @@ Follow these guidelines when making changes:
     Run the development server and test your changes:
     
     ```bash
-    pnpm dev
+    bun run dev
     ```
     
     This starts both frontend and backend in development mode.
@@ -119,10 +119,10 @@ Follow these guidelines when making changes:
     
     ```bash
     # Run linting
-    pnpm lint
+    bun run lint
     
     # Fix linting issues
-    pnpm lint:fix
+    bun run lint:fix
     ```
   </Accordion>
 
@@ -235,7 +235,7 @@ Follow these guidelines when making changes:
 
 <Card title="Pre-submission Checklist" icon="checklist">
 - ✅ **Code follows project standards**
-- ✅ **Fix liniting as much as possible (somewhat tolerant as we dev rapidly)** (`pnpm lint`)
+- ✅ **Fix liniting as much as possible (somewhat tolerant as we dev rapidly)** (`bun run lint`)
 - ✅ **No TypeScript errors**
 - ✅ **Documentation updated** if needed
 - ✅ **Changes tested manually**
@@ -289,13 +289,13 @@ When making database schema changes:
     ```bash
     # Generate migration after schema changes
     cd apps/backend
-    pnpm db:generate
+    bun run db:generate
     
     # Apply migrations
-    pnpm db:migrate:dev # which uses env.local for PG related env vars
+    bun run db:migrate:dev # which uses env.local for PG related env vars
     
     # Reset database (development only)
-    pnpm db:reset
+    bun run db:reset
     ```
   </Accordion>
 

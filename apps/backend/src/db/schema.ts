@@ -1,11 +1,14 @@
-import { OAuthClientInformation } from "@modelcontextprotocol/sdk/shared/auth.js";
-import { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
+import type {
+  OAuthClientInformation,
+  OAuthTokens,
+} from "@modelcontextprotocol/sdk/shared/auth.js"
 import {
   McpServerErrorStatusEnum,
   McpServerStatusEnum,
   McpServerTypeEnum,
-} from "@repo/zod-types";
-import { sql } from "drizzle-orm";
+  type SandboxConfig,
+} from "@repo/zod-types"
+import { sql } from "drizzle-orm"
 import {
   boolean,
   index,
@@ -17,20 +20,20 @@ import {
   timestamp,
   unique,
   uuid,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/pg-core"
 
 export const mcpServerTypeEnum = pgEnum(
   "mcp_server_type",
   McpServerTypeEnum.options,
-);
+)
 export const mcpServerStatusEnum = pgEnum(
   "mcp_server_status",
   McpServerStatusEnum.options,
-);
+)
 export const mcpServerErrorStatusEnum = pgEnum(
   "mcp_server_error_status",
   McpServerErrorStatusEnum.options,
-);
+)
 
 export const mcpServersTable = pgTable(
   "mcp_servers",
@@ -42,10 +45,7 @@ export const mcpServersTable = pgTable(
       .notNull()
       .default(McpServerTypeEnum.enum.STDIO),
     command: text("command"),
-    args: text("args")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    args: text("args").array().notNull().default(sql`'{}'::text[]`),
     env: jsonb("env")
       .$type<{ [key: string]: string }>()
       .notNull()
@@ -62,6 +62,8 @@ export const mcpServersTable = pgTable(
       .$type<{ [key: string]: string }>()
       .notNull()
       .default(sql`'{}'::jsonb`),
+    // Per-server sandbox / isolation overrides. NULL = inherit global defaults.
+    sandbox: jsonb("sandbox").$type<SandboxConfig>(),
     user_id: text("user_id").references(() => usersTable.id, {
       onDelete: "cascade",
     }),
@@ -81,7 +83,7 @@ export const mcpServersTable = pgTable(
         (type = 'STREAMABLE_HTTP' AND url IS NOT NULL AND command IS NULL AND url ~ '^https?://[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*(:[0-9]+)?(/[a-zA-Z0-9-._~:/?#\[\]@!$&''()*+,;=]*)?$')
       )`,
   ],
-);
+)
 
 export const oauthSessionsTable = pgTable(
   "oauth_sessions",
@@ -107,7 +109,7 @@ export const oauthSessionsTable = pgTable(
     index("oauth_sessions_mcp_server_uuid_idx").on(table.mcp_server_uuid),
     unique("oauth_sessions_unique_per_server_idx").on(table.mcp_server_uuid),
   ],
-);
+)
 
 export const toolsTable = pgTable(
   "tools",
@@ -117,10 +119,10 @@ export const toolsTable = pgTable(
     description: text("description"),
     toolSchema: jsonb("tool_schema")
       .$type<{
-        type: "object";
+        type: "object"
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        properties?: Record<string, any>;
-        required?: string[];
+        properties?: Record<string, any>
+        required?: string[]
       }>()
       .notNull(),
     created_at: timestamp("created_at", { withTimezone: true })
@@ -140,7 +142,7 @@ export const toolsTable = pgTable(
       table.name,
     ),
   ],
-);
+)
 
 // Better-auth tables
 export const usersTable = pgTable("users", {
@@ -160,7 +162,7 @@ export const usersTable = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+})
 
 export const sessionsTable = pgTable("sessions", {
   id: text("id").primaryKey(),
@@ -177,7 +179,7 @@ export const sessionsTable = pgTable("sessions", {
   userId: text("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
-});
+})
 
 export const accountsTable = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -203,7 +205,7 @@ export const accountsTable = pgTable("accounts", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+})
 
 export const verificationsTable = pgTable("verifications", {
   id: text("id").primaryKey(),
@@ -216,7 +218,7 @@ export const verificationsTable = pgTable("verifications", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+})
 
 // Namespaces table
 export const namespacesTable = pgTable(
@@ -243,7 +245,7 @@ export const namespacesTable = pgTable(
         name ~ '^[a-zA-Z0-9_-]+$'
       )`,
   ],
-);
+)
 
 // Endpoints table - public routing endpoints that map to namespaces
 export const endpointsTable = pgTable(
@@ -289,7 +291,7 @@ export const endpointsTable = pgTable(
         name ~ '^[a-zA-Z0-9_-]+$'
       )`,
   ],
-);
+)
 
 // Many-to-many relationship table between namespaces and mcp servers
 export const namespaceServerMappingsTable = pgTable(
@@ -322,7 +324,7 @@ export const namespaceServerMappingsTable = pgTable(
       table.mcp_server_uuid,
     ),
   ],
-);
+)
 
 // Many-to-many relationship table between namespaces and tools for status control and overrides
 export const namespaceToolMappingsTable = pgTable(
@@ -365,7 +367,7 @@ export const namespaceToolMappingsTable = pgTable(
       table.tool_uuid,
     ),
   ],
-);
+)
 
 // API Keys table
 export const apiKeysTable = pgTable(
@@ -388,7 +390,7 @@ export const apiKeysTable = pgTable(
     index("api_keys_is_active_idx").on(table.is_active),
     unique("api_keys_name_per_user_idx").on(table.user_id, table.name),
   ],
-);
+)
 
 // Configuration table for app-wide settings
 export const configTable = pgTable("config", {
@@ -401,7 +403,7 @@ export const configTable = pgTable("config", {
   updated_at: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+})
 
 // OAuth Registered Clients table
 export const oauthClientsTable = pgTable("oauth_clients", {
@@ -437,7 +439,7 @@ export const oauthClientsTable = pgTable("oauth_clients", {
   updated_at: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+})
 
 // OAuth Authorization Codes table
 export const oauthAuthorizationCodesTable = pgTable(
@@ -464,7 +466,7 @@ export const oauthAuthorizationCodesTable = pgTable(
     index("oauth_authorization_codes_user_id_idx").on(table.user_id),
     index("oauth_authorization_codes_expires_at_idx").on(table.expires_at),
   ],
-);
+)
 
 // OAuth Access Tokens table
 export const oauthAccessTokensTable = pgTable(
@@ -493,4 +495,4 @@ export const oauthAccessTokensTable = pgTable(
     index("oauth_access_tokens_expires_at_idx").on(table.expires_at),
     index("oauth_access_tokens_refresh_token_idx").on(table.refresh_token),
   ],
-);
+)

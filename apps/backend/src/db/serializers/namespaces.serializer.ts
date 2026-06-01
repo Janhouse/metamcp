@@ -1,11 +1,11 @@
-import {
+import type {
   DatabaseNamespace,
   DatabaseNamespaceTool,
   DatabaseNamespaceWithServers,
   Namespace,
   NamespaceTool,
   NamespaceWithServers,
-} from "@repo/zod-types";
+} from "@repo/zod-types"
 
 export class NamespacesSerializer {
   static serializeNamespace(dbNamespace: DatabaseNamespace): Namespace {
@@ -16,20 +16,20 @@ export class NamespacesSerializer {
       created_at: dbNamespace.created_at.toISOString(),
       updated_at: dbNamespace.updated_at.toISOString(),
       user_id: dbNamespace.user_id,
-    };
+    }
   }
 
   static serializeNamespaceList(
     dbNamespaces: DatabaseNamespace[],
   ): Namespace[] {
-    return dbNamespaces.map(this.serializeNamespace);
+    return dbNamespaces.map(NamespacesSerializer.serializeNamespace)
   }
 
   static serializeNamespaceWithServers(
     dbNamespace: DatabaseNamespaceWithServers,
     options: { requesterId?: string; isAdmin?: boolean } = {},
   ): NamespaceWithServers {
-    const { requesterId, isAdmin = false } = options;
+    const { requesterId, isAdmin = false } = options
     return {
       uuid: dbNamespace.uuid,
       name: dbNamespace.name,
@@ -44,7 +44,7 @@ export class NamespacesSerializer {
         const redact = !(
           isAdmin ||
           (server.user_id !== null && server.user_id === requesterId)
-        );
+        )
         return {
           uuid: server.uuid,
           name: server.name,
@@ -60,9 +60,9 @@ export class NamespacesSerializer {
           created_at: server.created_at.toISOString(),
           user_id: server.user_id,
           status: server.status,
-        };
+        }
       }),
-    };
+    }
   }
 
   static serializeNamespaceTool(dbTool: DatabaseNamespaceTool): NamespaceTool {
@@ -81,12 +81,12 @@ export class NamespacesSerializer {
       overrideTitle: dbTool.overrideTitle,
       overrideDescription: dbTool.overrideDescription,
       overrideAnnotations: dbTool.overrideAnnotations,
-    };
+    }
   }
 
   static serializeNamespaceTools(
     dbTools: DatabaseNamespaceTool[],
   ): NamespaceTool[] {
-    return dbTools.map(this.serializeNamespaceTool);
+    return dbTools.map(NamespacesSerializer.serializeNamespaceTool)
   }
 }

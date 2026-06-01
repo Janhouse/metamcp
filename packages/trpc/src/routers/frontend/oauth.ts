@@ -3,10 +3,10 @@ import {
   GetOAuthSessionResponseSchema,
   UpsertOAuthSessionRequestSchema,
   UpsertOAuthSessionResponseSchema,
-} from "@repo/zod-types";
-import { z } from "zod";
+} from "@repo/zod-types"
+import type { z } from "zod"
 
-import { protectedProcedure, router } from "../../trpc";
+import { protectedProcedure, router } from "../../trpc"
 
 // Define the OAuth router with procedure definitions
 // The actual implementation will be provided by the backend
@@ -16,11 +16,11 @@ export const createOAuthRouter = (
     get: (
       input: z.infer<typeof GetOAuthSessionRequestSchema>,
       userId: string,
-    ) => Promise<z.infer<typeof GetOAuthSessionResponseSchema>>;
+    ) => Promise<z.infer<typeof GetOAuthSessionResponseSchema>>
     upsert: (
       input: z.infer<typeof UpsertOAuthSessionRequestSchema>,
       userId: string,
-    ) => Promise<z.infer<typeof UpsertOAuthSessionResponseSchema>>;
+    ) => Promise<z.infer<typeof UpsertOAuthSessionResponseSchema>>
   },
 ) => {
   return router({
@@ -29,7 +29,7 @@ export const createOAuthRouter = (
       .input(GetOAuthSessionRequestSchema)
       .output(GetOAuthSessionResponseSchema)
       .query(async ({ input, ctx }) => {
-        return await implementations.get(input, (ctx as any).user.id);
+        return await implementations.get(input, (ctx as any).user.id)
       }),
 
     // Protected: Upsert OAuth session (with ownership check)
@@ -37,7 +37,7 @@ export const createOAuthRouter = (
       .input(UpsertOAuthSessionRequestSchema)
       .output(UpsertOAuthSessionResponseSchema)
       .mutation(async ({ input, ctx }) => {
-        return await implementations.upsert(input, (ctx as any).user.id);
+        return await implementations.upsert(input, (ctx as any).user.id)
       }),
-  });
-};
+  })
+}

@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import { Tool } from "@repo/zod-types";
+import type { Tool } from "@repo/zod-types"
 import {
   Calendar,
   ChevronDownIcon,
@@ -13,19 +13,19 @@ import {
   RefreshCw,
   Search,
   Wrench,
-} from "lucide-react";
-import React, { useMemo, useState } from "react";
+} from "lucide-react"
+import React, { useMemo, useState } from "react"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CodeBlock } from "@/components/ui/code-block";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { CodeBlock } from "@/components/ui/code-block"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -33,59 +33,59 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { useTranslations } from "@/hooks/useTranslations";
+} from "@/components/ui/table"
+import { useTranslations } from "@/hooks/useTranslations"
 
 // MCP Tool type from the protocol
 interface MCPTool {
-  name: string;
-  title?: string;
-  description?: string;
+  name: string
+  title?: string
+  description?: string
   inputSchema: {
-    type: "object";
-    properties?: Record<string, unknown>;
-    required?: string[];
-  };
+    type: "object"
+    properties?: Record<string, unknown>
+    required?: string[]
+  }
 }
 
 // Enhanced tool type that combines DB tools and MCP tools
 interface EnhancedTool {
   // Required fields that both types have
-  name: string;
-  description?: string | null;
+  name: string
+  description?: string | null
 
   // Optional fields from DB
-  uuid?: string;
-  created_at?: string;
-  updated_at?: string;
-  mcp_server_uuid?: string;
-  toolSchema?: Record<string, unknown>;
+  uuid?: string
+  created_at?: string
+  updated_at?: string
+  mcp_server_uuid?: string
+  toolSchema?: Record<string, unknown>
 
   // MCP-specific fields
   inputSchema?: {
-    type: "object";
-    properties?: Record<string, unknown>;
-    required?: string[];
-  };
+    type: "object"
+    properties?: Record<string, unknown>
+    required?: string[]
+  }
 
   // Source tracking - can be from database, MCP, or both
   sources: {
-    database: boolean;
-    mcp: boolean;
-  };
-  isTemporary?: boolean; // For tools that are fetched from MCP but not yet saved
+    database: boolean
+    mcp: boolean
+  }
+  isTemporary?: boolean // For tools that are fetched from MCP but not yet saved
 }
 
 interface UnifiedToolsTableProps {
-  dbTools: Tool[];
-  mcpTools: MCPTool[];
-  mcpServerUuid: string;
-  loading?: boolean;
-  onRefreshMcpTools?: () => void;
+  dbTools: Tool[]
+  mcpTools: MCPTool[]
+  mcpServerUuid: string
+  loading?: boolean
+  onRefreshMcpTools?: () => void
 }
 
-type SortField = "name" | "description" | "updated_at";
-type SortDirection = "asc" | "desc";
+type SortField = "name" | "description" | "updated_at"
+type SortDirection = "asc" | "desc"
 
 export function UnifiedToolsTable({
   dbTools,
@@ -93,15 +93,15 @@ export function UnifiedToolsTable({
   loading = false,
   onRefreshMcpTools,
 }: UnifiedToolsTableProps) {
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const { t } = useTranslations();
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [searchTerm, setSearchTerm] = useState<string>("")
+  const [sortField, setSortField] = useState<SortField>("name")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
+  const { t } = useTranslations()
 
   // Combine and enhance tools from both sources
   const enhancedTools: EnhancedTool[] = (() => {
-    const toolMap = new Map<string, EnhancedTool>();
+    const toolMap = new Map<string, EnhancedTool>()
 
     // First, add all database tools
     dbTools.forEach((tool) => {
@@ -111,22 +111,22 @@ export function UnifiedToolsTable({
           database: true,
           mcp: false,
         },
-      });
-    });
+      })
+    })
 
     // Then, add or update with MCP tools
     mcpTools.forEach((mcpTool) => {
-      const existingTool = toolMap.get(mcpTool.name);
+      const existingTool = toolMap.get(mcpTool.name)
 
       if (existingTool) {
         // Tool exists in database, mark it as also available in MCP
-        existingTool.sources.mcp = true;
+        existingTool.sources.mcp = true
         // Update MCP-specific fields if available
         if (mcpTool.inputSchema) {
-          existingTool.inputSchema = mcpTool.inputSchema;
+          existingTool.inputSchema = mcpTool.inputSchema
         }
         if (mcpTool.description && !existingTool.description) {
-          existingTool.description = mcpTool.description;
+          existingTool.description = mcpTool.description
         }
       } else {
         // Tool only exists in MCP, add as new
@@ -139,26 +139,26 @@ export function UnifiedToolsTable({
             mcp: true,
           },
           isTemporary: true,
-        });
+        })
       }
-    });
+    })
 
-    return Array.from(toolMap.values());
-  })();
+    return Array.from(toolMap.values())
+  })()
 
   // Handle sorting
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
     } else {
-      setSortField(field);
-      setSortDirection("asc");
+      setSortField(field)
+      setSortDirection("asc")
     }
-  };
+  }
 
   // Filter and sort tools
   const filteredAndSortedTools = useMemo(() => {
-    let filtered = enhancedTools;
+    let filtered = enhancedTools
 
     // Apply search filter
     if (searchTerm) {
@@ -166,54 +166,54 @@ export function UnifiedToolsTable({
         (tool) =>
           tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           tool.description?.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
+      )
     }
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aValue = a[sortField] || "";
-      let bValue = b[sortField] || "";
+      let aValue = a[sortField] || ""
+      let bValue = b[sortField] || ""
 
       // Handle string comparison
       if (typeof aValue === "string" && typeof bValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
       }
 
       if (aValue < bValue) {
-        return sortDirection === "asc" ? -1 : 1;
+        return sortDirection === "asc" ? -1 : 1
       }
       if (aValue > bValue) {
-        return sortDirection === "asc" ? 1 : -1;
+        return sortDirection === "asc" ? 1 : -1
       }
-      return 0;
-    });
+      return 0
+    })
 
-    return filtered;
-  }, [enhancedTools, searchTerm, sortField, sortDirection]);
+    return filtered
+  }, [enhancedTools, searchTerm, sortField, sortDirection])
 
   // Render sort icon
   const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) return null;
+    if (sortField !== field) return null
     return sortDirection === "asc" ? (
       <ChevronUpIcon className="h-3 w-3 ml-1" />
     ) : (
       <ChevronDownIcon className="h-3 w-3 ml-1" />
-    );
-  };
+    )
+  }
 
   // Toggle row expansion
   const toggleRowExpansion = (toolId: string) => {
     setExpandedRows((prev) => {
-      const newSet = new Set(prev);
+      const newSet = new Set(prev)
       if (newSet.has(toolId)) {
-        newSet.delete(toolId);
+        newSet.delete(toolId)
       } else {
-        newSet.add(toolId);
+        newSet.add(toolId)
       }
-      return newSet;
-    });
-  };
+      return newSet
+    })
+  }
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -223,12 +223,12 @@ export function UnifiedToolsTable({
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    });
-  };
+    })
+  }
 
   // Get source badge(s)
   const getSourceBadge = (tool: EnhancedTool) => {
-    const badges = [];
+    const badges = []
 
     if (tool.sources.mcp) {
       badges.push(
@@ -236,7 +236,7 @@ export function UnifiedToolsTable({
           <Wrench className="h-3 w-3" />
           {t("mcp-servers:tools.mcp")}
         </Badge>,
-      );
+      )
     }
 
     if (tool.sources.database) {
@@ -245,11 +245,11 @@ export function UnifiedToolsTable({
           <Database className="h-3 w-3" />
           {t("mcp-servers:tools.saved")}
         </Badge>,
-      );
+      )
     }
 
     if (badges.length > 1) {
-      return <div className="flex items-center gap-1">{badges}</div>;
+      return <div className="flex items-center gap-1">{badges}</div>
     }
 
     return (
@@ -259,16 +259,16 @@ export function UnifiedToolsTable({
           {t("mcp-servers:tools.unknown")}
         </Badge>
       )
-    );
-  };
+    )
+  }
 
   // Get tool parameters from schema
   const getToolParameters = (tool: EnhancedTool) => {
     const schema = (tool.toolSchema || tool.inputSchema) as Record<
       string,
       unknown
-    >;
-    if (!schema || !schema.properties) return [];
+    >
+    if (!schema?.properties) return []
 
     return Object.entries(
       schema.properties as Record<string, Record<string, unknown>>,
@@ -277,13 +277,13 @@ export function UnifiedToolsTable({
       type: (value.type as string) || "unknown",
       description: (value.description as string) || "",
       required: (schema.required as string[])?.includes(key) || false,
-    }));
-  };
+    }))
+  }
 
   // Get tool ID for expansion
   const getToolId = (tool: EnhancedTool) => {
-    return tool.uuid || `mcp-${tool.name}`;
-  };
+    return tool.uuid || `mcp-${tool.name}`
+  }
 
   if (filteredAndSortedTools.length === 0 && !searchTerm) {
     return (
@@ -307,7 +307,7 @@ export function UnifiedToolsTable({
           </Button>
         )}
       </div>
-    );
+    )
   }
 
   return (
@@ -411,9 +411,9 @@ export function UnifiedToolsTable({
           </TableHeader>
           <TableBody>
             {filteredAndSortedTools.map((tool) => {
-              const toolId = getToolId(tool);
-              const isExpanded = expandedRows.has(toolId);
-              const parameters = getToolParameters(tool);
+              const toolId = getToolId(tool)
+              const isExpanded = expandedRows.has(toolId)
+              const parameters = getToolParameters(tool)
 
               return (
                 <React.Fragment key={toolId}>
@@ -611,11 +611,11 @@ export function UnifiedToolsTable({
                     </TableRow>
                   )}
                 </React.Fragment>
-              );
+              )
             })}
           </TableBody>
         </Table>
       )}
     </div>
-  );
+  )
 }

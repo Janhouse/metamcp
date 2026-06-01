@@ -1,15 +1,15 @@
-"use client";
+"use client"
 
 import {
-  BulkImportMcpServersRequest,
+  type BulkImportMcpServersRequest,
   McpServerTypeEnum,
-} from "@repo/zod-types";
-import { Download, Upload } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
+} from "@repo/zod-types"
+import { Download, Upload } from "lucide-react"
+import { useState } from "react"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
-import { CodeBlock } from "@/components/ui/code-block";
+import { Button } from "@/components/ui/button"
+import { CodeBlock } from "@/components/ui/code-block"
 import {
   Dialog,
   DialogContent,
@@ -17,42 +17,42 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { copyToClipboard } from "@/lib/utils";
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { copyToClipboard } from "@/lib/utils"
 
 export function ExportImportButtons() {
-  const { t } = useTranslations();
-  const [importOpen, setImportOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
-  const [importJson, setImportJson] = useState("");
-  const [importError, setImportError] = useState("");
+  const { t } = useTranslations()
+  const [importOpen, setImportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [importJson, setImportJson] = useState("")
+  const [importError, setImportError] = useState("")
 
   // Use tRPC query for data fetching
-  const { data: serversResponse } = trpc.frontend.mcpServers.list.useQuery();
-  const servers = serversResponse?.success ? serversResponse.data : [];
+  const { data: serversResponse } = trpc.frontend.mcpServers.list.useQuery()
+  const servers = serversResponse?.success ? serversResponse.data : []
 
   // Get the utils for invalidating queries
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Use tRPC mutation for bulk import
   const bulkImportMutation = trpc.frontend.mcpServers.bulkImport.useMutation({
     onSuccess: (result) => {
       // Check if the operation was actually successful
       if (result.success) {
-        console.log(`Successfully imported ${result.imported} MCP servers`);
-        const plural = result.imported !== 1 ? "s" : "";
+        console.log(`Successfully imported ${result.imported} MCP servers`)
+        const plural = result.imported !== 1 ? "s" : ""
         toast.success(t("mcp-servers:import.imported"), {
           description: t("mcp-servers:import.importedDescription", {
             count: result.imported,
             plural,
           }),
-        });
+        })
         if (result.errors && result.errors.length > 0) {
-          console.warn("Import errors:", result.errors);
-          const errorPlural = result.errors.length !== 1 ? "s" : "";
+          console.warn("Import errors:", result.errors)
+          const errorPlural = result.errors.length !== 1 ? "s" : ""
           toast.warning(t("mcp-servers:import.importedWithWarnings"), {
             description: t(
               "mcp-servers:import.importedWithWarningsDescription",
@@ -61,139 +61,139 @@ export function ExportImportButtons() {
                 plural: errorPlural,
               },
             ),
-          });
+          })
         }
 
         // Invalidate the MCP servers list query to refetch data
-        utils.frontend.mcpServers.list.invalidate();
+        utils.frontend.mcpServers.list.invalidate()
 
         // Close the dialog and reset
-        setImportOpen(false);
-        setImportJson("");
-        setImportError("");
+        setImportOpen(false)
+        setImportJson("")
+        setImportError("")
       } else {
         // Handle business logic failures
-        console.error("Import failed:", result.message);
+        console.error("Import failed:", result.message)
         toast.error(t("mcp-servers:import.importFailed"), {
           description:
             result.message || t("mcp-servers:import.importFailedDescription"),
-        });
+        })
         setImportError(
           result.message || t("mcp-servers:import.importFailedDescription"),
-        );
+        )
       }
     },
     onError: (error) => {
-      console.error("Error importing MCP servers:", error);
+      console.error("Error importing MCP servers:", error)
       toast.error(t("mcp-servers:import.importFailed"), {
         description:
           error.message || t("mcp-servers:import.importFailedDescription"),
-      });
-      setImportError(t("mcp-servers:import.checkConsole"));
+      })
+      setImportError(t("mcp-servers:import.checkConsole"))
     },
-  });
+  })
 
   // Function to generate export JSON
   const generateExportJson = () => {
-    const mcpServersConfig: Record<string, Record<string, unknown>> = {};
+    const mcpServersConfig: Record<string, Record<string, unknown>> = {}
 
     servers.forEach((server) => {
       const config: Record<string, unknown> = {
         type: server.type.toUpperCase(),
-      };
+      }
 
       if (server.description) {
-        config.description = server.description;
+        config.description = server.description
       }
 
       if (server.type === McpServerTypeEnum.enum.STDIO) {
         if (server.command) {
-          config.command = server.command;
+          config.command = server.command
         }
         if (server.args && server.args.length > 0) {
-          config.args = server.args;
+          config.args = server.args
         }
         if (server.env && Object.keys(server.env).length > 0) {
-          config.env = server.env;
+          config.env = server.env
         }
       } else if (
         server.type === McpServerTypeEnum.enum.SSE ||
         server.type === McpServerTypeEnum.enum.STREAMABLE_HTTP
       ) {
         if (server.url) {
-          config.url = server.url;
+          config.url = server.url
         }
         if (server.bearerToken) {
-          config.bearerToken = server.bearerToken;
+          config.bearerToken = server.bearerToken
         }
         if (server.headers && Object.keys(server.headers).length > 0) {
-          config.headers = server.headers;
+          config.headers = server.headers
         }
       }
 
-      mcpServersConfig[server.name] = config;
-    });
+      mcpServersConfig[server.name] = config
+    })
 
     return {
       mcpServers: mcpServersConfig,
-    };
-  };
+    }
+  }
 
   // Function to download JSON file
   const downloadExportJson = () => {
-    const exportData = generateExportJson();
-    const jsonString = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "mcp-servers-export.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const exportData = generateExportJson()
+    const jsonString = JSON.stringify(exportData, null, 2)
+    const blob = new Blob([jsonString], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "mcp-servers-export.json"
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
     toast.success(t("mcp-servers:export.downloaded"), {
       description: t("mcp-servers:export.downloadedDescription"),
-    });
-  };
+    })
+  }
 
   // Function to copy JSON to clipboard
   const copyExportJson = () => {
-    const exportData = generateExportJson();
-    const jsonString = JSON.stringify(exportData, null, 2);
+    const exportData = generateExportJson()
+    const jsonString = JSON.stringify(exportData, null, 2)
     copyToClipboard(jsonString).then(() => {
       toast.success(t("mcp-servers:export.copiedToClipboard"), {
         description: t("mcp-servers:export.copiedDescription"),
-      });
-    });
-  };
+      })
+    })
+  }
 
   // Function to handle import
   const handleImport = async () => {
-    // Parse the JSON
-    let parsedJson;
+    // Parse the JSON (JSON.parse is inherently `any`; validated below)
+    let parsedJson: any
     try {
-      parsedJson = JSON.parse(importJson);
+      parsedJson = JSON.parse(importJson)
     } catch (_e) {
-      setImportError(t("mcp-servers:import.invalidJson"));
-      return;
+      setImportError(t("mcp-servers:import.invalidJson"))
+      return
     }
 
     // Validate the JSON structure
     if (!parsedJson.mcpServers || typeof parsedJson.mcpServers !== "object") {
-      setImportError(t("mcp-servers:import.invalidStructure"));
-      return;
+      setImportError(t("mcp-servers:import.invalidStructure"))
+      return
     }
 
-    console.log("Importing servers:", parsedJson);
+    console.log("Importing servers:", parsedJson)
 
     // Call the tRPC mutation
     const apiPayload: BulkImportMcpServersRequest = {
       mcpServers: parsedJson.mcpServers,
-    };
+    }
 
-    bulkImportMutation.mutate(apiPayload);
-  };
+    bulkImportMutation.mutate(apiPayload)
+  }
 
   return (
     <div className="flex gap-2">
@@ -299,8 +299,8 @@ export function ExportImportButtons() {
               <Textarea
                 value={importJson}
                 onChange={(e) => {
-                  setImportJson(e.target.value);
-                  setImportError("");
+                  setImportJson(e.target.value)
+                  setImportError("")
                 }}
                 placeholder={t("mcp-servers:import.placeholder")}
                 className="font-mono text-sm flex-1 min-h-[200px] max-h-[300px] resize-none overflow-y-auto"
@@ -315,9 +315,9 @@ export function ExportImportButtons() {
               type="button"
               variant="outline"
               onClick={() => {
-                setImportOpen(false);
-                setImportJson("");
-                setImportError("");
+                setImportOpen(false)
+                setImportJson("")
+                setImportError("")
               }}
               disabled={bulkImportMutation.isPending}
             >
@@ -336,5 +336,5 @@ export function ExportImportButtons() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

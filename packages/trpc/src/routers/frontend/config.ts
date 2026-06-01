@@ -1,120 +1,120 @@
-import { SetConfigRequest, SetConfigRequestSchema } from "@repo/zod-types";
-import { z } from "zod";
+import { type SetConfigRequest, SetConfigRequestSchema } from "@repo/zod-types"
+import { z } from "zod"
 
-import { adminProcedure, publicProcedure, router } from "../../trpc";
+import { adminProcedure, publicProcedure, router } from "../../trpc"
 
 export const createConfigRouter = (implementations: {
-  getSignupDisabled: () => Promise<boolean>;
+  getSignupDisabled: () => Promise<boolean>
   setSignupDisabled: (input: {
-    disabled: boolean;
-  }) => Promise<{ success: boolean }>;
-  getSsoSignupDisabled: () => Promise<boolean>;
+    disabled: boolean
+  }) => Promise<{ success: boolean }>
+  getSsoSignupDisabled: () => Promise<boolean>
   setSsoSignupDisabled: (input: {
-    disabled: boolean;
-  }) => Promise<{ success: boolean }>;
-  getBasicAuthDisabled: () => Promise<boolean>;
+    disabled: boolean
+  }) => Promise<{ success: boolean }>
+  getBasicAuthDisabled: () => Promise<boolean>
   setBasicAuthDisabled: (input: {
-    disabled: boolean;
-  }) => Promise<{ success: boolean }>;
-  getMcpResetTimeoutOnProgress: () => Promise<boolean>;
+    disabled: boolean
+  }) => Promise<{ success: boolean }>
+  getMcpResetTimeoutOnProgress: () => Promise<boolean>
   setMcpResetTimeoutOnProgress: (input: {
-    enabled: boolean;
-  }) => Promise<{ success: boolean }>;
-  getMcpTimeout: () => Promise<number>;
-  setMcpTimeout: (input: { timeout: number }) => Promise<{ success: boolean }>;
-  getMcpMaxTotalTimeout: () => Promise<number>;
+    enabled: boolean
+  }) => Promise<{ success: boolean }>
+  getMcpTimeout: () => Promise<number>
+  setMcpTimeout: (input: { timeout: number }) => Promise<{ success: boolean }>
+  getMcpMaxTotalTimeout: () => Promise<number>
   setMcpMaxTotalTimeout: (input: {
-    timeout: number;
-  }) => Promise<{ success: boolean }>;
-  getMcpMaxAttempts: () => Promise<number>;
+    timeout: number
+  }) => Promise<{ success: boolean }>
+  getMcpMaxAttempts: () => Promise<number>
   setMcpMaxAttempts: (input: {
-    maxAttempts: number;
-  }) => Promise<{ success: boolean }>;
-  getSessionLifetime: () => Promise<number | null>;
+    maxAttempts: number
+  }) => Promise<{ success: boolean }>
+  getSessionLifetime: () => Promise<number | null>
   setSessionLifetime: (input: {
-    lifetime?: number | null;
-  }) => Promise<{ success: boolean }>;
+    lifetime?: number | null
+  }) => Promise<{ success: boolean }>
   getAllConfigs: () => Promise<
     Array<{ id: string; value: string; description?: string | null }>
-  >;
-  setConfig: (input: SetConfigRequest) => Promise<{ success: boolean }>;
+  >
+  setConfig: (input: SetConfigRequest) => Promise<{ success: boolean }>
   getAuthProviders: () => Promise<
     Array<{ id: string; name: string; enabled: boolean }>
-  >;
+  >
 }) =>
   router({
     getSignupDisabled: publicProcedure.query(async () => {
-      return await implementations.getSignupDisabled();
+      return await implementations.getSignupDisabled()
     }),
 
     setSignupDisabled: adminProcedure
       .input(z.object({ disabled: z.boolean() }))
       .mutation(async ({ input }) => {
-        return await implementations.setSignupDisabled(input);
+        return await implementations.setSignupDisabled(input)
       }),
 
     getSsoSignupDisabled: publicProcedure.query(async () => {
-      return await implementations.getSsoSignupDisabled();
+      return await implementations.getSsoSignupDisabled()
     }),
 
     setSsoSignupDisabled: adminProcedure
       .input(z.object({ disabled: z.boolean() }))
       .mutation(async ({ input }) => {
-        return await implementations.setSsoSignupDisabled(input);
+        return await implementations.setSsoSignupDisabled(input)
       }),
 
     getBasicAuthDisabled: publicProcedure.query(async () => {
-      return await implementations.getBasicAuthDisabled();
+      return await implementations.getBasicAuthDisabled()
     }),
 
     setBasicAuthDisabled: adminProcedure
       .input(z.object({ disabled: z.boolean() }))
       .mutation(async ({ input }) => {
-        return await implementations.setBasicAuthDisabled(input);
+        return await implementations.setBasicAuthDisabled(input)
       }),
 
     getMcpResetTimeoutOnProgress: publicProcedure.query(async () => {
-      return await implementations.getMcpResetTimeoutOnProgress();
+      return await implementations.getMcpResetTimeoutOnProgress()
     }),
 
     setMcpResetTimeoutOnProgress: adminProcedure
       .input(z.object({ enabled: z.boolean() }))
       .mutation(async ({ input }) => {
-        return await implementations.setMcpResetTimeoutOnProgress(input);
+        return await implementations.setMcpResetTimeoutOnProgress(input)
       }),
 
     getMcpTimeout: publicProcedure.query(async () => {
-      return await implementations.getMcpTimeout();
+      return await implementations.getMcpTimeout()
     }),
 
     setMcpTimeout: adminProcedure
       .input(z.object({ timeout: z.number().min(1000).max(86400000) }))
       .mutation(async ({ input }) => {
-        return await implementations.setMcpTimeout(input);
+        return await implementations.setMcpTimeout(input)
       }),
 
     getMcpMaxTotalTimeout: publicProcedure.query(async () => {
-      return await implementations.getMcpMaxTotalTimeout();
+      return await implementations.getMcpMaxTotalTimeout()
     }),
 
     setMcpMaxTotalTimeout: adminProcedure
       .input(z.object({ timeout: z.number().min(1000).max(86400000) }))
       .mutation(async ({ input }) => {
-        return await implementations.setMcpMaxTotalTimeout(input);
+        return await implementations.setMcpMaxTotalTimeout(input)
       }),
 
     getMcpMaxAttempts: publicProcedure.query(async () => {
-      return await implementations.getMcpMaxAttempts();
+      return await implementations.getMcpMaxAttempts()
     }),
 
     setMcpMaxAttempts: adminProcedure
       .input(z.object({ maxAttempts: z.number().min(1).max(10) }))
       .mutation(async ({ input }) => {
-        return await implementations.setMcpMaxAttempts(input);
+        return await implementations.setMcpMaxAttempts(input)
       }),
 
     getSessionLifetime: publicProcedure.query(async () => {
-      return await implementations.getSessionLifetime();
+      return await implementations.getSessionLifetime()
     }),
 
     setSessionLifetime: adminProcedure
@@ -124,20 +124,20 @@ export const createConfigRouter = (implementations: {
         }),
       )
       .mutation(async ({ input }) => {
-        return await implementations.setSessionLifetime(input);
+        return await implementations.setSessionLifetime(input)
       }),
 
     getAllConfigs: adminProcedure.query(async () => {
-      return await implementations.getAllConfigs();
+      return await implementations.getAllConfigs()
     }),
 
     setConfig: adminProcedure
       .input(SetConfigRequestSchema)
       .mutation(async ({ input }) => {
-        return await implementations.setConfig(input);
+        return await implementations.setConfig(input)
       }),
 
     getAuthProviders: publicProcedure.query(async () => {
-      return await implementations.getAuthProviders();
+      return await implementations.getAuthProviders()
     }),
-  });
+  })

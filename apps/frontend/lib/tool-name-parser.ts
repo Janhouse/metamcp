@@ -7,8 +7,8 @@
  */
 
 export interface ParsedToolName {
-  serverName: string;
-  originalToolName: string;
+  serverName: string
+  originalToolName: string
 }
 
 /**
@@ -26,21 +26,21 @@ export interface ParsedToolName {
  * // → { serverName: "Parent", originalToolName: "Child__my_tool" }
  */
 export function parseToolName(toolName: string): ParsedToolName | null {
-  const firstDoubleUnderscoreIndex = toolName.indexOf("__");
+  const firstDoubleUnderscoreIndex = toolName.indexOf("__")
   if (firstDoubleUnderscoreIndex === -1) {
-    return null;
+    return null
   }
 
   // The first __ is always the separator between the top-level server prefix and the forwarded tool name
   // Everything before the first __ is the server prefix (which may contain nested servers)
   // Everything after the first __ is the forwarded tool name (which may itself include additional prefixes)
-  const serverName = toolName.substring(0, firstDoubleUnderscoreIndex);
-  const originalToolName = toolName.substring(firstDoubleUnderscoreIndex + 2);
+  const serverName = toolName.substring(0, firstDoubleUnderscoreIndex)
+  const originalToolName = toolName.substring(firstDoubleUnderscoreIndex + 2)
 
   return {
     serverName,
     originalToolName,
-  };
+  }
 }
 
 /**
@@ -55,5 +55,5 @@ export function parseToolName(toolName: string): ParsedToolName | null {
  * // → "Hacker-News__get_stories"
  */
 export function createToolName(serverName: string, toolName: string): string {
-  return `${serverName}__${toolName}`;
+  return `${serverName}__${toolName}`
 }

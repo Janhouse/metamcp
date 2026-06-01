@@ -1,5 +1,5 @@
-import type { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import type { ClientRequest } from "@modelcontextprotocol/sdk/types.js";
+import type { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js"
+import type { ClientRequest } from "@modelcontextprotocol/sdk/types.js"
 
 /**
  * Type for the makeRequest function passed as a prop to inspector components.
@@ -15,5 +15,5 @@ export type MakeRequestFn = (
   request: ClientRequest,
   schema: any,
   options?: RequestOptions & { suppressToast?: boolean },
-) => Promise<any>;
+) => Promise<any>
 /* eslint-enable @typescript-eslint/no-explicit-any */

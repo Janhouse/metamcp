@@ -1,31 +1,31 @@
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { Tool } from "@modelcontextprotocol/sdk/types.js"
 
-import { OpenApiSchema } from "./types";
+import type { OpenApiSchema } from "./types"
 
 // Convert MCP tools to OpenAPI schema
 export const generateOpenApiSchema = async (
   tools: Tool[],
   endpointName: string,
 ): Promise<OpenApiSchema> => {
-  const paths: Record<string, unknown> = {};
+  const paths: Record<string, unknown> = {}
 
   // Convert each MCP tool to an OpenAPI path (mounted directly to root, no /tools/ prefix)
   for (const tool of tools) {
-    const toolPath = `/${tool.name}`;
-    const operationId = tool.name.replace(/[^a-zA-Z0-9]/g, "_");
+    const toolPath = `/${tool.name}`
+    const operationId = tool.name.replace(/[^a-zA-Z0-9]/g, "_")
 
     // Create request body schema from tool input schema
     const requestBodySchema = tool.inputSchema || {
       type: "object",
       properties: {},
-    };
+    }
 
     // Determine HTTP method based on tool characteristics
     const httpMethod =
       requestBodySchema.properties &&
       Object.keys(requestBodySchema.properties).length > 0
         ? "post"
-        : "get";
+        : "get"
 
     const pathDefinition: Record<string, unknown> = {
       summary: tool.description || tool.name,
@@ -50,7 +50,7 @@ export const generateOpenApiSchema = async (
           },
         },
       },
-    };
+    }
 
     // Add request body for POST requests
     if (httpMethod === "post") {
@@ -61,12 +61,12 @@ export const generateOpenApiSchema = async (
           },
         },
         required: true,
-      };
+      }
     }
 
     paths[toolPath] = {
       [httpMethod]: pathDefinition,
-    };
+    }
   }
 
   return {
@@ -123,5 +123,5 @@ export const generateOpenApiSchema = async (
         },
       },
     },
-  };
-};
+  }
+}

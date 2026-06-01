@@ -17,8 +17,7 @@
     "vscode": {
       "extensions": [
         "prisma.prisma",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
+        "biomejs.biome",
         "ms-vscode.vscode-typescript-next",
         "bradlc.vscode-tailwindcss",
         "dsznajder.es7-react-js-snippets",
@@ -28,10 +27,11 @@
         "ms-playwright.playwright"
       ],
       "settings": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.defaultFormatter": "biomejs.biome",
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-          "source.fixAll.eslint": "explicit"
+          "source.organizeImports.biome": "explicit",
+          "quickfix.biome": "explicit"
         },
         "typescript.tsdk": "node_modules/typescript/lib",
         "typescript.enablePromptUseWorkspaceTsdk": true,
@@ -44,12 +44,7 @@
           "**/node_modules": true,
           "**/dist": true,
           "**/.next": true
-        },
-        "eslint.workingDirectories": [
-          "apps/frontend",
-          "apps/backend",
-          "packages/trpc"
-        ]
+        }
       }
     }
   },
@@ -72,10 +67,10 @@
   "remoteUser": "root",
   "shutdownAction": "stopCompose",
   "onCreateCommand": {
-    "initialize": "CI=true pnpm install && cd apps/backend && pnpm drizzle-kit migrate --config=drizzle.config.ts"
+    "initialize": "CI=true bun install"
   },
   "postAttachCommand": {
-    "finalMessage": "echo \"\\033[1mWhat's next:\\n\\t\\033[0;36m💡\\033[0m Open the terminal and run \\033[0;36mpnpm dev\\033[0m to start the development servers.\""
+    "finalMessage": "echo \"\\033[1mWhat's next:\\n\\t\\033[0;36m💡\\033[0m Open the terminal and run \\033[0;36mbun run dev\\033[0m to start the development servers (migrations run automatically on backend boot).\""
   },
   "remoteEnv": {
     "NODE_ENV": "development",

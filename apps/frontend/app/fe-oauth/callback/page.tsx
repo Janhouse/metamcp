@@ -1,14 +1,14 @@
-"use client";
+"use client"
 
-import { Suspense } from "react";
+import { Suspense } from "react"
 
-import OAuthCallback from "@/components/OAuthCallback";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useTranslations } from "@/hooks/useTranslations";
+import OAuthCallback from "@/components/OAuthCallback"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { useTranslations } from "@/hooks/useTranslations"
 
 function LoadingFallback() {
-  const { t } = useTranslations();
-  return <div>{t("common:loading")}</div>;
+  const { t } = useTranslations()
+  return <div>{t("common:loading")}</div>
 }
 
 export default function OAuthCallbackPage() {
@@ -21,5 +21,5 @@ export default function OAuthCallbackPage() {
         <OAuthCallback />
       </Suspense>
     </div>
-  );
+  )
 }

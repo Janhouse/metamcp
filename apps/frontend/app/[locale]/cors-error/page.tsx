@@ -1,48 +1,48 @@
-"use client";
+"use client"
 
-import { AlertTriangle, ExternalLink, RefreshCw } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { AlertTriangle, ExternalLink, RefreshCw } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useEffect, useState } from "react"
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useTranslations } from "@/hooks/useTranslations";
-import { getAppUrl } from "@/lib/env";
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { useTranslations } from "@/hooks/useTranslations"
+import { getAppUrl } from "@/lib/env"
 
 function CorsErrorContent() {
-  const { t } = useTranslations();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [currentDomain, setCurrentDomain] = useState<string>("");
-  const [correctDomain, setCorrectDomain] = useState<string>("");
+  const { t } = useTranslations()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [currentDomain, setCurrentDomain] = useState<string>("")
+  const [correctDomain, setCorrectDomain] = useState<string>("")
 
   useEffect(() => {
     // Get the current domain from the URL
-    const currentUrl = window.location.origin;
-    setCurrentDomain(currentUrl);
+    const currentUrl = window.location.origin
+    setCurrentDomain(currentUrl)
 
     // Get the correct domain from the environment
     try {
-      const appUrl = getAppUrl();
-      setCorrectDomain(appUrl);
+      const appUrl = getAppUrl()
+      setCorrectDomain(appUrl)
     } catch (error) {
-      console.error("Error getting app URL:", error);
+      console.error("Error getting app URL:", error)
     }
-  }, []);
+  }, [])
 
-  const attemptedPath = searchParams.get("callbackUrl") || "/";
+  const attemptedPath = searchParams.get("callbackUrl") || "/"
 
   const handleRedirectToCorrectDomain = () => {
     if (correctDomain) {
-      const redirectUrl = `${correctDomain}${attemptedPath}`;
-      window.location.href = redirectUrl;
+      const redirectUrl = `${correctDomain}${attemptedPath}`
+      window.location.href = redirectUrl
     }
-  };
+  }
 
   const handleRefresh = () => {
-    router.refresh();
-  };
+    router.refresh()
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -134,11 +134,11 @@ function CorsErrorContent() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
 
 function LoadingFallback() {
-  const { t } = useTranslations();
+  const { t } = useTranslations()
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">
@@ -146,7 +146,7 @@ function LoadingFallback() {
         <p className="mt-2 text-muted-foreground">{t("common:loading")}</p>
       </div>
     </div>
-  );
+  )
 }
 
 export default function CorsErrorPage() {
@@ -159,5 +159,5 @@ export default function CorsErrorPage() {
         <CorsErrorContent />
       </Suspense>
     </div>
-  );
+  )
 }

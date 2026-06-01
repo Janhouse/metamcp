@@ -1,12 +1,12 @@
-import {
+import type {
   DatabaseTool,
   ToolCreateInput,
   ToolUpsertInput,
-} from "@repo/zod-types";
-import { and, eq, notInArray, sql } from "drizzle-orm";
+} from "@repo/zod-types"
+import { and, eq, notInArray, sql } from "drizzle-orm"
 
-import { db } from "../index";
-import { toolsTable } from "../schema";
+import { db } from "../index"
+import { toolsTable } from "../schema"
 
 export class ToolsRepository {
   async findByMcpServerUuid(mcpServerUuid: string): Promise<DatabaseTool[]> {
@@ -14,18 +14,18 @@ export class ToolsRepository {
       .select()
       .from(toolsTable)
       .where(eq(toolsTable.mcp_server_uuid, mcpServerUuid))
-      .orderBy(toolsTable.name);
+      .orderBy(toolsTable.name)
   }
 
   async create(input: ToolCreateInput): Promise<DatabaseTool> {
-    const [createdTool] = await db.insert(toolsTable).values(input).returning();
+    const [createdTool] = await db.insert(toolsTable).values(input).returning()
 
-    return createdTool;
+    return createdTool
   }
 
   async bulkUpsert(input: ToolUpsertInput): Promise<DatabaseTool[]> {
     if (!input.tools || input.tools.length === 0) {
-      return [];
+      return []
     }
 
     // Format tools for database insertion
@@ -37,7 +37,7 @@ export class ToolsRepository {
         ...tool.inputSchema,
       },
       mcp_server_uuid: input.mcpServerUuid,
-    }));
+    }))
 
     // Batch insert all tools with upsert
     const result = await db
@@ -51,9 +51,9 @@ export class ToolsRepository {
           updated_at: new Date(),
         },
       })
-      .returning();
+      .returning()
 
-    return result;
+    return result
   }
 
   async findByUuid(uuid: string): Promise<DatabaseTool | undefined> {
@@ -61,18 +61,18 @@ export class ToolsRepository {
       .select()
       .from(toolsTable)
       .where(eq(toolsTable.uuid, uuid))
-      .limit(1);
+      .limit(1)
 
-    return tool;
+    return tool
   }
 
   async deleteByUuid(uuid: string): Promise<DatabaseTool | undefined> {
     const [deletedTool] = await db
       .delete(toolsTable)
       .where(eq(toolsTable.uuid, uuid))
-      .returning();
+      .returning()
 
-    return deletedTool;
+    return deletedTool
   }
 
   /**
@@ -90,7 +90,7 @@ export class ToolsRepository {
       return await db
         .delete(toolsTable)
         .where(eq(toolsTable.mcp_server_uuid, mcpServerUuid))
-        .returning();
+        .returning()
     }
 
     // Delete tools that are in DB but not in current tool list
@@ -102,7 +102,7 @@ export class ToolsRepository {
           notInArray(toolsTable.name, currentToolNames),
         ),
       )
-      .returning();
+      .returning()
   }
 
   /**
@@ -111,25 +111,25 @@ export class ToolsRepository {
    * @returns Object with upserted and deleted tools
    */
   async syncTools(input: ToolUpsertInput): Promise<{
-    upserted: DatabaseTool[];
-    deleted: DatabaseTool[];
+    upserted: DatabaseTool[]
+    deleted: DatabaseTool[]
   }> {
-    const currentToolNames = input.tools.map((tool) => tool.name);
+    const currentToolNames = input.tools.map((tool) => tool.name)
 
     // First, delete obsolete tools
     const deleted = await this.deleteObsoleteTools(
       input.mcpServerUuid,
       currentToolNames,
-    );
+    )
 
     // Then, upsert current tools
-    let upserted: DatabaseTool[] = [];
+    let upserted: DatabaseTool[] = []
     if (input.tools.length > 0) {
-      upserted = await this.bulkUpsert(input);
+      upserted = await this.bulkUpsert(input)
     }
 
-    return { upserted, deleted };
+    return { upserted, deleted }
   }
 }
 
-export const toolsRepository = new ToolsRepository();
+export const toolsRepository = new ToolsRepository()

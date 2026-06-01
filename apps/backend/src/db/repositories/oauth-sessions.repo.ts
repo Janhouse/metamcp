@@ -1,12 +1,12 @@
-import {
+import type {
   DatabaseOAuthSession,
   OAuthSessionCreateInput,
   OAuthSessionUpdateInput,
-} from "@repo/zod-types";
-import { eq, sql } from "drizzle-orm";
+} from "@repo/zod-types"
+import { eq, sql } from "drizzle-orm"
 
-import { db } from "../index";
-import { oauthSessionsTable } from "../schema";
+import { db } from "../index"
+import { oauthSessionsTable } from "../schema"
 
 export class OAuthSessionsRepository {
   async findByMcpServerUuid(
@@ -16,9 +16,9 @@ export class OAuthSessionsRepository {
       .select()
       .from(oauthSessionsTable)
       .where(eq(oauthSessionsTable.mcp_server_uuid, mcpServerUuid))
-      .limit(1);
+      .limit(1)
 
-    return session;
+    return session
   }
 
   async create(input: OAuthSessionCreateInput): Promise<DatabaseOAuthSession> {
@@ -32,9 +32,9 @@ export class OAuthSessionsRepository {
         ...(input.tokens && { tokens: input.tokens }),
         ...(input.code_verifier && { code_verifier: input.code_verifier }),
       })
-      .returning();
+      .returning()
 
-    return createdSession;
+    return createdSession
   }
 
   async update(
@@ -51,9 +51,9 @@ export class OAuthSessionsRepository {
         updated_at: sql`NOW()`,
       })
       .where(eq(oauthSessionsTable.mcp_server_uuid, input.mcp_server_uuid))
-      .returning();
+      .returning()
 
-    return updatedSession;
+    return updatedSession
   }
 
   async upsert(input: OAuthSessionUpdateInput): Promise<DatabaseOAuthSession> {
@@ -69,7 +69,7 @@ export class OAuthSessionsRepository {
       }),
       ...(input.tokens && { tokens: input.tokens }),
       ...(input.code_verifier && { code_verifier: input.code_verifier }),
-    };
+    }
 
     const [session] = await db
       .insert(oauthSessionsTable)
@@ -84,12 +84,12 @@ export class OAuthSessionsRepository {
           updated_at: sql`NOW()`,
         },
       })
-      .returning();
+      .returning()
 
     if (!session) {
-      throw new Error("Failed to upsert OAuth session");
+      throw new Error("Failed to upsert OAuth session")
     }
-    return session;
+    return session
   }
 
   async deleteByMcpServerUuid(
@@ -98,10 +98,10 @@ export class OAuthSessionsRepository {
     const [deletedSession] = await db
       .delete(oauthSessionsTable)
       .where(eq(oauthSessionsTable.mcp_server_uuid, mcpServerUuid))
-      .returning();
+      .returning()
 
-    return deletedSession;
+    return deletedSession
   }
 }
 
-export const oauthSessionsRepository = new OAuthSessionsRepository();
+export const oauthSessionsRepository = new OAuthSessionsRepository()

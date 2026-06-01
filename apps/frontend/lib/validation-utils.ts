@@ -1,4 +1,4 @@
-import { ZodError, ZodIssue } from "zod";
+import type { ZodError, ZodIssue } from "zod"
 
 /**
  * Sanitize a post-login redirect target to a same-origin relative path.
@@ -12,20 +12,20 @@ export function safeInternalRedirect(
   raw: string | null | undefined,
   fallback: string = "/",
 ): string {
-  if (!raw) return fallback;
+  if (!raw) return fallback
   // Must be an absolute path on this origin: starts with "/", but not "//"
   // (protocol-relative) and not "/\" (which some browsers treat as "//").
   if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) {
-    return fallback;
+    return fallback
   }
   // Reject any embedded scheme (e.g. "/redirect?to=javascript:...") defensively
   // by ensuring it parses as a relative URL on a dummy origin.
   try {
-    const parsed = new URL(raw, "http://localhost");
-    if (parsed.origin !== "http://localhost") return fallback;
-    return parsed.pathname + parsed.search + parsed.hash;
+    const parsed = new URL(raw, "http://localhost")
+    if (parsed.origin !== "http://localhost") return fallback
+    return parsed.pathname + parsed.search + parsed.hash
   } catch {
-    return fallback;
+    return fallback
   }
 }
 
@@ -33,7 +33,7 @@ export function safeInternalRedirect(
 type TranslationFunction = (
   key: string,
   params?: Record<string, string | number>,
-) => string;
+) => string
 
 // Map of Zod issue codes to translation keys
 const issueCodeToTranslationKey: Record<string, string> = {
@@ -46,7 +46,7 @@ const issueCodeToTranslationKey: Record<string, string> = {
   invalid_url: "validation:urlFormat",
   invalid_email: "validation:email",
   custom: "validation:generic.invalid",
-};
+}
 
 // Map specific validation messages to translation keys
 const messageToTranslationKey: Record<string, string> = {
@@ -66,7 +66,7 @@ const messageToTranslationKey: Record<string, string> = {
   "Name must be URL compatible": "validation:endpointName.urlCompatible",
   "Password must be at least 8 characters long": "validation:password.tooShort",
   "Passwords do not match": "validation:password.mismatch",
-};
+}
 
 /**
  * Translates a single Zod issue to a localized error message
@@ -76,49 +76,49 @@ export function translateZodIssue(
   t: TranslationFunction,
 ): string {
   // First, check if the message is already a translation key
-  if (issue.message && issue.message.startsWith("validation:")) {
-    return t(issue.message);
+  if (issue.message?.startsWith("validation:")) {
+    return t(issue.message)
   }
 
   // Then, try to find a direct message translation
   if (issue.message && messageToTranslationKey[issue.message]) {
-    const translationKey = messageToTranslationKey[issue.message]!;
-    return t(translationKey);
+    const translationKey = messageToTranslationKey[issue.message]!
+    return t(translationKey)
   }
 
   // Handle specific issue codes with parameters
   switch (issue.code) {
     case "too_small":
       if ("minimum" in issue) {
-        return t("validation:minLength", { min: Number(issue.minimum) });
+        return t("validation:minLength", { min: Number(issue.minimum) })
       }
-      break;
+      break
     case "too_big":
       if ("maximum" in issue) {
-        return t("validation:maxLength", { max: Number(issue.maximum) });
+        return t("validation:maxLength", { max: Number(issue.maximum) })
       }
-      break;
+      break
     case "invalid_format":
       if ("format" in issue) {
-        if (issue.format === "email") return t("validation:email");
-        if (issue.format === "url") return t("validation:urlFormat");
+        if (issue.format === "email") return t("validation:email")
+        if (issue.format === "url") return t("validation:urlFormat")
       }
-      break;
+      break
     case "custom":
       if (issue.message && messageToTranslationKey[issue.message]) {
-        return t(messageToTranslationKey[issue.message]!);
+        return t(messageToTranslationKey[issue.message]!)
       }
-      break;
+      break
   }
 
   // Fall back to issue code translation
-  const translationKey = issueCodeToTranslationKey[issue.code];
+  const translationKey = issueCodeToTranslationKey[issue.code]
   if (translationKey) {
-    return t(translationKey);
+    return t(translationKey)
   }
 
   // Ultimate fallback - return the original message or a generic error
-  return issue.message || t("validation:generic.invalid");
+  return issue.message || t("validation:generic.invalid")
 }
 
 /**
@@ -128,21 +128,21 @@ export function translateZodError(
   error: ZodError,
   t: TranslationFunction,
 ): Record<string, string> {
-  const translatedErrors: Record<string, string> = {};
+  const translatedErrors: Record<string, string> = {}
 
   for (const issue of error.issues) {
-    const fieldPath = issue.path.join(".");
-    const translatedMessage = translateZodIssue(issue, t);
+    const fieldPath = issue.path.join(".")
+    const translatedMessage = translateZodIssue(issue, t)
 
     // If there's already an error for this field, append to it
     if (translatedErrors[fieldPath]) {
-      translatedErrors[fieldPath] += "; " + translatedMessage;
+      translatedErrors[fieldPath] += `; ${translatedMessage}`
     } else {
-      translatedErrors[fieldPath] = translatedMessage;
+      translatedErrors[fieldPath] = translatedMessage
     }
   }
 
-  return translatedErrors;
+  return translatedErrors
 }
 
 /**
@@ -153,13 +153,11 @@ export function getTranslatedFieldError(
   fieldName: string,
   t: TranslationFunction,
 ): string | undefined {
-  if (!error) return undefined;
+  if (!error) return undefined
 
-  const issue = error.issues.find(
-    (issue) => issue.path.join(".") === fieldName,
-  );
+  const issue = error.issues.find((issue) => issue.path.join(".") === fieldName)
 
-  if (!issue) return undefined;
+  if (!issue) return undefined
 
-  return translateZodIssue(issue, t);
+  return translateZodIssue(issue, t)
 }

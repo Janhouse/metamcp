@@ -1,32 +1,31 @@
-import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { isJSONRPCRequest } from "@modelcontextprotocol/sdk/types.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js"
+import { isJSONRPCRequest } from "@modelcontextprotocol/sdk/types.js"
 
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
 
 function onClientError(error: Error) {
   // Don't log "Not connected" errors as they're expected when connections close
-  if (error?.message && error.message.includes("Not connected")) {
-    logger.debug("Client transport disconnected (expected during cleanup)");
-    return;
+  if (error?.message?.includes("Not connected")) {
+    logger.debug("Client transport disconnected (expected during cleanup)")
+    return
   }
-  logger.error("Error from inspector client:", error);
+  logger.error("Error from inspector client:", error)
 }
 
 function onServerError(error: Error) {
   // Don't log "Not connected" errors as they're expected when connections close
-  if (error?.message && error.message.includes("Not connected")) {
-    logger.debug("Server transport disconnected (expected during cleanup)");
-    return;
+  if (error?.message?.includes("Not connected")) {
+    logger.debug("Server transport disconnected (expected during cleanup)")
+    return
   }
 
   if (
-    (error?.message &&
-      error.message.includes("Error POSTing to endpoint (HTTP 404)")) ||
+    error?.message?.includes("Error POSTing to endpoint (HTTP 404)") ||
     (error?.cause && JSON.stringify(error.cause).includes("ECONNREFUSED"))
   ) {
-    logger.error("Connection refused. Is the MCP server running?");
+    logger.error("Connection refused. Is the MCP server running?")
   } else {
-    logger.error("Error from MCP server:", error);
+    logger.error("Error from MCP server:", error)
   }
 }
 
@@ -35,72 +34,72 @@ export default function mcpProxy({
   transportToServer,
   onCleanup,
 }: {
-  transportToClient: Transport;
-  transportToServer: Transport;
-  onCleanup?: () => Promise<void> | void;
+  transportToClient: Transport
+  transportToServer: Transport
+  onCleanup?: () => Promise<void> | void
 }) {
-  let transportToClientClosed = false;
-  let transportToServerClosed = false;
-  let cleanupCalled = false;
+  let transportToClientClosed = false
+  let transportToServerClosed = false
+  let cleanupCalled = false
 
-  let reportedServerSession = false;
+  let reportedServerSession = false
 
   // Helper function to safely trigger cleanup once
   const triggerCleanup = async () => {
     if (cleanupCalled) {
-      logger.debug("Cleanup already called, skipping");
-      return;
+      logger.debug("Cleanup already called, skipping")
+      return
     }
     if (!onCleanup) {
-      logger.debug("No cleanup callback provided, skipping");
-      return;
+      logger.debug("No cleanup callback provided, skipping")
+      return
     }
-    cleanupCalled = true;
+    cleanupCalled = true
 
     try {
       logger.debug(
         "Triggering MCP proxy cleanup (server session/subprocess cleanup)",
-      );
-      await onCleanup();
-      logger.debug("MCP proxy cleanup completed successfully");
+      )
+      await onCleanup()
+      logger.debug("MCP proxy cleanup completed successfully")
     } catch (error) {
-      logger.error("Error during MCP proxy cleanup:", error);
+      logger.error("Error during MCP proxy cleanup:", error)
     }
-  };
+  }
 
   // Helper function to close both transports safely
   const closeAllTransports = async () => {
-    const promises = [];
+    const promises = []
 
     if (!transportToClientClosed) {
-      transportToClientClosed = true;
-      promises.push(transportToClient.close().catch(onClientError));
+      transportToClientClosed = true
+      promises.push(transportToClient.close().catch(onClientError))
     }
 
     if (!transportToServerClosed) {
-      transportToServerClosed = true;
-      promises.push(transportToServer.close().catch(onServerError));
+      transportToServerClosed = true
+      promises.push(transportToServer.close().catch(onServerError))
     }
 
-    await Promise.allSettled(promises);
-    await triggerCleanup();
-  };
+    await Promise.allSettled(promises)
+    await triggerCleanup()
+  }
 
   transportToClient.onmessage = (message) => {
     // Check if server transport is still connected before sending
     if (transportToServerClosed) {
-      logger.debug("Ignoring message to closed server transport");
-      return;
+      logger.debug("Ignoring message to closed server transport")
+      return
     }
 
     transportToServer.send(message).catch(async (error) => {
       // Handle connection closed errors gracefully
-      if (error?.message && error.message.includes("Not connected")) {
+      if (error?.message?.includes("Not connected")) {
         logger.debug(
           "Server transport disconnected while sending message, cleaning up",
-        );
-        await closeAllTransports();
-        return;
+        )
+        await closeAllTransports()
+        return
       }
 
       // Send error response back to client if it was a request (has id) and connection is still open
@@ -113,87 +112,87 @@ export default function mcpProxy({
             message: error.message,
             data: error,
           },
-        };
+        }
 
         // Safely send error response
         if (!transportToClientClosed) {
-          transportToClient.send(errorResponse).catch(onClientError);
+          transportToClient.send(errorResponse).catch(onClientError)
         }
       }
-    });
-  };
+    })
+  }
 
   transportToServer.onmessage = (message) => {
     if (!reportedServerSession) {
       if (transportToServer.sessionId) {
         // Can only report for StreamableHttp
         logger.info(
-          "Proxy  <-> Server sessionId: " + transportToServer.sessionId,
-        );
+          `Proxy  <-> Server sessionId: ${transportToServer.sessionId}`,
+        )
       }
-      reportedServerSession = true;
+      reportedServerSession = true
     }
 
     // Check if client transport is still connected before sending
     if (transportToClientClosed) {
-      logger.debug("Ignoring message to closed client transport");
-      return;
+      logger.debug("Ignoring message to closed client transport")
+      return
     }
 
     transportToClient.send(message).catch(async (error) => {
       // Handle connection closed errors gracefully
-      if (error?.message && error.message.includes("Not connected")) {
+      if (error?.message?.includes("Not connected")) {
         logger.debug(
           "Client transport disconnected while sending message, cleaning up",
-        );
-        await closeAllTransports();
-        return;
+        )
+        await closeAllTransports()
+        return
       }
-      onClientError(error);
-    });
-  };
+      onClientError(error)
+    })
+  }
 
   transportToClient.onclose = async () => {
-    logger.debug("Client transport closed");
+    logger.debug("Client transport closed")
     if (!transportToClientClosed) {
-      transportToClientClosed = true;
+      transportToClientClosed = true
       if (!transportToServerClosed) {
-        logger.debug("Closing server transport due to client close");
-        await transportToServer.close().catch(onServerError);
+        logger.debug("Closing server transport due to client close")
+        await transportToServer.close().catch(onServerError)
       }
     }
-    await triggerCleanup();
-  };
+    await triggerCleanup()
+  }
 
   transportToServer.onclose = async () => {
-    logger.debug("Server transport closed");
+    logger.debug("Server transport closed")
     if (!transportToServerClosed) {
-      transportToServerClosed = true;
+      transportToServerClosed = true
       if (!transportToClientClosed) {
-        logger.debug("Closing client transport due to server close");
-        await transportToClient.close().catch(onClientError);
+        logger.debug("Closing client transport due to server close")
+        await transportToClient.close().catch(onClientError)
       }
     }
-    await triggerCleanup();
-  };
+    await triggerCleanup()
+  }
 
   transportToClient.onerror = async (error) => {
     // Mark as closed and trigger cleanup if we get a connection error
-    if (error?.message && error.message.includes("Not connected")) {
-      logger.debug("Client transport error: Not connected, cleaning up");
-      await closeAllTransports();
-      return;
+    if (error?.message?.includes("Not connected")) {
+      logger.debug("Client transport error: Not connected, cleaning up")
+      await closeAllTransports()
+      return
     }
-    onClientError(error);
-  };
+    onClientError(error)
+  }
 
   transportToServer.onerror = async (error) => {
     // Mark as closed and trigger cleanup if we get a connection error
-    if (error?.message && error.message.includes("Not connected")) {
-      logger.debug("Server transport error: Not connected, cleaning up");
-      await closeAllTransports();
-      return;
+    if (error?.message?.includes("Not connected")) {
+      logger.debug("Server transport error: Not connected, cleaning up")
+      await closeAllTransports()
+      return
     }
-    onServerError(error);
-  };
+    onServerError(error)
+  }
 }

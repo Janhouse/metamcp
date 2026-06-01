@@ -9,8 +9,6 @@
     "build": "tsup",
     "check-types": "tsc --noEmit",
     "dev": "tsup --watch",
-    "lint": "eslint . --max-warnings 0",
-    "lint:fix": "eslint . --fix",
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -19,9 +17,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "eslint": "^9.39.4",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3"
   },

@@ -1,19 +1,19 @@
-"use client";
+"use client"
 
 import {
   McpServerErrorStatusEnum,
   McpServerTypeEnum,
-  NamespaceServer,
-} from "@repo/zod-types";
+  type NamespaceServer,
+} from "@repo/zod-types"
 import {
-  ColumnDef,
+  type ColumnDef,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  SortingState,
+  type SortingState,
   useReactTable,
-} from "@tanstack/react-table";
+} from "@tanstack/react-table"
 import {
   ArrowUpDown,
   Copy,
@@ -23,22 +23,22 @@ import {
   MoreHorizontal,
   Search,
   Server,
-} from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React, { useRef, useState } from "react";
-import { toast } from "sonner";
+} from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useRef, useState } from "react"
+import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import {
   Table,
   TableBody,
@@ -46,16 +46,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { copyToClipboard } from "@/lib/utils";
+} from "@/components/ui/table"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { copyToClipboard } from "@/lib/utils"
 
 interface NamespaceServersTableProps {
-  servers: NamespaceServer[];
-  namespaceUuid: string;
-  onServerStatusChange?: () => void; // Callback for when server status changes
-  sessionInitializing?: boolean; // Whether session initialization is in progress
+  servers: NamespaceServer[]
+  namespaceUuid: string
+  onServerStatusChange?: () => void // Callback for when server status changes
+  sessionInitializing?: boolean // Whether session initialization is in progress
 }
 
 export function NamespaceServersTable({
@@ -64,19 +64,19 @@ export function NamespaceServersTable({
   onServerStatusChange,
   sessionInitializing = false,
 }: NamespaceServersTableProps) {
-  const router = useRouter();
-  const { t } = useTranslations();
+  const router = useRouter()
+  const { t } = useTranslations()
   const [sorting, setSorting] = useState<SortingState>([
     {
       id: "name",
       desc: false,
     },
-  ]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const lastToggleTimeRef = useRef<number>(0);
+  ])
+  const [globalFilter, setGlobalFilter] = useState("")
+  const lastToggleTimeRef = useRef<number>(0)
 
   // TRPC utils for invalidating queries
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // TRPC mutation for updating server status
   const updateServerStatusMutation =
@@ -86,13 +86,13 @@ export function NamespaceServersTable({
           description:
             data.message ||
             t("namespaces:serversTable.serverStatusUpdatedDescription"),
-        });
+        })
         // Use setData to update the cache directly instead of invalidating
         // This preserves the current sort order and table state
         utils.frontend.namespaces.get.setData(
           { uuid: namespaceUuid },
           (oldData) => {
-            if (!oldData?.success || !oldData.data) return oldData;
+            if (!oldData?.success || !oldData.data) return oldData
             return {
               ...oldData,
               data: {
@@ -109,50 +109,50 @@ export function NamespaceServersTable({
                     : server,
                 ),
               },
-            };
+            }
           },
-        );
+        )
 
         // Trigger connection refresh callback
         if (onServerStatusChange) {
-          onServerStatusChange();
+          onServerStatusChange()
         }
       },
       onError: (error) => {
         toast.error(t("namespaces:serversTable.failedToUpdateServerStatus"), {
           description: error.message || t("common:unexpectedError"),
-        });
+        })
         // Revert the optimistic update on error
-        utils.frontend.namespaces.get.invalidate({ uuid: namespaceUuid });
+        utils.frontend.namespaces.get.invalidate({ uuid: namespaceUuid })
       },
-    });
+    })
 
   const handleStatusToggle = (serverUuid: string, currentStatus: string) => {
     // Don't allow toggles during session initialization
     if (sessionInitializing || updateServerStatusMutation.isPending) {
-      return;
+      return
     }
 
-    const now = Date.now();
-    const timeSinceLastToggle = now - lastToggleTimeRef.current;
+    const now = Date.now()
+    const timeSinceLastToggle = now - lastToggleTimeRef.current
 
     // Prevent rapid successive toggles (minimum 1 second between toggles)
     if (timeSinceLastToggle < 1000) {
       toast.warning(t("namespaces:serversTable.toggleTooFast"), {
         description: t("namespaces:serversTable.toggleTooFastDescription"),
-      });
-      return;
+      })
+      return
     }
 
-    lastToggleTimeRef.current = now;
+    lastToggleTimeRef.current = now
 
-    const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE"
 
     // Optimistic update: immediately update the UI
     utils.frontend.namespaces.get.setData(
       { uuid: namespaceUuid },
       (oldData) => {
-        if (!oldData?.success || !oldData.data) return oldData;
+        if (!oldData?.success || !oldData.data) return oldData
         return {
           ...oldData,
           data: {
@@ -163,17 +163,17 @@ export function NamespaceServersTable({
                 : server,
             ),
           },
-        };
+        }
       },
-    );
+    )
 
     // Then make the API call
     updateServerStatusMutation.mutate({
       namespaceUuid,
       serverUuid,
       status: newStatus,
-    });
-  };
+    })
+  }
 
   // Define columns for the data table
   const columns: ColumnDef<NamespaceServer>[] = [
@@ -188,10 +188,10 @@ export function NamespaceServersTable({
             {t("common:name")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const server = row.original;
+        const server = row.original
         return (
           <div className="space-y-1 px-3 py-2">
             <div
@@ -201,7 +201,7 @@ export function NamespaceServersTable({
               {server.name}
             </div>
           </div>
-        );
+        )
       },
     },
     {
@@ -215,15 +215,15 @@ export function NamespaceServersTable({
             {t("common:type")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const type = row.getValue("type") as string;
+        const type = row.getValue("type") as string
         return (
           <div className="px-3 py-2">
             <Badge variant="info">{type.toUpperCase()}</Badge>
           </div>
-        );
+        )
       },
     },
     {
@@ -237,13 +237,13 @@ export function NamespaceServersTable({
             {t("common:status")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const server = row.original;
-        const isActive = server.status === "ACTIVE";
+        const server = row.original
+        const isActive = server.status === "ACTIVE"
         const isDisabled =
-          sessionInitializing || updateServerStatusMutation.isPending;
+          sessionInitializing || updateServerStatusMutation.isPending
 
         return (
           <div className="px-3 py-2">
@@ -260,7 +260,7 @@ export function NamespaceServersTable({
               />
             </div>
           </div>
-        );
+        )
       },
     },
     {
@@ -274,11 +274,11 @@ export function NamespaceServersTable({
             {t("namespaces:serversTable.errorStatus")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const errorStatus = row.getValue("error_status") as string;
-        const hasError = errorStatus === McpServerErrorStatusEnum.enum.ERROR;
+        const errorStatus = row.getValue("error_status") as string
+        const hasError = errorStatus === McpServerErrorStatusEnum.enum.ERROR
         return (
           <div className="px-3 py-2">
             <Badge variant={hasError ? "destructive" : "success"}>
@@ -287,33 +287,33 @@ export function NamespaceServersTable({
                 : t("namespaces:serversTable.noError")}
             </Badge>
           </div>
-        );
+        )
       },
     },
     {
       accessorKey: "details",
       header: t("namespaces:serversTable.configuration"),
       cell: ({ row }) => {
-        const server = row.original;
-        const details = [];
+        const server = row.original
+        const details = []
 
         if (server.command) {
           details.push(
             `${t("namespaces:serversTable.command")}: ${server.command}`,
-          );
+          )
         }
         if (server.args.length > 0) {
           details.push(
             `${t("namespaces:serversTable.args")}: ${server.args.join(" ")}`,
-          );
+          )
         }
         if (server.url) {
-          details.push(`${t("namespaces:serversTable.url")}: ${server.url}`);
+          details.push(`${t("namespaces:serversTable.url")}: ${server.url}`)
         }
         if (Object.keys(server.env).length > 0) {
           details.push(
             `${t("namespaces:serversTable.env")}: ${t("namespaces:serversTable.envVars", { count: Object.keys(server.env).length })}`,
-          );
+          )
         }
 
         return (
@@ -327,7 +327,7 @@ export function NamespaceServersTable({
               </div>
             ))}
           </div>
-        );
+        )
       },
     },
     {
@@ -341,54 +341,54 @@ export function NamespaceServersTable({
             {t("common:created")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"));
+        const date = new Date(row.getValue("created_at"))
         return (
           <div className="text-sm text-muted-foreground px-3 py-2">
             {date.toLocaleDateString()} {date.toLocaleTimeString()}
           </div>
-        );
+        )
       },
     },
     {
       id: "actions",
       header: t("common:actions"),
       cell: ({ row }) => {
-        const server = row.original;
+        const server = row.original
 
         const copyServerJson = () => {
           const config: Record<string, unknown> = {
             type: server.type,
-          };
+          }
 
           if (server.description) {
-            config.description = server.description;
+            config.description = server.description
           }
 
           if (server.type === McpServerTypeEnum.enum.STDIO) {
             if (server.command) {
-              config.command = server.command;
+              config.command = server.command
             }
             if (server.args && server.args.length > 0) {
-              config.args = server.args;
+              config.args = server.args
             }
             if (server.env && Object.keys(server.env).length > 0) {
-              config.env = server.env;
+              config.env = server.env
             }
           } else if (
             server.type === McpServerTypeEnum.enum.SSE ||
             server.type === McpServerTypeEnum.enum.STREAMABLE_HTTP
           ) {
             if (server.url) {
-              config.url = server.url;
+              config.url = server.url
             }
             if (server.bearerToken) {
-              config.bearerToken = server.bearerToken;
+              config.bearerToken = server.bearerToken
             }
             if (server.headers && Object.keys(server.headers).length > 0) {
-              config.headers = server.headers;
+              config.headers = server.headers
             }
           }
 
@@ -396,15 +396,15 @@ export function NamespaceServersTable({
             mcpServers: {
               [server.name]: config,
             },
-          };
+          }
 
-          const serverJson = JSON.stringify(exportFormat, null, 2);
-          copyToClipboard(serverJson);
-        };
+          const serverJson = JSON.stringify(exportFormat, null, 2)
+          copyToClipboard(serverJson)
+        }
 
         const handleViewDetails = () => {
-          router.push(`/mcp-servers/${server.uuid}`);
-        };
+          router.push(`/mcp-servers/${server.uuid}`)
+        }
 
         return (
           <DropdownMenu>
@@ -439,10 +439,10 @@ export function NamespaceServersTable({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: servers,
@@ -461,7 +461,7 @@ export function NamespaceServersTable({
     // Maintain sorting stability
     manualSorting: false,
     enableSorting: true,
-  });
+  })
 
   if (servers.length === 0) {
     return (
@@ -476,7 +476,7 @@ export function NamespaceServersTable({
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -514,7 +514,7 @@ export function NamespaceServersTable({
                             header.getContext(),
                           )}
                     </TableHead>
-                  );
+                  )
                 })}
               </TableRow>
             ))}
@@ -564,5 +564,5 @@ export function NamespaceServersTable({
         </div>
       </div>
     </div>
-  );
+  )
 }

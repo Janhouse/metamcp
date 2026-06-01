@@ -1,18 +1,18 @@
-"use client";
+"use client"
 
 import {
-  EditNamespaceFormData,
+  type EditNamespaceFormData,
   editNamespaceFormSchema,
-  Namespace,
-  NamespaceWithServers,
-  UpdateNamespaceRequest,
-} from "@repo/zod-types";
-import { Check, ChevronDown, Search, Server } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+  type Namespace,
+  type NamespaceWithServers,
+  type UpdateNamespaceRequest,
+} from "@repo/zod-types"
+import { Check, ChevronDown, Search, Server } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -20,24 +20,24 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { createTranslatedZodResolver } from "@/lib/zod-resolver";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { createTranslatedZodResolver } from "@/lib/zod-resolver"
 
 interface EditNamespaceProps {
-  namespace: NamespaceWithServers | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: (updatedNamespace: Namespace) => void;
+  namespace: NamespaceWithServers | null
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: (updatedNamespace: Namespace) => void
 }
 
 export function EditNamespace({
@@ -46,69 +46,69 @@ export function EditNamespace({
   onClose,
   onSuccess,
 }: EditNamespaceProps) {
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [selectedServerUuids, setSelectedServerUuids] = useState<string[]>([]);
-  const [serverSearchQuery, setServerSearchQuery] = useState("");
-  const { t } = useTranslations();
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [selectedServerUuids, setSelectedServerUuids] = useState<string[]>([])
+  const [serverSearchQuery, setServerSearchQuery] = useState("")
+  const { t } = useTranslations()
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Fetch MCP servers list
   const { data: serversResponse, isLoading: serversLoading } =
-    trpc.frontend.mcpServers.list.useQuery();
-  const availableServers = serversResponse?.success ? serversResponse.data : [];
+    trpc.frontend.mcpServers.list.useQuery()
+  const availableServers = serversResponse?.success ? serversResponse.data : []
 
   // Filter and sort servers alphabetically
   const filteredServers = availableServers
     .filter((server) => {
-      if (!serverSearchQuery.trim()) return true;
-      const query = serverSearchQuery.toLowerCase();
+      if (!serverSearchQuery.trim()) return true
+      const query = serverSearchQuery.toLowerCase()
       return (
         server.name.toLowerCase().includes(query) ||
         server.description?.toLowerCase().includes(query)
-      );
+      )
     })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   // tRPC mutation for updating namespace
   const updateNamespaceMutation = trpc.frontend.namespaces.update.useMutation({
     onSuccess: (data) => {
       if (data.success && data.data) {
         // Invalidate both the list and individual namespace queries
-        utils.frontend.namespaces.list.invalidate();
+        utils.frontend.namespaces.list.invalidate()
         if (namespace) {
-          utils.frontend.namespaces.get.invalidate({ uuid: namespace.uuid });
+          utils.frontend.namespaces.get.invalidate({ uuid: namespace.uuid })
         }
 
         toast.success(t("namespaces:edit.updateSuccess"), {
           description: t("namespaces:edit.updateSuccessDescription"),
-        });
-        onSuccess(data.data);
-        onClose();
+        })
+        onSuccess(data.data)
+        onClose()
         editForm.reset({
           name: "",
           description: "",
           mcpServerUuids: [],
           user_id: undefined,
-        });
+        })
       } else {
         toast.error(t("namespaces:edit.updateFailed"), {
           description:
             data.message || t("namespaces:edit.updateFailedDescription"),
-        });
+        })
       }
     },
     onError: (error) => {
-      console.error("Error updating namespace:", error);
+      console.error("Error updating namespace:", error)
       toast.error(t("namespaces:edit.updateFailed"), {
         description: error.message || t("namespaces:edit.unexpectedError"),
-      });
+      })
     },
     onSettled: () => {
-      setIsUpdating(false);
+      setIsUpdating(false)
     },
-  });
+  })
 
   const editForm = useForm<EditNamespaceFormData>({
     resolver: createTranslatedZodResolver(editNamespaceFormSchema, t),
@@ -118,42 +118,42 @@ export function EditNamespace({
       mcpServerUuids: [],
       user_id: undefined,
     },
-  });
+  })
 
   // Pre-populate form when namespace changes
   useEffect(() => {
     if (namespace && isOpen) {
       const serverUuids = namespace.servers
         ? namespace.servers.map((server) => server.uuid)
-        : [];
+        : []
       editForm.reset({
         name: namespace.name,
         description: namespace.description || "",
         mcpServerUuids: serverUuids,
         user_id: namespace.user_id,
-      });
-      setSelectedServerUuids(serverUuids);
+      })
+      setSelectedServerUuids(serverUuids)
     }
-  }, [namespace, isOpen, editForm]);
+  }, [namespace, isOpen, editForm])
 
   // Handle server selection
   const handleServerToggle = (serverUuid: string) => {
     setSelectedServerUuids((prev) => {
       const newSelection = prev.includes(serverUuid)
         ? prev.filter((uuid) => uuid !== serverUuid)
-        : [...prev, serverUuid];
+        : [...prev, serverUuid]
 
       // Update the form value
-      editForm.setValue("mcpServerUuids", newSelection);
-      return newSelection;
-    });
-  };
+      editForm.setValue("mcpServerUuids", newSelection)
+      return newSelection
+    })
+  }
 
   // Handle edit namespace
   const handleEditNamespace = async (data: EditNamespaceFormData) => {
-    if (!namespace) return;
+    if (!namespace) return
 
-    setIsUpdating(true);
+    setIsUpdating(true)
     try {
       // Create the API request payload
       const apiPayload: UpdateNamespaceRequest = {
@@ -162,35 +162,35 @@ export function EditNamespace({
         description: data.description,
         mcpServerUuids: selectedServerUuids,
         user_id: data.user_id,
-      };
+      }
 
       // Use tRPC mutation instead of direct fetch
-      updateNamespaceMutation.mutate(apiPayload);
+      updateNamespaceMutation.mutate(apiPayload)
     } catch (error) {
-      setIsUpdating(false);
-      console.error("Error preparing namespace data:", error);
+      setIsUpdating(false)
+      console.error("Error preparing namespace data:", error)
       toast.error(t("namespaces:edit.updateFailed"), {
         description:
           error instanceof Error
             ? error.message
             : t("namespaces:edit.unexpectedError"),
-      });
+      })
     }
-  };
+  }
 
   const handleClose = () => {
-    onClose();
+    onClose()
     editForm.reset({
       name: "",
       description: "",
       mcpServerUuids: [],
       user_id: undefined,
-    });
-    setSelectedServerUuids([]);
-  };
+    })
+    setSelectedServerUuids([])
+  }
 
   if (!namespace) {
-    return null;
+    return null
   }
 
   return (
@@ -322,7 +322,7 @@ export function EditNamespace({
                     {filteredServers.map((server) => {
                       const isSelected = selectedServerUuids.includes(
                         server.uuid,
-                      );
+                      )
                       return (
                         <div
                           key={server.uuid}
@@ -359,7 +359,7 @@ export function EditNamespace({
                             )}
                           </div>
                         </div>
-                      );
+                      )
                     })}
                   </div>
                 )}
@@ -388,5 +388,5 @@ export function EditNamespace({
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

@@ -1,110 +1,110 @@
-import { SetConfigRequest } from "@repo/zod-types";
+import type { SetConfigRequest } from "@repo/zod-types"
 
-import { configService } from "../lib/config.service";
+import { configService } from "../lib/config.service"
 
 export const configImplementations = {
   getSignupDisabled: async (): Promise<boolean> => {
-    return await configService.isSignupDisabled();
+    return await configService.isSignupDisabled()
   },
 
   setSignupDisabled: async (input: {
-    disabled: boolean;
+    disabled: boolean
   }): Promise<{ success: boolean }> => {
-    await configService.setSignupDisabled(input.disabled);
-    return { success: true };
+    await configService.setSignupDisabled(input.disabled)
+    return { success: true }
   },
 
   getSsoSignupDisabled: async (): Promise<boolean> => {
-    return await configService.isSsoSignupDisabled();
+    return await configService.isSsoSignupDisabled()
   },
 
   setSsoSignupDisabled: async (input: {
-    disabled: boolean;
+    disabled: boolean
   }): Promise<{ success: boolean }> => {
-    await configService.setSsoSignupDisabled(input.disabled);
-    return { success: true };
+    await configService.setSsoSignupDisabled(input.disabled)
+    return { success: true }
   },
 
   getBasicAuthDisabled: async (): Promise<boolean> => {
-    return await configService.isBasicAuthDisabled();
+    return await configService.isBasicAuthDisabled()
   },
 
   setBasicAuthDisabled: async (input: {
-    disabled: boolean;
+    disabled: boolean
   }): Promise<{ success: boolean }> => {
-    await configService.setBasicAuthDisabled(input.disabled);
-    return { success: true };
+    await configService.setBasicAuthDisabled(input.disabled)
+    return { success: true }
   },
 
   getMcpResetTimeoutOnProgress: async (): Promise<boolean> => {
-    return await configService.getMcpResetTimeoutOnProgress();
+    return await configService.getMcpResetTimeoutOnProgress()
   },
 
   setMcpResetTimeoutOnProgress: async (input: {
-    enabled: boolean;
+    enabled: boolean
   }): Promise<{ success: boolean }> => {
-    await configService.setMcpResetTimeoutOnProgress(input.enabled);
-    return { success: true };
+    await configService.setMcpResetTimeoutOnProgress(input.enabled)
+    return { success: true }
   },
 
   getMcpTimeout: async (): Promise<number> => {
-    return await configService.getMcpTimeout();
+    return await configService.getMcpTimeout()
   },
 
   setMcpTimeout: async (input: {
-    timeout: number;
+    timeout: number
   }): Promise<{ success: boolean }> => {
-    await configService.setMcpTimeout(input.timeout);
-    return { success: true };
+    await configService.setMcpTimeout(input.timeout)
+    return { success: true }
   },
 
   getMcpMaxTotalTimeout: async (): Promise<number> => {
-    return await configService.getMcpMaxTotalTimeout();
+    return await configService.getMcpMaxTotalTimeout()
   },
 
   setMcpMaxTotalTimeout: async (input: {
-    timeout: number;
+    timeout: number
   }): Promise<{ success: boolean }> => {
-    await configService.setMcpMaxTotalTimeout(input.timeout);
-    return { success: true };
+    await configService.setMcpMaxTotalTimeout(input.timeout)
+    return { success: true }
   },
 
   getMcpMaxAttempts: async (): Promise<number> => {
-    return await configService.getMcpMaxAttempts();
+    return await configService.getMcpMaxAttempts()
   },
 
   setMcpMaxAttempts: async (input: {
-    maxAttempts: number;
+    maxAttempts: number
   }): Promise<{ success: boolean }> => {
-    await configService.setMcpMaxAttempts(input.maxAttempts);
-    return { success: true };
+    await configService.setMcpMaxAttempts(input.maxAttempts)
+    return { success: true }
   },
 
   getSessionLifetime: async (): Promise<number | null> => {
-    return await configService.getSessionLifetime();
+    return await configService.getSessionLifetime()
   },
 
   setSessionLifetime: async (input: {
-    lifetime?: number | null;
+    lifetime?: number | null
   }): Promise<{ success: boolean }> => {
-    await configService.setSessionLifetime(input.lifetime);
-    return { success: true };
+    await configService.setSessionLifetime(input.lifetime)
+    return { success: true }
   },
 
   getAllConfigs: async (): Promise<
     Array<{ id: string; value: string; description?: string | null }>
   > => {
-    return await configService.getAllConfigs();
+    return await configService.getAllConfigs()
   },
 
   setConfig: async (input: SetConfigRequest): Promise<{ success: boolean }> => {
-    await configService.setConfig(input.key, input.value, input.description);
-    return { success: true };
+    await configService.setConfig(input.key, input.value, input.description)
+    return { success: true }
   },
 
   getAuthProviders: async (): Promise<
     Array<{ id: string; name: string; enabled: boolean }>
   > => {
-    return await configService.getAuthProviders();
+    return await configService.getAuthProviders()
   },
-};
+}

@@ -1,35 +1,35 @@
-"use client";
+"use client"
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { type SettingsFormData, SettingsFormSchema } from "@repo/zod-types";
-import React, { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { zodResolver } from "@hookform/resolvers/zod"
+import { type SettingsFormData, SettingsFormSchema } from "@repo/zod-types"
+import { useEffect, useState } from "react"
+import { Controller, useForm } from "react-hook-form"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
 
 export default function SettingsPage() {
-  const { t } = useTranslations();
-  const [isSignupDisabled, setIsSignupDisabled] = useState(false);
-  const [isSsoSignupDisabled, setIsSsoSignupDisabled] = useState(false);
-  const [isBasicAuthDisabled, setIsBasicAuthDisabled] = useState(false);
+  const { t } = useTranslations()
+  const [isSignupDisabled, setIsSignupDisabled] = useState(false)
+  const [isSsoSignupDisabled, setIsSsoSignupDisabled] = useState(false)
+  const [isBasicAuthDisabled, setIsBasicAuthDisabled] = useState(false)
   const [mcpResetTimeoutOnProgress, setMcpResetTimeoutOnProgress] =
-    useState(true);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    useState(true)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isSessionLifetimeEnabled, setIsSessionLifetimeEnabled] =
-    useState(false);
+    useState(false)
 
   // Form setup
   const form = useForm<SettingsFormData>({
@@ -40,209 +40,209 @@ export default function SettingsPage() {
       mcpMaxAttempts: 1,
       sessionLifetime: null, // Default to infinite (null)
     },
-  });
+  })
 
   const {
     handleSubmit,
     reset,
     formState: { isDirty, isSubmitting },
-  } = form;
+  } = form
 
   // Get current settings
   const {
     data: signupDisabled,
     isLoading: signupLoading,
     refetch: refetchSignup,
-  } = trpc.frontend.config.getSignupDisabled.useQuery();
+  } = trpc.frontend.config.getSignupDisabled.useQuery()
 
   const {
     data: ssoSignupDisabled,
     isLoading: ssoSignupLoading,
     refetch: refetchSsoSignup,
-  } = trpc.frontend.config.getSsoSignupDisabled.useQuery();
+  } = trpc.frontend.config.getSsoSignupDisabled.useQuery()
 
   const {
     data: basicAuthDisabled,
     isLoading: basicAuthLoading,
     refetch: refetchBasicAuth,
-  } = trpc.frontend.config.getBasicAuthDisabled.useQuery();
+  } = trpc.frontend.config.getBasicAuthDisabled.useQuery()
 
   const {
     data: mcpResetTimeoutOnProgressData,
     isLoading: mcpResetLoading,
     refetch: refetchMcpReset,
-  } = trpc.frontend.config.getMcpResetTimeoutOnProgress.useQuery();
+  } = trpc.frontend.config.getMcpResetTimeoutOnProgress.useQuery()
 
   const {
     data: mcpTimeoutData,
     isLoading: mcpTimeoutLoading,
     refetch: refetchMcpTimeout,
-  } = trpc.frontend.config.getMcpTimeout.useQuery();
+  } = trpc.frontend.config.getMcpTimeout.useQuery()
 
   const {
     data: mcpMaxTotalTimeoutData,
     isLoading: mcpMaxTotalLoading,
     refetch: refetchMcpMaxTotal,
-  } = trpc.frontend.config.getMcpMaxTotalTimeout.useQuery();
+  } = trpc.frontend.config.getMcpMaxTotalTimeout.useQuery()
 
   const {
     data: mcpMaxAttemptsData,
     isLoading: mcpMaxAttemptsLoading,
     refetch: refetchMcpMaxAttempts,
-  } = trpc.frontend.config.getMcpMaxAttempts.useQuery();
+  } = trpc.frontend.config.getMcpMaxAttempts.useQuery()
 
   const {
     data: sessionLifetimeData,
     isLoading: sessionLifetimeLoading,
     refetch: refetchSessionLifetime,
-  } = trpc.frontend.config.getSessionLifetime.useQuery();
+  } = trpc.frontend.config.getSessionLifetime.useQuery()
 
   // Mutations
   const setSignupDisabledMutation =
     trpc.frontend.config.setSignupDisabled.useMutation({
       onSuccess: (data) => {
         if (data.success) {
-          refetchSignup();
+          refetchSignup()
         } else {
-          console.error("Failed to update signup setting");
+          console.error("Failed to update signup setting")
         }
       },
-    });
+    })
 
   const setSsoSignupDisabledMutation =
     trpc.frontend.config.setSsoSignupDisabled.useMutation({
       onSuccess: (data) => {
         if (data.success) {
-          refetchSsoSignup();
+          refetchSsoSignup()
         } else {
-          console.error("Failed to update SSO signup setting");
+          console.error("Failed to update SSO signup setting")
         }
       },
-    });
+    })
 
   const setBasicAuthDisabledMutation =
     trpc.frontend.config.setBasicAuthDisabled.useMutation({
       onSuccess: (data) => {
         if (data.success) {
-          refetchBasicAuth();
+          refetchBasicAuth()
         } else {
-          console.error("Failed to update basic auth setting");
+          console.error("Failed to update basic auth setting")
         }
       },
-    });
+    })
 
   const setMcpResetTimeoutOnProgressMutation =
     trpc.frontend.config.setMcpResetTimeoutOnProgress.useMutation({
       onSuccess: (data) => {
         if (data.success) {
-          refetchMcpReset();
+          refetchMcpReset()
         } else {
-          console.error("Failed to update MCP reset timeout setting");
+          console.error("Failed to update MCP reset timeout setting")
         }
       },
-    });
+    })
 
   const setMcpTimeoutMutation = trpc.frontend.config.setMcpTimeout.useMutation({
     onSuccess: (data) => {
       if (data.success) {
-        refetchMcpTimeout();
-        setHasUnsavedChanges(false);
+        refetchMcpTimeout()
+        setHasUnsavedChanges(false)
       } else {
-        console.error("Failed to update MCP timeout setting");
+        console.error("Failed to update MCP timeout setting")
       }
     },
-  });
+  })
 
   const setMcpMaxTotalTimeoutMutation =
     trpc.frontend.config.setMcpMaxTotalTimeout.useMutation({
       onSuccess: (data) => {
         if (data.success) {
-          refetchMcpMaxTotal();
-          setHasUnsavedChanges(false);
+          refetchMcpMaxTotal()
+          setHasUnsavedChanges(false)
         } else {
-          console.error("Failed to update MCP max total timeout setting");
+          console.error("Failed to update MCP max total timeout setting")
         }
       },
-    });
+    })
 
   const setMcpMaxAttemptsMutation =
     trpc.frontend.config.setMcpMaxAttempts.useMutation({
       onSuccess: (data) => {
         if (data.success) {
-          refetchMcpMaxAttempts();
-          setHasUnsavedChanges(false);
+          refetchMcpMaxAttempts()
+          setHasUnsavedChanges(false)
         } else {
-          console.error("Failed to update MCP max attempts setting");
+          console.error("Failed to update MCP max attempts setting")
         }
       },
-    });
+    })
 
   const setSessionLifetimeMutation =
     trpc.frontend.config.setSessionLifetime.useMutation({
       onSuccess: (data) => {
         if (data.success) {
-          refetchSessionLifetime();
-          setHasUnsavedChanges(false);
+          refetchSessionLifetime()
+          setHasUnsavedChanges(false)
         } else {
-          console.error("Failed to update session lifetime setting");
+          console.error("Failed to update session lifetime setting")
         }
       },
-    });
+    })
 
   // Update local state when data is loaded
   useEffect(() => {
     if (signupDisabled !== undefined) {
-      setIsSignupDisabled(signupDisabled);
+      setIsSignupDisabled(signupDisabled)
     }
-  }, [signupDisabled]);
+  }, [signupDisabled])
 
   useEffect(() => {
     if (ssoSignupDisabled !== undefined) {
-      setIsSsoSignupDisabled(ssoSignupDisabled);
+      setIsSsoSignupDisabled(ssoSignupDisabled)
     }
-  }, [ssoSignupDisabled]);
+  }, [ssoSignupDisabled])
 
   useEffect(() => {
     if (basicAuthDisabled !== undefined) {
-      setIsBasicAuthDisabled(basicAuthDisabled);
+      setIsBasicAuthDisabled(basicAuthDisabled)
     }
-  }, [basicAuthDisabled]);
+  }, [basicAuthDisabled])
 
   useEffect(() => {
     if (mcpResetTimeoutOnProgressData !== undefined) {
-      setMcpResetTimeoutOnProgress(mcpResetTimeoutOnProgressData);
+      setMcpResetTimeoutOnProgress(mcpResetTimeoutOnProgressData)
     }
-  }, [mcpResetTimeoutOnProgressData]);
+  }, [mcpResetTimeoutOnProgressData])
 
   useEffect(() => {
     if (mcpTimeoutData !== undefined) {
-      form.setValue("mcpTimeout", mcpTimeoutData);
+      form.setValue("mcpTimeout", mcpTimeoutData)
     }
-  }, [mcpTimeoutData, form]);
+  }, [mcpTimeoutData, form])
 
   useEffect(() => {
     if (mcpMaxTotalTimeoutData !== undefined) {
-      form.setValue("mcpMaxTotalTimeout", mcpMaxTotalTimeoutData);
+      form.setValue("mcpMaxTotalTimeout", mcpMaxTotalTimeoutData)
     }
-  }, [mcpMaxTotalTimeoutData, form]);
+  }, [mcpMaxTotalTimeoutData, form])
 
   useEffect(() => {
     if (mcpMaxAttemptsData !== undefined) {
-      form.setValue("mcpMaxAttempts", mcpMaxAttemptsData);
+      form.setValue("mcpMaxAttempts", mcpMaxAttemptsData)
     }
-  }, [mcpMaxAttemptsData, form]);
+  }, [mcpMaxAttemptsData, form])
 
   useEffect(() => {
     if (sessionLifetimeData !== undefined) {
-      const hasLifetime = sessionLifetimeData !== null;
-      setIsSessionLifetimeEnabled(hasLifetime);
+      const hasLifetime = sessionLifetimeData !== null
+      setIsSessionLifetimeEnabled(hasLifetime)
       // Convert milliseconds to minutes for display
       const lifetimeInMinutes = sessionLifetimeData
         ? Math.round(sessionLifetimeData / 60000)
-        : null;
-      form.setValue("sessionLifetime", lifetimeInMinutes);
+        : null
+      form.setValue("sessionLifetime", lifetimeInMinutes)
     }
-  }, [sessionLifetimeData, form]);
+  }, [sessionLifetimeData, form])
 
   // Reset form with loaded data to establish proper baseline for change detection
   useEffect(() => {
@@ -255,13 +255,13 @@ export default function SettingsPage() {
       // Convert milliseconds to minutes for session lifetime
       const lifetimeInMinutes = sessionLifetimeData
         ? Math.round(sessionLifetimeData / 60000)
-        : null;
+        : null
       form.reset({
         mcpTimeout: mcpTimeoutData,
         mcpMaxTotalTimeout: mcpMaxTotalTimeoutData,
         mcpMaxAttempts: mcpMaxAttemptsData,
         sessionLifetime: lifetimeInMinutes,
-      });
+      })
     }
   }, [
     mcpTimeoutData,
@@ -269,98 +269,98 @@ export default function SettingsPage() {
     mcpMaxAttemptsData,
     sessionLifetimeData,
     form,
-  ]);
+  ])
 
   // Handle immediate switch updates
   const handleSignupToggle = async (checked: boolean) => {
-    setIsSignupDisabled(checked);
+    setIsSignupDisabled(checked)
     try {
-      await setSignupDisabledMutation.mutateAsync({ disabled: checked });
+      await setSignupDisabledMutation.mutateAsync({ disabled: checked })
       toast.success(
         checked
           ? t("settings:signupDisabledSuccess")
           : t("settings:signupEnabledSuccess"),
-      );
+      )
     } catch (error) {
-      setIsSignupDisabled(!checked);
-      console.error("Failed to update signup setting:", error);
+      setIsSignupDisabled(!checked)
+      console.error("Failed to update signup setting:", error)
       toast.error(t("settings:signupToggleError"), {
         description: error instanceof Error ? error.message : String(error),
-      });
+      })
     }
-  };
+  }
 
   const handleSsoSignupToggle = async (checked: boolean) => {
-    setIsSsoSignupDisabled(checked);
+    setIsSsoSignupDisabled(checked)
     try {
-      await setSsoSignupDisabledMutation.mutateAsync({ disabled: checked });
+      await setSsoSignupDisabledMutation.mutateAsync({ disabled: checked })
       toast.success(
         checked
           ? t("settings:ssoSignupDisabledSuccess")
           : t("settings:ssoSignupEnabledSuccess"),
-      );
+      )
     } catch (error) {
-      setIsSsoSignupDisabled(!checked);
-      console.error("Failed to update SSO signup setting:", error);
+      setIsSsoSignupDisabled(!checked)
+      console.error("Failed to update SSO signup setting:", error)
       toast.error(t("settings:ssoSignupToggleError"), {
         description: error instanceof Error ? error.message : String(error),
-      });
+      })
     }
-  };
+  }
 
   const handleBasicAuthToggle = async (checked: boolean) => {
-    setIsBasicAuthDisabled(checked);
+    setIsBasicAuthDisabled(checked)
     try {
-      await setBasicAuthDisabledMutation.mutateAsync({ disabled: checked });
+      await setBasicAuthDisabledMutation.mutateAsync({ disabled: checked })
       toast.success(
         checked
           ? t("settings:basicAuthDisabledSuccess")
           : t("settings:basicAuthEnabledSuccess"),
-      );
+      )
     } catch (error) {
-      setIsBasicAuthDisabled(!checked);
-      console.error("Failed to update basic auth setting:", error);
+      setIsBasicAuthDisabled(!checked)
+      console.error("Failed to update basic auth setting:", error)
       toast.error(t("settings:basicAuthToggleError"), {
         description: error instanceof Error ? error.message : String(error),
-      });
+      })
     }
-  };
+  }
 
   const handleMcpResetTimeoutToggle = async (checked: boolean) => {
-    setMcpResetTimeoutOnProgress(checked);
+    setMcpResetTimeoutOnProgress(checked)
     try {
       await setMcpResetTimeoutOnProgressMutation.mutateAsync({
         enabled: checked,
-      });
+      })
       toast.success(
         checked
           ? t("settings:mcpResetTimeoutEnabledSuccess")
           : t("settings:mcpResetTimeoutDisabledSuccess"),
-      );
+      )
     } catch (error) {
-      setMcpResetTimeoutOnProgress(!checked);
-      console.error("Failed to update MCP reset timeout setting:", error);
+      setMcpResetTimeoutOnProgress(!checked)
+      console.error("Failed to update MCP reset timeout setting:", error)
       toast.error(t("settings:mcpResetTimeoutToggleError"), {
         description: error instanceof Error ? error.message : String(error),
-      });
+      })
     }
-  };
+  }
 
   const handleSessionLifetimeToggle = (checked: boolean) => {
-    setIsSessionLifetimeEnabled(checked);
+    setIsSessionLifetimeEnabled(checked)
     // Mark the form dirty (shouldDirty) so toggling the switch actually enables
     // "Save" — without it the change was silently dropped and never persisted.
     if (!checked) {
       // When disabled, set to null for infinite sessions
-      form.setValue("sessionLifetime", null, { shouldDirty: true });
+      form.setValue("sessionLifetime", null, { shouldDirty: true })
     } else {
       // When enabled, keep any existing value or default to 240 min (4 hours)
-      const currentValue = form.getValues("sessionLifetime");
+      const currentValue = form.getValues("sessionLifetime")
       form.setValue("sessionLifetime", currentValue ?? 240, {
         shouldDirty: true,
-      });
+      })
     }
-  };
+  }
 
   // Handle form submission
   const onSubmit = async (data: SettingsFormData) => {
@@ -379,21 +379,21 @@ export default function SettingsPage() {
               ? data.sessionLifetime * 60000
               : null,
         }),
-      ]);
-      reset(data); // Reset form state to match current values
-      toast.success(t("settings:saved"));
+      ])
+      reset(data) // Reset form state to match current values
+      toast.success(t("settings:saved"))
     } catch (error) {
-      console.error("Failed to save settings:", error);
+      console.error("Failed to save settings:", error)
       toast.error(t("settings:error"), {
         description: error instanceof Error ? error.message : String(error),
-      });
+      })
     }
-  };
+  }
 
   // Check for unsaved changes
   useEffect(() => {
-    setHasUnsavedChanges(isDirty);
-  }, [isDirty]);
+    setHasUnsavedChanges(isDirty)
+  }, [isDirty])
 
   const isLoading =
     signupLoading ||
@@ -403,7 +403,7 @@ export default function SettingsPage() {
     mcpTimeoutLoading ||
     mcpMaxTotalLoading ||
     mcpMaxAttemptsLoading ||
-    sessionLifetimeLoading;
+    sessionLifetimeLoading
 
   if (isLoading) {
     return (
@@ -416,7 +416,7 @@ export default function SettingsPage() {
         </div>
         <div>{t("settings:loading")}</div>
       </div>
-    );
+    )
   }
 
   return (
@@ -534,8 +534,8 @@ export default function SettingsPage() {
                       min="1000"
                       max="86400000"
                       onChange={(e) => {
-                        const value = parseInt(e.target.value, 10);
-                        field.onChange(isNaN(value) ? 1000 : value);
+                        const value = parseInt(e.target.value, 10)
+                        field.onChange(Number.isNaN(value) ? 1000 : value)
                       }}
                       className="w-32"
                     />
@@ -564,8 +564,8 @@ export default function SettingsPage() {
                       min="1000"
                       max="86400000"
                       onChange={(e) => {
-                        const value = parseInt(e.target.value, 10);
-                        field.onChange(isNaN(value) ? 1000 : value);
+                        const value = parseInt(e.target.value, 10)
+                        field.onChange(Number.isNaN(value) ? 1000 : value)
                       }}
                       className="w-32"
                     />
@@ -594,8 +594,8 @@ export default function SettingsPage() {
                       min="1"
                       max="10"
                       onChange={(e) => {
-                        const value = parseInt(e.target.value, 10);
-                        field.onChange(isNaN(value) ? 1 : value);
+                        const value = parseInt(e.target.value, 10)
+                        field.onChange(Number.isNaN(value) ? 1 : value)
                       }}
                       className="w-32"
                     />
@@ -648,8 +648,8 @@ export default function SettingsPage() {
                           max="1440"
                           value={field.value || 240}
                           onChange={(e) => {
-                            const value = parseInt(e.target.value, 10);
-                            field.onChange(isNaN(value) ? 240 : value);
+                            const value = parseInt(e.target.value, 10)
+                            field.onChange(Number.isNaN(value) ? 240 : value)
                           }}
                           className="w-32"
                         />
@@ -685,5 +685,5 @@ export default function SettingsPage() {
         </Card>
       </form>
     </div>
-  );
+  )
 }

@@ -1,15 +1,15 @@
-"use client";
+"use client"
 
-import { EndpointWithNamespace } from "@repo/zod-types";
+import type { EndpointWithNamespace } from "@repo/zod-types"
 import {
-  ColumnDef,
+  type ColumnDef,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  SortingState,
+  type SortingState,
   useReactTable,
-} from "@tanstack/react-table";
+} from "@tanstack/react-table"
 import {
   ArrowUpDown,
   Copy,
@@ -19,14 +19,14 @@ import {
   Package,
   Search,
   Trash2,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
+} from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { toast } from "sonner"
 
-import { EditEndpoint } from "@/components/edit-endpoint";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { EditEndpoint } from "@/components/edit-endpoint"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -34,14 +34,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -49,88 +49,88 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { useTranslations } from "@/hooks/useTranslations";
-import { getAppUrl } from "@/lib/env";
-import { trpc } from "@/lib/trpc";
-import { copyToClipboard } from "@/lib/utils";
+} from "@/components/ui/table"
+import { useTranslations } from "@/hooks/useTranslations"
+import { getAppUrl } from "@/lib/env"
+import { trpc } from "@/lib/trpc"
+import { copyToClipboard } from "@/lib/utils"
 
 interface EndpointsListProps {
-  onRefresh?: () => void;
+  onRefresh?: () => void
 }
 
 export function EndpointsList({ onRefresh }: EndpointsListProps) {
-  const { t } = useTranslations();
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { t } = useTranslations()
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState("")
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [endpointToDelete, setEndpointToDelete] =
-    useState<EndpointWithNamespace | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+    useState<EndpointWithNamespace | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [endpointToEdit, setEndpointToEdit] =
-    useState<EndpointWithNamespace | null>(null);
-  const router = useRouter();
+    useState<EndpointWithNamespace | null>(null)
+  const router = useRouter()
 
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Fetch endpoints using tRPC
   const {
     data: endpointsResponse,
     isLoading,
     error,
-  } = trpc.frontend.endpoints.list.useQuery();
+  } = trpc.frontend.endpoints.list.useQuery()
 
   // Fetch user's API keys to use in URLs
-  const { data: apiKeysResponse } = trpc.frontend.apiKeys.list.useQuery();
+  const { data: apiKeysResponse } = trpc.frontend.apiKeys.list.useQuery()
 
   // Delete mutation
   const deleteEndpointMutation = trpc.frontend.endpoints.delete.useMutation({
     onSuccess: (data) => {
       if (data.success) {
-        toast.success(t("endpoints:list.deleteSuccess"));
-        utils.frontend.endpoints.list.invalidate();
-        utils.frontend.mcpServers.list.invalidate();
-        setDeleteDialogOpen(false);
-        setEndpointToDelete(null);
-        onRefresh?.();
+        toast.success(t("endpoints:list.deleteSuccess"))
+        utils.frontend.endpoints.list.invalidate()
+        utils.frontend.mcpServers.list.invalidate()
+        setDeleteDialogOpen(false)
+        setEndpointToDelete(null)
+        onRefresh?.()
       } else {
         // Handle backend error response
-        toast.error(data.message || t("endpoints:list.deleteError"));
+        toast.error(data.message || t("endpoints:list.deleteError"))
       }
     },
     onError: (error) => {
       toast.error(t("endpoints:list.deleteError"), {
         description: error.message,
-      });
+      })
     },
-  });
+  })
 
-  const endpoints = endpointsResponse?.success ? endpointsResponse.data : [];
+  const endpoints = endpointsResponse?.success ? endpointsResponse.data : []
 
   const handleDeleteEndpoint = (endpoint: EndpointWithNamespace) => {
-    setEndpointToDelete(endpoint);
-    setDeleteDialogOpen(true);
-  };
+    setEndpointToDelete(endpoint)
+    setDeleteDialogOpen(true)
+  }
 
   const handleEditEndpoint = (endpoint: EndpointWithNamespace) => {
-    setEndpointToEdit(endpoint);
-    setEditDialogOpen(true);
-  };
+    setEndpointToEdit(endpoint)
+    setEditDialogOpen(true)
+  }
 
   const handleEditSuccess = (_updatedEndpoint: EndpointWithNamespace) => {
     // The cache invalidation is handled in the EditEndpoint component
-    onRefresh?.();
-  };
+    onRefresh?.()
+  }
 
   const confirmDelete = () => {
     if (endpointToDelete) {
-      deleteEndpointMutation.mutate({ uuid: endpointToDelete.uuid });
+      deleteEndpointMutation.mutate({ uuid: endpointToDelete.uuid })
     }
-  };
+  }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
+    return new Date(dateString).toLocaleString()
+  }
 
   // Define columns for the data table
   const columns: ColumnDef<EndpointWithNamespace>[] = [
@@ -145,10 +145,10 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
             {t("common:name")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const endpoint = row.original;
+        const endpoint = row.original
         return (
           <div className="space-y-1 px-3 py-2">
             <div className="font-medium">{endpoint.name}</div>
@@ -162,9 +162,9 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                   size="sm"
                   className="h-2 w-2 p-0 hover:bg-muted"
                   onClick={() => {
-                    const url = `${getAppUrl()}/metamcp/${endpoint.name}/sse`;
-                    copyToClipboard(url);
-                    toast.success(t("endpoints:list.sseUrlCopied"));
+                    const url = `${getAppUrl()}/metamcp/${endpoint.name}/sse`
+                    copyToClipboard(url)
+                    toast.success(t("endpoints:list.sseUrlCopied"))
                   }}
                 >
                   <Copy className="h-2 w-2" />
@@ -179,9 +179,9 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                   size="sm"
                   className="h-2 w-2 p-0 hover:bg-muted"
                   onClick={() => {
-                    const url = `${getAppUrl()}/metamcp/${endpoint.name}/mcp`;
-                    copyToClipboard(url);
-                    toast.success(t("endpoints:list.shttpUrlCopied"));
+                    const url = `${getAppUrl()}/metamcp/${endpoint.name}/mcp`
+                    copyToClipboard(url)
+                    toast.success(t("endpoints:list.shttpUrlCopied"))
                   }}
                 >
                   <Copy className="h-2 w-2" />
@@ -196,9 +196,9 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                   size="sm"
                   className="h-2 w-2 p-0 hover:bg-muted"
                   onClick={() => {
-                    const url = `${getAppUrl()}/metamcp/${endpoint.name}/api`;
-                    copyToClipboard(url);
-                    toast.success(t("endpoints:list.openApiUrlCopied"));
+                    const url = `${getAppUrl()}/metamcp/${endpoint.name}/api`
+                    copyToClipboard(url)
+                    toast.success(t("endpoints:list.openApiUrlCopied"))
                   }}
                 >
                   <Copy className="h-2 w-2" />
@@ -213,9 +213,9 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                   size="sm"
                   className="h-2 w-2 p-0 hover:bg-muted"
                   onClick={() => {
-                    const url = `${getAppUrl()}/metamcp/${endpoint.name}/api/openapi.json`;
-                    copyToClipboard(url);
-                    toast.success(t("endpoints:list.openApiSchemaUrlCopied"));
+                    const url = `${getAppUrl()}/metamcp/${endpoint.name}/api/openapi.json`
+                    copyToClipboard(url)
+                    toast.success(t("endpoints:list.openApiSchemaUrlCopied"))
                   }}
                 >
                   <Copy className="h-2 w-2" />
@@ -223,14 +223,14 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
               </div>
             </div>
           </div>
-        );
+        )
       },
     },
     {
       accessorKey: "description",
       header: t("common:description"),
       cell: ({ row }) => {
-        const description = row.getValue("description") as string | null;
+        const description = row.getValue("description") as string | null
         return (
           <div className="px-3 pl-0 py-2">
             {description ? (
@@ -241,14 +241,14 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
               </span>
             )}
           </div>
-        );
+        )
       },
     },
     {
       accessorKey: "namespace",
       header: t("endpoints:namespace"),
       cell: ({ row }) => {
-        const endpoint = row.original;
+        const endpoint = row.original
         return (
           <div className="px-3 pl-0 py-2">
             <div
@@ -261,22 +261,22 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
               <span className="font-medium">{endpoint.namespace.name}</span>
             </div>
           </div>
-        );
+        )
       },
     },
     {
       accessorKey: "user_id",
       header: t("endpoints:ownership"),
       cell: ({ row }) => {
-        const endpoint = row.original;
-        const isPublic = endpoint.user_id === null;
+        const endpoint = row.original
+        const isPublic = endpoint.user_id === null
         return (
           <div className="py-2">
             <Badge variant={isPublic ? "success" : "neutral"}>
               {isPublic ? t("endpoints:public") : t("endpoints:private")}
             </Badge>
           </div>
-        );
+        )
       },
     },
     {
@@ -290,78 +290,78 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
             {t("common:created")}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        );
+        )
       },
       cell: ({ row }) => {
-        const date = formatDate(row.getValue("created_at"));
+        const date = formatDate(row.getValue("created_at"))
         return (
           <div className="text-sm text-muted-foreground px-3 py-2">{date}</div>
-        );
+        )
       },
     },
     {
       id: "actions",
       header: t("common:actions"),
       cell: ({ row }) => {
-        const endpoint = row.original;
+        const endpoint = row.original
 
         const copyFullSseUrl = () => {
-          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/sse`;
-          copyToClipboard(baseUrl);
-          toast.success(t("endpoints:list.sseUrlCopied"));
-        };
+          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/sse`
+          copyToClipboard(baseUrl)
+          toast.success(t("endpoints:list.sseUrlCopied"))
+        }
 
         const copyFullShttpUrl = () => {
-          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/mcp`;
-          copyToClipboard(baseUrl);
-          toast.success(t("endpoints:list.shttpUrlCopied"));
-        };
+          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/mcp`
+          copyToClipboard(baseUrl)
+          toast.success(t("endpoints:list.shttpUrlCopied"))
+        }
 
         const copyFullApiUrl = () => {
-          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api`;
-          copyToClipboard(baseUrl);
-          toast.success(t("endpoints:list.openApiUrlCopied"));
-        };
+          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api`
+          copyToClipboard(baseUrl)
+          toast.success(t("endpoints:list.openApiUrlCopied"))
+        }
 
         const copyFullOpenApiSchemaUrl = () => {
-          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api/openapi.json`;
-          copyToClipboard(baseUrl);
-          toast.success(t("endpoints:list.openApiSchemaUrlCopied"));
-        };
+          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api/openapi.json`
+          copyToClipboard(baseUrl)
+          toast.success(t("endpoints:list.openApiSchemaUrlCopied"))
+        }
 
         const getApiKey = () => {
-          const apiKeys = apiKeysResponse?.apiKeys || [];
-          const activeApiKey = apiKeys.find((key) => key.is_active);
-          return activeApiKey?.key || "YOUR_API_KEY";
-        };
+          const apiKeys = apiKeysResponse?.apiKeys || []
+          const activeApiKey = apiKeys.find((key) => key.is_active)
+          return activeApiKey?.key || "YOUR_API_KEY"
+        }
 
         const copyFullSseUrlWithApiKey = () => {
-          const apiKey = getApiKey();
-          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/sse?api_key=${apiKey}`;
-          copyToClipboard(baseUrl);
-          toast.success(t("endpoints:list.sseUrlWithApiKeyCopied"));
-        };
+          const apiKey = getApiKey()
+          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/sse?api_key=${apiKey}`
+          copyToClipboard(baseUrl)
+          toast.success(t("endpoints:list.sseUrlWithApiKeyCopied"))
+        }
 
         const copyFullShttpUrlWithApiKey = () => {
-          const apiKey = getApiKey();
-          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/mcp?api_key=${apiKey}`;
-          copyToClipboard(baseUrl);
-          toast.success(t("endpoints:list.shttpUrlWithApiKeyCopied"));
-        };
+          const apiKey = getApiKey()
+          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/mcp?api_key=${apiKey}`
+          copyToClipboard(baseUrl)
+          toast.success(t("endpoints:list.shttpUrlWithApiKeyCopied"))
+        }
 
         const copyFullApiUrlWithApiKey = () => {
-          const apiKey = getApiKey();
-          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api?api_key=${apiKey}`;
-          copyToClipboard(baseUrl);
-          toast.success(t("endpoints:list.openApiUrlWithApiKeyCopied"));
-        };
+          const apiKey = getApiKey()
+          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api?api_key=${apiKey}`
+          copyToClipboard(baseUrl)
+          toast.success(t("endpoints:list.openApiUrlWithApiKeyCopied"))
+        }
 
         const copyFullOpenApiSchemaUrlWithApiKey = () => {
-          const apiKey = getApiKey();
-          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api/openapi.json?api_key=${apiKey}`;
-          copyToClipboard(baseUrl);
-          toast.success(t("endpoints:list.openApiSchemaUrlWithApiKeyCopied"));
-        };
+          const apiKey = getApiKey()
+          const baseUrl = `${getAppUrl()}/metamcp/${endpoint.name}/api/openapi.json?api_key=${apiKey}`
+          copyToClipboard(baseUrl)
+          toast.success(t("endpoints:list.openApiSchemaUrlWithApiKeyCopied"))
+        }
 
         return (
           <DropdownMenu>
@@ -435,10 +435,10 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: endpoints,
@@ -457,7 +457,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
     // Maintain sorting stability
     manualSorting: false,
     enableSorting: true,
-  });
+  })
 
   if (isLoading) {
     return (
@@ -470,7 +470,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -481,7 +481,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
           <p className="text-sm">{error.message}</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (endpoints.length === 0) {
@@ -497,7 +497,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -529,7 +529,7 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
                             header.getContext(),
                           )}
                     </TableHead>
-                  );
+                  )
                 })}
               </TableRow>
             ))}
@@ -570,8 +570,8 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
         endpoint={endpointToEdit}
         isOpen={editDialogOpen}
         onClose={() => {
-          setEditDialogOpen(false);
-          setEndpointToEdit(null);
+          setEditDialogOpen(false)
+          setEndpointToEdit(null)
         }}
         onSuccess={handleEditSuccess}
       />
@@ -611,5 +611,5 @@ export function EndpointsList({ onRefresh }: EndpointsListProps) {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

@@ -1,46 +1,46 @@
-"use client";
-import { ActivitySquare, AlertTriangle, Brain, Settings } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod";
+"use client"
+import { ActivitySquare, AlertTriangle, Brain, Settings } from "lucide-react"
+import { useState } from "react"
+import { toast } from "sonner"
+import { z } from "zod"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { MakeRequestFn } from "@/lib/mcp-types";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import type { MakeRequestFn } from "@/lib/mcp-types"
 
 interface SamplingMessage {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant" | "system"
   content: {
-    type: "text";
-    text: string;
-  };
+    type: "text"
+    text: string
+  }
 }
 
 interface SamplingRequest {
-  messages: SamplingMessage[];
-  maxTokens?: number;
-  temperature?: number;
-  topP?: number;
-  stopSequences?: string[];
+  messages: SamplingMessage[]
+  maxTokens?: number
+  temperature?: number
+  topP?: number
+  stopSequences?: string[]
   modelPreferences?: {
     hints?: Array<{
-      name?: string;
-    }>;
-    costPriority?: number;
-    speedPriority?: number;
-    intelligencePriority?: number;
-  };
+      name?: string
+    }>
+    costPriority?: number
+    speedPriority?: number
+    intelligencePriority?: number
+  }
 }
 
 interface SamplingResponse {
-  role: "assistant";
+  role: "assistant"
   content: {
-    type: "text";
-    text: string;
-  };
-  model: string;
-  stopReason?: "endTurn" | "stopSequence" | "maxTokens";
+    type: "text"
+    text: string
+  }
+  model: string
+  stopReason?: "endTurn" | "stopSequence" | "maxTokens"
 }
 
 // Define schema (currently unused but available for future MCP integration)
@@ -52,12 +52,12 @@ const _CreateMessageResultSchema = z.object({
   }),
   model: z.string(),
   stopReason: z.enum(["endTurn", "stopSequence", "maxTokens"]).optional(),
-});
+})
 
 interface InspectorSamplingProps {
-  mcpServerUuid: string;
-  makeRequest: MakeRequestFn;
-  enabled?: boolean;
+  mcpServerUuid: string
+  makeRequest: MakeRequestFn
+  enabled?: boolean
 }
 
 export function InspectorSampling({
@@ -69,42 +69,42 @@ export function InspectorSampling({
       role: "user",
       content: { type: "text", text: "Hello! Can you help me?" },
     },
-  ]);
-  const [maxTokens, setMaxTokens] = useState<number>(1000);
-  const [temperature, setTemperature] = useState<number>(0.7);
-  const [topP, setTopP] = useState<number>(1.0);
-  const [stopSequences, setStopSequences] = useState<string>("");
-  const [response, setResponse] = useState<SamplingResponse | null>(null);
-  const [sampling, setSampling] = useState(false);
-  const [newMessageText, setNewMessageText] = useState("");
+  ])
+  const [maxTokens, setMaxTokens] = useState<number>(1000)
+  const [temperature, setTemperature] = useState<number>(0.7)
+  const [topP, setTopP] = useState<number>(1.0)
+  const [stopSequences, setStopSequences] = useState<string>("")
+  const [response, setResponse] = useState<SamplingResponse | null>(null)
+  const [sampling, setSampling] = useState(false)
+  const [newMessageText, setNewMessageText] = useState("")
   const [newMessageRole, setNewMessageRole] = useState<"user" | "system">(
     "user",
-  );
+  )
 
   const handleAddMessage = () => {
-    if (!newMessageText.trim()) return;
+    if (!newMessageText.trim()) return
 
     const newMessage: SamplingMessage = {
       role: newMessageRole,
       content: { type: "text", text: newMessageText.trim() },
-    };
+    }
 
-    setMessages((prev) => [...prev, newMessage]);
-    setNewMessageText("");
-  };
+    setMessages((prev) => [...prev, newMessage])
+    setNewMessageText("")
+  }
 
   const handleRemoveMessage = (index: number) => {
-    setMessages((prev) => prev.filter((_, i) => i !== index));
-  };
+    setMessages((prev) => prev.filter((_, i) => i !== index))
+  }
 
   const handleSample = async () => {
     if (messages.length === 0) {
-      toast.error("Please add at least one message");
-      return;
+      toast.error("Please add at least one message")
+      return
     }
 
-    setSampling(true);
-    setResponse(null);
+    setSampling(true)
+    setResponse(null)
 
     try {
       const _samplingRequest: SamplingRequest = {
@@ -118,11 +118,11 @@ export function InspectorSampling({
             .map((s) => s.trim())
             .filter(Boolean),
         }),
-      };
+      }
 
       // Note: Sampling is not a standard MCP protocol feature
       // This is a placeholder that simulates the functionality
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate processing time
+      await new Promise((resolve) => setTimeout(resolve, 1500)) // Simulate processing time
 
       const simulatedResult = {
         role: "assistant" as const,
@@ -132,34 +132,34 @@ export function InspectorSampling({
         },
         model: "simulated-model",
         stopReason: "endTurn" as const,
-      };
+      }
 
-      setResponse(simulatedResult);
+      setResponse(simulatedResult)
       toast.info(
         "Sampling simulation completed (feature not available in standard MCP)",
-      );
+      )
     } catch (error) {
-      console.error("Error during sampling:", error);
+      console.error("Error during sampling:", error)
       toast.error("Failed to complete sampling", {
         description: error instanceof Error ? error.message : String(error),
-      });
+      })
     } finally {
-      setSampling(false);
+      setSampling(false)
     }
-  };
+  }
 
   const getRoleColor = (role: string) => {
     switch (role) {
       case "user":
-        return "bg-blue-50 border-blue-200 text-blue-900";
+        return "bg-blue-50 border-blue-200 text-blue-900"
       case "assistant":
-        return "bg-green-50 border-green-200 text-green-900";
+        return "bg-green-50 border-green-200 text-green-900"
       case "system":
-        return "bg-orange-50 border-orange-200 text-orange-900";
+        return "bg-orange-50 border-orange-200 text-orange-900"
       default:
-        return "bg-gray-50 border-gray-200 text-gray-900";
+        return "bg-gray-50 border-gray-200 text-gray-900"
     }
-  };
+  }
 
   if (!enabled) {
     return (
@@ -170,7 +170,7 @@ export function InspectorSampling({
           This MCP server doesn&apos;t support LLM sampling.
         </p>
       </div>
-    );
+    )
   }
 
   return (
@@ -210,6 +210,7 @@ export function InspectorSampling({
                       {message.role}
                     </span>
                     <button
+                      type="button"
                       onClick={() => handleRemoveMessage(index)}
                       className="text-xs text-red-600 hover:text-red-800"
                     >
@@ -269,7 +270,7 @@ export function InspectorSampling({
                   max="4000"
                   value={maxTokens}
                   onChange={(e) =>
-                    setMaxTokens(parseInt(e.target.value) || 1000)
+                    setMaxTokens(parseInt(e.target.value, 10) || 1000)
                   }
                 />
               </div>
@@ -410,5 +411,5 @@ export function InspectorSampling({
         </div>
       </div>
     </div>
-  );
+  )
 }

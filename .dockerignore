@@ -1,62 +1,64 @@
-# Dependencies
-node_modules
+# Dependencies (recursive — the monorepo has node_modules in every workspace)
+**/node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
+bun-debug.log*
 
-# Production builds
-.next
-dist
-build
+# Build outputs (recursive: apps/*/dist, apps/frontend/.next, .turbo, etc.)
+**/.next
+**/dist
+**/build
+**/.turbo
+out
 
-# Environment files
+# Environment files (provided at runtime, never baked into the image)
 .env
-.env.local
-.env.production
+.env.*
 
-# Git
+# Git / VCS / CI
 .git
 .gitignore
+.gitattributes
+.gitea
+.github
 
-# Docker
-Dockerfile*
-docker-compose*.yml
+# Docker + dev tooling (not needed in the build context; entrypoints live in
+# docker/ and ARE included because the Dockerfiles COPY them)
+docker/docker-compose*.yml
 .dockerignore
+.devcontainer
+.claude
 
-# IDE
+# Editors / OS
 .vscode
 .idea
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs / runtime data
 logs
 *.log
-
-# Runtime data
 pids
 *.pid
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
-coverage
-
-# Temporary folders
+# Coverage / temp
+**/coverage
 tmp
 temp
 
-# Documentation
+# Tests (the production build never runs them)
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+
+# Docs and large repository assets (not needed in the image)
 docs
 *.md
-
-# Test files
-**/*.test.js
-**/*.test.ts
-**/*.spec.js
-**/*.spec.ts
+metamcp.svg
+metamcp_screenshot.png

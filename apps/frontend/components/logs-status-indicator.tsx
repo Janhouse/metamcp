@@ -1,22 +1,22 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
 
-import { Badge } from "@/components/ui/badge";
-import { useLogsStore } from "@/lib/stores/logs-store";
+import { Badge } from "@/components/ui/badge"
+import { useLogsStore } from "@/lib/stores/logs-store"
 
 export function LogsStatusIndicator() {
-  const { totalCount, isAutoRefreshing } = useLogsStore();
-  const [mounted, setMounted] = useState(false);
+  const { totalCount, isAutoRefreshing } = useLogsStore()
+  const [mounted, setMounted] = useState(false)
 
   // Only render after component mounts to avoid hydration mismatch
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
 
   // Return empty div during SSR to avoid hydration mismatch
   if (!mounted) {
-    return <div className="flex items-center gap-1" />;
+    return <div className="flex items-center gap-1" />
   }
 
   if (totalCount === 0) {
@@ -29,7 +29,7 @@ export function LogsStatusIndicator() {
           />
         )}
       </div>
-    );
+    )
   }
 
   return (
@@ -44,5 +44,5 @@ export function LogsStatusIndicator() {
         />
       )}
     </div>
-  );
+  )
 }

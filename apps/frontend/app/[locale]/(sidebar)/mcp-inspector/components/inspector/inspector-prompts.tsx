@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
-"use client";
+"use client"
 import {
   GetPromptResultSchema,
   ListPromptsResultSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+} from "@modelcontextprotocol/sdk/types.js"
 import {
   AlertTriangle,
   ChevronDown,
@@ -11,56 +11,56 @@ import {
   MessageSquare,
   Play,
   RefreshCw,
-} from "lucide-react";
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod";
+} from "lucide-react"
+import { useCallback, useState } from "react"
+import { toast } from "sonner"
+import type { z } from "zod"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useTranslations } from "@/hooks/useTranslations";
-import { MakeRequestFn } from "@/lib/mcp-types";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useTranslations } from "@/hooks/useTranslations"
+import type { MakeRequestFn } from "@/lib/mcp-types"
 
 interface Prompt {
-  name: string;
-  description?: string;
+  name: string
+  description?: string
   arguments?: Array<{
-    name: string;
-    description?: string;
-    required?: boolean;
-  }>;
+    name: string
+    description?: string
+    required?: boolean
+  }>
 }
 
 // Use the actual MCP SDK types
-type PromptGetResponse = z.infer<typeof GetPromptResultSchema>;
-type PromptMessage = PromptGetResponse["messages"][0];
+type PromptGetResponse = z.infer<typeof GetPromptResultSchema>
+type PromptMessage = PromptGetResponse["messages"][0]
 
 interface InspectorPromptsProps {
-  makeRequest: MakeRequestFn;
-  enabled?: boolean;
+  makeRequest: MakeRequestFn
+  enabled?: boolean
 }
 
 export function InspectorPrompts({
   makeRequest,
   enabled = true,
 }: InspectorPromptsProps) {
-  const { t } = useTranslations();
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-  const [promptArgs, setPromptArgs] = useState<Record<string, string>>({});
+  const { t } = useTranslations()
+  const [prompts, setPrompts] = useState<Prompt[]>([])
+  const [loading, setLoading] = useState(false)
+  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null)
+  const [promptArgs, setPromptArgs] = useState<Record<string, string>>({})
   const [promptResult, setPromptResult] = useState<PromptGetResponse | null>(
     null,
-  );
-  const [getting, setGetting] = useState(false);
-  const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  )
+  const [getting, setGetting] = useState(false)
+  const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null)
+  const [nextCursor, setNextCursor] = useState<string | undefined>()
 
   const fetchPrompts = useCallback(
     async (cursor?: string) => {
-      if (!enabled) return;
+      if (!enabled) return
 
-      setLoading(true);
+      setLoading(true)
       try {
         const response = await makeRequest(
           {
@@ -69,48 +69,48 @@ export function InspectorPrompts({
           },
           ListPromptsResultSchema,
           { suppressToast: true },
-        );
+        )
 
         if (cursor) {
           // Append to existing prompts if we're fetching more
-          setPrompts((prev) => [...prev, ...(response.prompts || [])]);
+          setPrompts((prev) => [...prev, ...(response.prompts || [])])
         } else {
           // Replace prompts if this is the first fetch
-          setPrompts(response.prompts || []);
+          setPrompts(response.prompts || [])
         }
 
-        setNextCursor(response.nextCursor);
+        setNextCursor(response.nextCursor)
 
         if (response.prompts && response.prompts.length === 0 && !cursor) {
-          toast.info(t("inspector:promptsComponent.noPromptsFound"));
+          toast.info(t("inspector:promptsComponent.noPromptsFound"))
         }
       } catch (error) {
-        console.error("Error fetching prompts:", error);
+        console.error("Error fetching prompts:", error)
         toast.error("Failed to fetch prompts from MCP server", {
           description: error instanceof Error ? error.message : String(error),
-        });
+        })
         if (!cursor) {
-          setPrompts([]);
+          setPrompts([])
         }
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     },
     [makeRequest, enabled, t],
-  );
+  )
 
   const clearPrompts = () => {
-    setPrompts([]);
-    setSelectedPrompt(null);
-    setPromptResult(null);
-    setNextCursor(undefined);
-  };
+    setPrompts([])
+    setSelectedPrompt(null)
+    setPromptResult(null)
+    setNextCursor(undefined)
+  }
 
   const handlePromptGet = async () => {
-    if (!selectedPrompt) return;
+    if (!selectedPrompt) return
 
-    setGetting(true);
-    setPromptResult(null);
+    setGetting(true)
+    setPromptResult(null)
 
     try {
       const response = await makeRequest(
@@ -123,16 +123,16 @@ export function InspectorPrompts({
         },
         GetPromptResultSchema,
         { suppressToast: true },
-      );
+      )
 
-      setPromptResult(response);
+      setPromptResult(response)
       toast.success(
         t("inspector:promptsComponent.promptRetrievedSuccess", {
           promptName: selectedPrompt.name,
         }),
-      );
+      )
     } catch (error) {
-      console.error("Error getting prompt:", error);
+      console.error("Error getting prompt:", error)
       toast.error(
         t("inspector:promptsComponent.promptRetrievalError", {
           promptName: selectedPrompt.name,
@@ -140,32 +140,32 @@ export function InspectorPrompts({
         {
           description: error instanceof Error ? error.message : String(error),
         },
-      );
+      )
     } finally {
-      setGetting(false);
+      setGetting(false)
     }
-  };
+  }
 
   const handleArgChange = (argName: string, value: string) => {
     setPromptArgs((prev) => ({
       ...prev,
       [argName]: value,
-    }));
-  };
+    }))
+  }
 
   const renderMessage = (message: PromptMessage, index: number) => {
     const getRoleColor = (role: string) => {
       switch (role) {
         case "user":
-          return "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800";
+          return "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
         case "assistant":
-          return "text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800";
+          return "text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
         case "system":
-          return "text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800";
+          return "text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800"
         default:
-          return "text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-700";
+          return "text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-700"
       }
-    };
+    }
 
     return (
       <div
@@ -190,7 +190,7 @@ export function InspectorPrompts({
             {message.content.data && (
               <img
                 src={`data:${message.content.mimeType};base64,${message.content.data}`}
-                alt="Prompt image"
+                alt="Prompt"
                 className="mt-2 max-w-full h-auto"
               />
             )}
@@ -208,6 +208,7 @@ export function InspectorPrompts({
                 className="mt-2 w-full"
                 src={`data:${message.content.mimeType};base64,${message.content.data}`}
               >
+                <track kind="captions" />
                 {t("inspector:promptsComponent.audioNotSupported")}
               </audio>
             )}
@@ -245,8 +246,8 @@ export function InspectorPrompts({
           </div>
         )}
       </div>
-    );
-  };
+    )
+  }
 
   if (!enabled) {
     return (
@@ -259,7 +260,7 @@ export function InspectorPrompts({
           {t("inspector:promptsComponent.promptsNotSupportedDesc")}
         </p>
       </div>
-    );
+    )
   }
 
   return (
@@ -334,16 +335,16 @@ export function InspectorPrompts({
                         : "hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
                     onClick={() => {
-                      setSelectedPrompt(prompt);
-                      setPromptResult(null);
+                      setSelectedPrompt(prompt)
+                      setPromptResult(null)
                       // Reset args when selecting a new prompt
-                      const initialArgs: Record<string, string> = {};
+                      const initialArgs: Record<string, string> = {}
                       if (prompt.arguments) {
                         prompt.arguments.forEach((arg) => {
-                          initialArgs[arg.name] = "";
-                        });
+                          initialArgs[arg.name] = ""
+                        })
                       }
-                      setPromptArgs(initialArgs);
+                      setPromptArgs(initialArgs)
                     }}
                   >
                     <div className="flex items-center justify-between">
@@ -370,13 +371,14 @@ export function InspectorPrompts({
                           </span>
                         )}
                         <button
+                          type="button"
                           onClick={(e) => {
-                            e.stopPropagation();
+                            e.stopPropagation()
                             setExpandedPrompt(
                               expandedPrompt === prompt.name
                                 ? null
                                 : prompt.name,
-                            );
+                            )
                           }}
                         >
                           {expandedPrompt === prompt.name ? (
@@ -443,43 +445,40 @@ export function InspectorPrompts({
           </div>
 
           {/* Arguments Form */}
-          {selectedPrompt &&
-            selectedPrompt.arguments &&
-            selectedPrompt.arguments.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-2">
-                  {t("inspector:promptsComponent.arguments")}
-                </h4>
-                <div className="space-y-3">
-                  {selectedPrompt.arguments.map((arg) => (
-                    <div key={arg.name}>
-                      <label className="text-xs font-medium">
-                        {arg.name}
-                        {arg.required && (
-                          <span className="text-red-500 ml-1">*</span>
-                        )}
-                      </label>
-                      {arg.description && (
-                        <div className="text-xs text-muted-foreground mb-1">
-                          {arg.description}
-                        </div>
+          {selectedPrompt?.arguments && selectedPrompt.arguments.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-2">
+                {t("inspector:promptsComponent.arguments")}
+              </h4>
+              <div className="space-y-3">
+                {selectedPrompt.arguments.map((arg) => (
+                  <div key={arg.name}>
+                    <label className="text-xs font-medium">
+                      {arg.name}
+                      {arg.required && (
+                        <span className="text-red-500 ml-1">*</span>
                       )}
-                      <Input
-                        value={promptArgs[arg.name] || ""}
-                        onChange={(e) =>
-                          handleArgChange(arg.name, e.target.value)
-                        }
-                        placeholder={t(
-                          "inspector:promptsComponent.enterValue",
-                          { argName: arg.name },
-                        )}
-                        className="text-xs"
-                      />
-                    </div>
-                  ))}
-                </div>
+                    </label>
+                    {arg.description && (
+                      <div className="text-xs text-muted-foreground mb-1">
+                        {arg.description}
+                      </div>
+                    )}
+                    <Input
+                      value={promptArgs[arg.name] || ""}
+                      onChange={(e) =>
+                        handleArgChange(arg.name, e.target.value)
+                      }
+                      placeholder={t("inspector:promptsComponent.enterValue", {
+                        argName: arg.name,
+                      })}
+                      className="text-xs"
+                    />
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
 
           {/* Get Prompt Button */}
           {selectedPrompt && (
@@ -557,5 +556,5 @@ export function InspectorPrompts({
         </div>
       </div>
     </div>
-  );
+  )
 }

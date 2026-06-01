@@ -1,17 +1,17 @@
-"use client";
+"use client"
 
 import {
-  CreateEndpointFormData,
+  type CreateEndpointFormData,
+  type CreateEndpointRequest,
   createEndpointFormSchema,
-  CreateEndpointRequest,
-} from "@repo/zod-types";
-import { Check, ChevronDown, Link, Plus } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+} from "@repo/zod-types"
+import { Check, ChevronDown, Link, Plus } from "lucide-react"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -19,41 +19,39 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { createTranslatedZodResolver } from "@/lib/zod-resolver";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { createTranslatedZodResolver } from "@/lib/zod-resolver"
 
-import { EndpointsList } from "./endpoints-list";
+import { EndpointsList } from "./endpoints-list"
 
 export default function EndpointsPage() {
-  const { t } = useTranslations();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedNamespaceUuid, setSelectedNamespaceUuid] =
-    useState<string>("");
-  const [selectedNamespaceName, setSelectedNamespaceName] =
-    useState<string>("");
+  const { t } = useTranslations()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedNamespaceUuid, setSelectedNamespaceUuid] = useState<string>("")
+  const [selectedNamespaceName, setSelectedNamespaceName] = useState<string>("")
 
   // Get the tRPC query client for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Fetch available namespaces for selection
   const { data: namespacesResponse, isLoading: namespacesLoading } =
-    trpc.frontend.namespaces.list.useQuery();
+    trpc.frontend.namespaces.list.useQuery()
 
   const availableNamespaces = namespacesResponse?.success
     ? namespacesResponse.data
-    : [];
+    : []
 
   // tRPC mutation for creating endpoint
   const createEndpointMutation = trpc.frontend.endpoints.create.useMutation({
@@ -64,8 +62,8 @@ export default function EndpointsPage() {
           description: t("endpoints:endpointCreatedDescription", {
             name: form.getValues().name,
           }),
-        });
-        setCreateOpen(false);
+        })
+        setCreateOpen(false)
         form.reset({
           name: "",
           description: "",
@@ -83,31 +81,31 @@ export default function EndpointsPage() {
           useQueryParamAuth: false,
           createMcpServer: true,
           user_id: undefined, // Default to "For myself" (Private)
-        });
-        setSelectedNamespaceUuid("");
-        setSelectedNamespaceName("");
+        })
+        setSelectedNamespaceUuid("")
+        setSelectedNamespaceName("")
         // Invalidate and refetch the endpoint list, MCP servers list, and API keys list
-        utils.frontend.endpoints.list.invalidate();
-        utils.frontend.mcpServers.list.invalidate();
-        utils.frontend.apiKeys.list.invalidate();
+        utils.frontend.endpoints.list.invalidate()
+        utils.frontend.mcpServers.list.invalidate()
+        utils.frontend.apiKeys.list.invalidate()
       } else {
         // Handle business logic failures
-        console.error("Endpoint creation failed:", data.message);
+        console.error("Endpoint creation failed:", data.message)
         toast.error(t("endpoints:createEndpointError"), {
           description: data.message || "An unexpected error occurred",
-        });
+        })
       }
     },
     onError: (error) => {
-      console.error("Error creating endpoint:", error);
+      console.error("Error creating endpoint:", error)
       toast.error(t("endpoints:createEndpointError"), {
         description: error.message || "An unexpected error occurred",
-      });
+      })
     },
     onSettled: () => {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     },
-  });
+  })
 
   const form = useForm<CreateEndpointFormData>({
     resolver: createTranslatedZodResolver(createEndpointFormSchema, t),
@@ -129,10 +127,10 @@ export default function EndpointsPage() {
       createMcpServer: true,
       user_id: undefined, // Default to "For myself" (Private)
     },
-  });
+  })
 
   const onSubmit = async (data: CreateEndpointFormData) => {
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       // Create the API request payload
       const apiPayload: CreateEndpointRequest = {
@@ -152,34 +150,34 @@ export default function EndpointsPage() {
         useQueryParamAuth: data.useQueryParamAuth,
         createMcpServer: data.createMcpServer,
         user_id: data.user_id,
-      };
-      console.log("apiPayload", apiPayload);
+      }
+      console.log("apiPayload", apiPayload)
       // Use tRPC mutation
-      createEndpointMutation.mutate(apiPayload);
+      createEndpointMutation.mutate(apiPayload)
     } catch (error) {
-      setIsSubmitting(false);
-      console.error("Error preparing endpoint data:", error);
+      setIsSubmitting(false)
+      console.error("Error preparing endpoint data:", error)
       toast.error(t("endpoints:createEndpointError"), {
         description:
           error instanceof Error
             ? error.message
             : "An unexpected error occurred",
-      });
+      })
     }
-  };
+  }
 
   const handleNamespaceSelect = (
     namespaceUuid: string,
     namespaceName: string,
   ) => {
-    setSelectedNamespaceUuid(namespaceUuid);
-    setSelectedNamespaceName(namespaceName);
-    form.setValue("namespaceUuid", namespaceUuid);
-    form.clearErrors("namespaceUuid");
-  };
+    setSelectedNamespaceUuid(namespaceUuid)
+    setSelectedNamespaceName(namespaceName)
+    form.setValue("namespaceUuid", namespaceUuid)
+    form.clearErrors("namespaceUuid")
+  }
 
   const resetForm = () => {
-    setCreateOpen(false);
+    setCreateOpen(false)
     form.reset({
       name: "",
       description: "",
@@ -197,10 +195,10 @@ export default function EndpointsPage() {
       useQueryParamAuth: false,
       createMcpServer: true,
       user_id: undefined, // Default to "For myself" (Private)
-    });
-    setSelectedNamespaceUuid("");
-    setSelectedNamespaceName("");
-  };
+    })
+    setSelectedNamespaceUuid("")
+    setSelectedNamespaceName("")
+  }
 
   return (
     <div className="space-y-6">
@@ -722,5 +720,5 @@ export default function EndpointsPage() {
 
       <EndpointsList />
     </div>
-  );
+  )
 }

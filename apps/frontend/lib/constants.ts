@@ -6,14 +6,14 @@ export const SESSION_KEYS = {
   CLIENT_INFORMATION: "mcp_client_information",
   MCP_SERVER_UUID: "mcp_server_uuid",
   SERVER_METADATA: "mcp_server_metadata",
-} as const;
+} as const
 
 // Helper function to create server-specific session storage keys
 export function getServerSpecificKey(
   baseKey: string,
   serverUrl: string,
 ): string {
-  return `${baseKey}_${btoa(serverUrl).replace(/[^a-zA-Z0-9]/g, "")}`;
+  return `${baseKey}_${btoa(serverUrl).replace(/[^a-zA-Z0-9]/g, "")}`
 }
 
 export type ConnectionStatus =
@@ -21,4 +21,4 @@ export type ConnectionStatus =
   | "disconnected"
   | "connected"
   | "error"
-  | "error-connecting-to-proxy";
+  | "error-connecting-to-proxy"

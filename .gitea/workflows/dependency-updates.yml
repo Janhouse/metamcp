@@ -7,10 +7,17 @@ on:
 
 jobs:
   update:
-    uses: https://git.janhouse.lv/janhouse/gitea-pnpm-deps-update/.gitea/workflows/run.yml@c5d1654e15454d56af8609633fdb86ded9356804
+    # Bun-based weekly updater (honors bunfig.toml minimumReleaseAge). Pinned to
+    # a SHA for supply-chain safety; bump deliberately when the workflow changes.
+    uses: https://git.janhouse.lv/janhouse/gitea-bun-deps-update/.gitea/workflows/run.yml@e3da17c025be5df87f75c554fdf5e324296991b4
     with:
       base-branch: main
       monitor-ci: true
+      # Root scripts go through turbo; lint is biome invoked from the workflow side.
+      lint-cmd: 'bunx biome ci .'
+      typecheck-cmd: 'bunx turbo check-types'
+      test-cmd: 'bunx turbo test'
+      build-cmd: 'bunx turbo build'
     secrets:
       BOT_TOKEN: ${{ secrets.DEPS_BOT_TOKEN }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

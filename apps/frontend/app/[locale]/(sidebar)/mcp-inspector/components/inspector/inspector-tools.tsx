@@ -1,10 +1,10 @@
-"use client";
+"use client"
 import {
-  CompatibilityCallToolResult,
+  type CompatibilityCallToolResult,
   CompatibilityCallToolResultSchema,
   ListToolsResultSchema,
-  Tool,
-} from "@modelcontextprotocol/sdk/types.js";
+  type Tool,
+} from "@modelcontextprotocol/sdk/types.js"
 import {
   AlertTriangle,
   CheckCircle,
@@ -14,62 +14,62 @@ import {
   Play,
   Wrench,
   XCircle,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+} from "lucide-react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
-import { CodeBlock } from "@/components/ui/code-block";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useTranslations } from "@/hooks/useTranslations";
-import { MakeRequestFn } from "@/lib/mcp-types";
+import { Button } from "@/components/ui/button"
+import { CodeBlock } from "@/components/ui/code-block"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useTranslations } from "@/hooks/useTranslations"
+import type { MakeRequestFn } from "@/lib/mcp-types"
 
 interface InspectorToolsProps {
-  makeRequest: MakeRequestFn;
-  enabled?: boolean;
+  makeRequest: MakeRequestFn
+  enabled?: boolean
 }
 
 interface ToolExecution {
-  id: string;
-  toolName: string;
-  arguments: Record<string, unknown>;
-  timestamp: Date;
-  status: "running" | "success" | "error";
-  result?: CompatibilityCallToolResult;
-  error?: string;
-  duration?: number;
+  id: string
+  toolName: string
+  arguments: Record<string, unknown>
+  timestamp: Date
+  status: "running" | "success" | "error"
+  result?: CompatibilityCallToolResult
+  error?: string
+  duration?: number
 }
 
 interface ArgumentInput {
-  key: string;
-  value: string;
-  type: string;
-  required: boolean;
-  description?: string;
+  key: string
+  value: string
+  type: string
+  required: boolean
+  description?: string
 }
 
 export function InspectorTools({
   makeRequest,
   enabled = true,
 }: InspectorToolsProps) {
-  const { t } = useTranslations();
-  const [tools, setTools] = useState<Tool[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
-  const [argumentInputs, setArgumentInputs] = useState<ArgumentInput[]>([]);
-  const [executions, setExecutions] = useState<ToolExecution[]>([]);
-  const [executing, setExecuting] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const { t } = useTranslations()
+  const [tools, setTools] = useState<Tool[]>([])
+  const [loading, setLoading] = useState(false)
+  const [selectedTool, setSelectedTool] = useState<Tool | null>(null)
+  const [argumentInputs, setArgumentInputs] = useState<ArgumentInput[]>([])
+  const [executions, setExecutions] = useState<ToolExecution[]>([])
+  const [executing, setExecuting] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | undefined>()
 
   // Fetch available tools with proper error handling pattern from official inspector
   const fetchTools = async (cursor?: string) => {
     if (!enabled) {
-      toast.warning(t("inspector:toolsComponent.toolsNotSupportedWarning"));
-      return;
+      toast.warning(t("inspector:toolsComponent.toolsNotSupportedWarning"))
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
       const response = await makeRequest(
         {
@@ -78,77 +78,77 @@ export function InspectorTools({
         },
         ListToolsResultSchema,
         { suppressToast: true },
-      );
+      )
 
       if (cursor) {
         // Append to existing tools if we're fetching more
-        setTools((prev) => [...prev, ...(response.tools || [])]);
+        setTools((prev) => [...prev, ...(response.tools || [])])
       } else {
         // Replace tools if this is the first fetch
-        setTools(response.tools || []);
+        setTools(response.tools || [])
       }
 
-      setNextCursor(response.nextCursor);
+      setNextCursor(response.nextCursor)
 
       if (response.tools && response.tools.length > 0) {
         toast.success(
           t("inspector:toolsComponent.foundTools", {
             count: response.tools.length,
           }),
-        );
+        )
         // Auto-select first tool if none selected
         if (!selectedTool && response.tools.length > 0) {
-          setSelectedTool(response.tools[0] ?? null);
+          setSelectedTool(response.tools[0] ?? null)
         }
       } else {
-        toast.info(t("inspector:toolsComponent.noToolsFound"));
+        toast.info(t("inspector:toolsComponent.noToolsFound"))
       }
     } catch (error) {
-      console.error("Error listing tools:", error);
+      console.error("Error listing tools:", error)
       toast.error(t("inspector:toolsComponent.listTools"), {
         description: error instanceof Error ? error.message : String(error),
-      });
-      setTools([]);
+      })
+      setTools([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const clearTools = () => {
-    setTools([]);
-    setSelectedTool(null);
-    setNextCursor(undefined);
-    setExecutions([]);
-  };
+    setTools([])
+    setSelectedTool(null)
+    setNextCursor(undefined)
+    setExecutions([])
+  }
 
   // Update argument inputs when selected tool changes
   useEffect(() => {
     if (!selectedTool) {
-      setArgumentInputs([]);
-      return;
+      setArgumentInputs([])
+      return
     }
 
-    const properties = selectedTool.inputSchema?.properties || {};
-    const required = selectedTool.inputSchema?.required || [];
+    const properties = selectedTool.inputSchema?.properties || {}
+    const required = selectedTool.inputSchema?.required || []
 
     const inputs: ArgumentInput[] = Object.entries(properties).map(
       // @ts-expect-error TODO resolve MCP SDK Tool schema mismatch
       ([key, schema]: [string, Record<string, unknown>]) => {
-        let defaultValue = "";
-        let type = "text";
+        let defaultValue = ""
+        let type = "text"
 
         // Determine input type and default value based on schema
         if (schema.type === "string") {
           defaultValue =
-            (schema.default as string) || (schema.example as string) || "";
-          type = "text";
+            (schema.default as string) || (schema.example as string) || ""
+          type = "text"
         } else if (schema.type === "number" || schema.type === "integer") {
           defaultValue =
-            schema.default?.toString() || schema.example?.toString() || "0";
-          type = "number";
+            schema.default?.toString() || schema.example?.toString() || "0"
+          type = "number"
         } else if (schema.type === "boolean") {
-          defaultValue = schema.default?.toString() || "false";
-          type = "boolean";
+          defaultValue = schema.default?.toString() || "false"
+          type = "boolean"
         } else if (schema.type === "array" || schema.type === "object") {
           defaultValue = JSON.stringify(
             schema.default ||
@@ -156,15 +156,15 @@ export function InspectorTools({
               (schema.type === "array" ? [] : {}),
             null,
             2,
-          );
-          type = "json";
+          )
+          type = "json"
         } else {
           defaultValue = JSON.stringify(
             schema.default || schema.example || null,
             null,
             2,
-          );
-          type = "json";
+          )
+          type = "json"
         }
 
         return {
@@ -173,32 +173,32 @@ export function InspectorTools({
           type,
           required: required.includes(key),
           description: schema.description as string | undefined,
-        };
+        }
       },
-    );
+    )
 
-    setArgumentInputs(inputs);
-  }, [selectedTool]);
+    setArgumentInputs(inputs)
+  }, [selectedTool])
 
   // Execute the selected tool using the proper result schema from official inspector
   const executeTool = async () => {
-    if (!selectedTool) return;
+    if (!selectedTool) return
 
-    const arguments_obj: Record<string, unknown> = {};
+    const arguments_obj: Record<string, unknown> = {}
 
     // Parse all argument inputs
     for (const input of argumentInputs) {
       try {
         if (input.type === "number") {
-          arguments_obj[input.key] = input.value ? parseFloat(input.value) : 0;
+          arguments_obj[input.key] = input.value ? parseFloat(input.value) : 0
         } else if (input.type === "boolean") {
-          arguments_obj[input.key] = input.value === "true";
+          arguments_obj[input.key] = input.value === "true"
         } else if (input.type === "json") {
           arguments_obj[input.key] = input.value
             ? JSON.parse(input.value)
-            : null;
+            : null
         } else {
-          arguments_obj[input.key] = input.value;
+          arguments_obj[input.key] = input.value
         }
       } catch (_error) {
         toast.error(
@@ -206,14 +206,14 @@ export function InspectorTools({
           {
             description: t("inspector:toolsComponent.invalidJsonDescription"),
           },
-        );
-        return;
+        )
+        return
       }
     }
 
-    setExecuting(true);
-    const startTime = Date.now();
-    const executionId = `exec-${Date.now()}`;
+    setExecuting(true)
+    const startTime = Date.now()
+    const executionId = `exec-${Date.now()}`
 
     const newExecution: ToolExecution = {
       id: executionId,
@@ -221,9 +221,9 @@ export function InspectorTools({
       arguments: arguments_obj,
       timestamp: new Date(),
       status: "running",
-    };
+    }
 
-    setExecutions((prev) => [newExecution, ...prev]);
+    setExecutions((prev) => [newExecution, ...prev])
 
     try {
       // Use CompatibilityCallToolResultSchema for better compatibility
@@ -237,19 +237,19 @@ export function InspectorTools({
         },
         CompatibilityCallToolResultSchema,
         { suppressToast: true },
-      );
+      )
 
-      const duration = Date.now() - startTime;
+      const duration = Date.now() - startTime
       const successExecution: ToolExecution = {
         ...newExecution,
         status: "success",
         result: response,
         duration,
-      };
+      }
 
       setExecutions((prev) =>
         prev.map((exec) => (exec.id === executionId ? successExecution : exec)),
-      );
+      )
 
       toast.success(
         t("inspector:toolsComponent.toolExecutedSuccess", {
@@ -261,22 +261,21 @@ export function InspectorTools({
             { duration },
           ),
         },
-      );
+      )
     } catch (error) {
-      const duration = Date.now() - startTime;
-      const errorString =
-        error instanceof Error ? error.message : String(error);
+      const duration = Date.now() - startTime
+      const errorString = error instanceof Error ? error.message : String(error)
 
       const failedExecution: ToolExecution = {
         ...newExecution,
         status: "error",
         error: errorString,
         duration,
-      };
+      }
 
       setExecutions((prev) =>
         prev.map((exec) => (exec.id === executionId ? failedExecution : exec)),
-      );
+      )
 
       toast.error(
         t("inspector:toolsComponent.toolExecutionFailed", {
@@ -285,45 +284,45 @@ export function InspectorTools({
         {
           description: errorString,
         },
-      );
+      )
     } finally {
-      setExecuting(false);
+      setExecuting(false)
     }
-  };
+  }
 
   const updateArgumentValue = (key: string, value: string) => {
     setArgumentInputs((prev) =>
       prev.map((input) => (input.key === key ? { ...input, value } : input)),
-    );
-  };
+    )
+  }
 
   const formatDuration = (duration: number) => {
     if (duration < 1000) {
       return t("inspector:toolsComponent.formatDuration.milliseconds", {
         duration,
-      });
+      })
     }
     return t("inspector:toolsComponent.formatDuration.seconds", {
       duration: (duration / 1000).toFixed(2),
-    });
-  };
+    })
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "running":
         return (
           <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
-        );
+        )
       case "success":
         return (
           <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-        );
+        )
       case "error":
-        return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
+        return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
       default:
-        return <Clock className="h-4 w-4 text-muted-foreground" />;
+        return <Clock className="h-4 w-4 text-muted-foreground" />
     }
-  };
+  }
 
   // Check if tools capability is disabled
   if (!enabled) {
@@ -337,7 +336,7 @@ export function InspectorTools({
           {t("inspector:toolsComponent.toolsNotSupportedDesc")}
         </p>
       </div>
-    );
+    )
   }
 
   return (
@@ -593,5 +592,5 @@ export function InspectorTools({
         </div>
       </div>
     </div>
-  );
+  )
 }

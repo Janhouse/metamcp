@@ -1,4 +1,4 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsup"
 
 export default defineConfig({
   entry: ["src/index.ts"],
@@ -15,7 +15,7 @@ export default defineConfig({
   outExtension() {
     return {
       js: `.js`, // Ensure .js output instead of .mjs
-    };
+    }
   },
   external: ["@trpc/server", "@repo/zod-types", "zod"],
-});
+})

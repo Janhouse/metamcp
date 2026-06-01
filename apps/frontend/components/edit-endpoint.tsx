@@ -1,17 +1,17 @@
-"use client";
+"use client"
 
 import {
-  EditEndpointFormData,
+  type EditEndpointFormData,
+  type EndpointWithNamespace,
   editEndpointFormSchema,
-  EndpointWithNamespace,
-  UpdateEndpointRequest,
-} from "@repo/zod-types";
-import { Check, ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+  type UpdateEndpointRequest,
+} from "@repo/zod-types"
+import { Check, ChevronDown } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -19,25 +19,25 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { useTranslations } from "@/hooks/useTranslations";
-import { trpc } from "@/lib/trpc";
-import { createTranslatedZodResolver } from "@/lib/zod-resolver";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { useTranslations } from "@/hooks/useTranslations"
+import { trpc } from "@/lib/trpc"
+import { createTranslatedZodResolver } from "@/lib/zod-resolver"
 
 interface EditEndpointProps {
-  endpoint: EndpointWithNamespace | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: (updatedEndpoint: EndpointWithNamespace) => void;
+  endpoint: EndpointWithNamespace | null
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: (updatedEndpoint: EndpointWithNamespace) => void
 }
 
 export function EditEndpoint({
@@ -46,37 +46,35 @@ export function EditEndpoint({
   onClose,
   onSuccess,
 }: EditEndpointProps) {
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [selectedNamespaceUuid, setSelectedNamespaceUuid] =
-    useState<string>("");
-  const [selectedNamespaceName, setSelectedNamespaceName] =
-    useState<string>("");
-  const { t } = useTranslations();
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [selectedNamespaceUuid, setSelectedNamespaceUuid] = useState<string>("")
+  const [selectedNamespaceName, setSelectedNamespaceName] = useState<string>("")
+  const { t } = useTranslations()
 
   // Get tRPC utils for cache invalidation
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils()
 
   // Fetch namespaces list
   const { data: namespacesResponse, isLoading: namespacesLoading } =
-    trpc.frontend.namespaces.list.useQuery();
+    trpc.frontend.namespaces.list.useQuery()
   const availableNamespaces = namespacesResponse?.success
     ? namespacesResponse.data
-    : [];
+    : []
 
   // tRPC mutation for updating endpoint
   const updateEndpointMutation = trpc.frontend.endpoints.update.useMutation({
     onSuccess: (data) => {
       if (data.success && data.data) {
         // Invalidate both the list and individual endpoint queries, and MCP servers list
-        utils.frontend.endpoints.list.invalidate();
-        utils.frontend.mcpServers.list.invalidate();
+        utils.frontend.endpoints.list.invalidate()
+        utils.frontend.mcpServers.list.invalidate()
         if (endpoint) {
-          utils.frontend.endpoints.get.invalidate({ uuid: endpoint.uuid });
+          utils.frontend.endpoints.get.invalidate({ uuid: endpoint.uuid })
         }
 
         toast.success(t("endpoints:edit.updateSuccess"), {
           description: t("endpoints:edit.updateSuccessDescription"),
-        });
+        })
 
         // Get the updated endpoint with namespace info for the callback
         const updatedEndpoint: EndpointWithNamespace = {
@@ -85,28 +83,28 @@ export function EditEndpoint({
             availableNamespaces.find(
               (ns) => ns.uuid === data.data!.namespace_uuid,
             ) || endpoint!.namespace,
-        };
+        }
 
-        onSuccess(updatedEndpoint);
-        onClose();
-        editForm.reset();
+        onSuccess(updatedEndpoint)
+        onClose()
+        editForm.reset()
       } else {
         toast.error(t("endpoints:edit.updateFailed"), {
           description:
             data.message || t("endpoints:edit.updateFailedDescription"),
-        });
+        })
       }
     },
     onError: (error) => {
-      console.error("Error updating endpoint:", error);
+      console.error("Error updating endpoint:", error)
       toast.error(t("endpoints:edit.updateFailed"), {
         description: error.message || t("common:unexpectedError"),
-      });
+      })
     },
     onSettled: () => {
-      setIsUpdating(false);
+      setIsUpdating(false)
     },
-  });
+  })
 
   const editForm = useForm<EditEndpointFormData>({
     resolver: createTranslatedZodResolver(editEndpointFormSchema, t),
@@ -126,7 +124,7 @@ export function EditEndpoint({
       enableOauth: false,
       useQueryParamAuth: false,
     },
-  });
+  })
 
   // Pre-populate form when endpoint changes
   useEffect(() => {
@@ -146,28 +144,28 @@ export function EditEndpoint({
         clientMaxRateStrategyKey: endpoint.clientMaxRateStrategyKey,
         enableOauth: endpoint.enable_oauth ?? false,
         useQueryParamAuth: endpoint.use_query_param_auth ?? false,
-      });
-      setSelectedNamespaceUuid(endpoint.namespace.uuid);
-      setSelectedNamespaceName(endpoint.namespace.name);
+      })
+      setSelectedNamespaceUuid(endpoint.namespace.uuid)
+      setSelectedNamespaceName(endpoint.namespace.name)
     }
-  }, [endpoint, isOpen, editForm]);
+  }, [endpoint, isOpen, editForm])
 
   // Handle namespace selection
   const handleNamespaceSelect = (
     namespaceUuid: string,
     namespaceName: string,
   ) => {
-    setSelectedNamespaceUuid(namespaceUuid);
-    setSelectedNamespaceName(namespaceName);
-    editForm.setValue("namespaceUuid", namespaceUuid);
-    editForm.clearErrors("namespaceUuid");
-  };
+    setSelectedNamespaceUuid(namespaceUuid)
+    setSelectedNamespaceName(namespaceName)
+    editForm.setValue("namespaceUuid", namespaceUuid)
+    editForm.clearErrors("namespaceUuid")
+  }
 
   // Handle edit endpoint
   const handleEditEndpoint = async (data: EditEndpointFormData) => {
-    if (!endpoint) return;
+    if (!endpoint) return
 
-    setIsUpdating(true);
+    setIsUpdating(true)
     try {
       // Create the API request payload
       const apiPayload: UpdateEndpointRequest = {
@@ -186,21 +184,21 @@ export function EditEndpoint({
         clientMaxRateStrategyKey: data.clientMaxRateStrategyKey,
         enableOauth: data.enableOauth,
         useQueryParamAuth: data.useQueryParamAuth,
-      };
+      }
       // Use tRPC mutation
-      updateEndpointMutation.mutate(apiPayload);
+      updateEndpointMutation.mutate(apiPayload)
     } catch (error) {
-      setIsUpdating(false);
-      console.error("Error preparing endpoint data:", error);
+      setIsUpdating(false)
+      console.error("Error preparing endpoint data:", error)
       toast.error(t("endpoints:edit.updateFailed"), {
         description:
           error instanceof Error ? error.message : t("common:unexpectedError"),
-      });
+      })
     }
-  };
+  }
 
   const handleClose = () => {
-    onClose();
+    onClose()
     editForm.reset({
       name: "",
       description: "",
@@ -208,13 +206,13 @@ export function EditEndpoint({
       enableApiKeyAuth: true,
       enableOauth: false,
       useQueryParamAuth: false,
-    });
-    setSelectedNamespaceUuid("");
-    setSelectedNamespaceName("");
-  };
+    })
+    setSelectedNamespaceUuid("")
+    setSelectedNamespaceName("")
+  }
 
   if (!endpoint) {
-    return null;
+    return null
   }
 
   return (
@@ -652,5 +650,5 @@ export function EditEndpoint({
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
