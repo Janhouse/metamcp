@@ -4,7 +4,6 @@ import {
   SSEClientTransport,
   SseError,
 } from "@modelcontextprotocol/sdk/client/sse.js"
-import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js"
@@ -21,7 +20,12 @@ import { mcpServersRepository } from "../../db/repositories"
 import mcpProxy from "../../lib/mcp-proxy"
 import { transformDockerUrl } from "../../lib/metamcp/client"
 import { mcpServerPool } from "../../lib/metamcp/mcp-server-pool"
-import { resolveEnvVariables } from "../../lib/metamcp/utils"
+import {
+  buildChildEnv,
+  getSandboxCwd,
+  resolveSandboxConfig,
+  wrapCommand,
+} from "../../lib/metamcp/sandbox"
 import { ProcessManagedStdioTransport } from "../../lib/stdio-transport/process-managed-transport"
 import { betterAuthMcpMiddleware } from "../../middleware/better-auth-mcp.middleware"
 
@@ -31,10 +35,6 @@ const STREAMABLE_HTTP_HEADERS_PASSTHROUGH = [
   "mcp-session-id",
   "last-event-id",
 ]
-
-const defaultEnvironment = {
-  ...getDefaultEnvironment(),
-}
 
 // Cooldown mechanism for failed STDIO commands
 const STDIO_COOLDOWN_DURATION = 10000 // 10 seconds
@@ -239,14 +239,16 @@ const createTransport = async (req: express.Request): Promise<Transport> => {
     const origArgs = shellParseArgs(query.args as string) as string[]
     const queryEnv = query.env ? JSON.parse(query.env as string) : {}
 
-    // Resolve environment variable placeholders
-    const resolvedQueryEnv = resolveEnvVariables(queryEnv)
-
-    const env = { ...process.env, ...defaultEnvironment, ...resolvedQueryEnv }
+    // Deny-by-default env: never spread the host process.env (which holds
+    // DATABASE_URL / BETTER_AUTH_SECRET / etc). buildChildEnv = inherit
+    // whitelist + the explicitly-provided env, with ${VAR} placeholders
+    // resolved. Matches the production pool path in client.ts.
+    const env = buildChildEnv(queryEnv)
 
     const { cmd, args } = findActualExecutable(command, origArgs)
 
-    // Check if this command is in cooldown
+    // Cooldown key, UUID extraction and error checks all use the *original*
+    // (unwrapped) command — only the final transport gets the sandbox wrapper.
     if (isStdioInCooldown(cmd, args, env)) {
       logger.info(`STDIO command in cooldown: ${cmd} ${args.join(" ")}`)
       const cooldownEnd = stdioCommandCooldowns.get(
@@ -259,8 +261,10 @@ const createTransport = async (req: express.Request): Promise<Transport> => {
       }
     }
 
-    // Check if the server is in error state
+    // Check if the server is in error state, and load its per-server sandbox
+    // config when the command maps to a known DB server.
     const serverUuid = await extractServerUuidFromStdioCommand(cmd, args)
+    let perServerSandbox = null
     if (serverUuid) {
       const isInError = await checkServerErrorStatus(serverUuid)
       if (isInError) {
@@ -268,15 +272,21 @@ const createTransport = async (req: express.Request): Promise<Transport> => {
           `Server is in error state and cannot be connected to. Please check the server configuration and try again later.`,
         )
       }
+      const dbServer = await mcpServersRepository.findByUuid(serverUuid)
+      perServerSandbox = dbServer?.sandbox ?? null
     }
+
+    const sandboxCfg = resolveSandboxConfig(perServerSandbox)
+    const wrapped = wrapCommand(cmd, args, sandboxCfg)
 
     logger.info(`STDIO transport: command=${cmd}, args=${args}`)
 
     const transport = new ProcessManagedStdioTransport({
-      command: cmd,
-      args,
+      command: wrapped.command,
+      args: wrapped.args,
       env,
       stderr: "pipe",
+      cwd: getSandboxCwd(sandboxCfg),
     })
 
     try {
@@ -644,12 +654,7 @@ serverRouter.get("/stdio", async (req, res) => {
         const command = query.command as string
         const origArgs = shellParseArgs(query.args as string) as string[]
         const queryEnv = query.env ? JSON.parse(query.env as string) : {}
-        const resolvedQueryEnv = resolveEnvVariables(queryEnv)
-        const env = {
-          ...process.env,
-          ...defaultEnvironment,
-          ...resolvedQueryEnv,
-        }
+        const env = buildChildEnv(queryEnv)
         const { cmd, args } = findActualExecutable(command, origArgs)
 
         setStdioCooldown(cmd, args, env)
@@ -690,12 +695,7 @@ serverRouter.get("/stdio", async (req, res) => {
             const command = query.command as string
             const origArgs = shellParseArgs(query.args as string) as string[]
             const queryEnv = query.env ? JSON.parse(query.env as string) : {}
-            const resolvedQueryEnv = resolveEnvVariables(queryEnv)
-            const env = {
-              ...process.env,
-              ...defaultEnvironment,
-              ...resolvedQueryEnv,
-            }
+            const env = buildChildEnv(queryEnv)
             const { cmd, args } = findActualExecutable(command, origArgs)
 
             setStdioCooldown(cmd, args, env)

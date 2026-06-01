@@ -16,6 +16,7 @@ const baseServer = {
   bearerToken: "tok_123",
   headers: { Authorization: "Bearer x" },
   user_id: "owner",
+  sandbox: { network: false },
 } as any
 
 describe("McpServersSerializer secret redaction", () => {
@@ -24,6 +25,8 @@ describe("McpServersSerializer secret redaction", () => {
     expect(out.env).toEqual({ SECRET: "value" })
     expect(out.bearerToken).toBe("tok_123")
     expect(out.headers).toEqual({ Authorization: "Bearer x" })
+    // Sandbox config passes through unchanged.
+    expect(out.sandbox).toEqual({ network: false })
   })
 
   it("strips secrets when redacted", () => {
@@ -33,9 +36,10 @@ describe("McpServersSerializer secret redaction", () => {
     expect(out.env).toEqual({})
     expect(out.bearerToken).toBeUndefined()
     expect(out.headers).toEqual({})
-    // non-secret fields preserved
+    // non-secret fields preserved (sandbox is not a secret)
     expect(out.name).toBe("srv")
     expect(out.command).toBe("node")
+    expect(out.sandbox).toEqual({ network: false })
   })
 
   it("list redacts secrets for servers the requester does not own", () => {

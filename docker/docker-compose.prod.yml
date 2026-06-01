@@ -13,6 +13,20 @@ services:
       # Generate one with: openssl rand -base64 48
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set to a unique random value (e.g. openssl rand -base64 48)}
     restart: "no"
+    # --- Container hardening (defense-in-depth around spawned MCP servers) ---
+    # MCP servers run as child processes in this container; these limits cap the
+    # blast radius of a malicious/buggy server. bubblewrap (MCP_SANDBOX=bwrap)
+    # layers per-process namespace + read-only-fs isolation on top using
+    # unprivileged user namespaces (compatible with no-new-privileges + cap_drop).
+    # Keep Docker's DEFAULT seccomp profile — do NOT set seccomp=unconfined.
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    pids_limit: 4096
+    # Caps memory for the app AND every MCP server it spawns. Raise via
+    # METAMCP_MEM_LIMIT for workloads running many/heavy MCP servers.
+    mem_limit: ${METAMCP_MEM_LIMIT:-4g}
 
   postgres:
     volumes:

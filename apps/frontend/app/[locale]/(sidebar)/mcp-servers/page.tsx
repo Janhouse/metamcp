@@ -10,7 +10,10 @@ import { ChevronDown, Plus, Server } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
-
+import {
+  McpServerSandboxFields,
+  type SandboxFieldsForm,
+} from "@/components/mcp-server-sandbox-fields"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -37,6 +40,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useTranslations } from "@/hooks/useTranslations"
+import { sandboxFormToConfig } from "@/lib/sandbox-form"
 import { trpc } from "@/lib/trpc"
 import { createTranslatedZodResolver } from "@/lib/zod-resolver"
 
@@ -60,6 +64,16 @@ export default function McpServersPage() {
       bearerToken: "",
       headers: "",
       user_id: undefined, // Default to private (current user)
+      sandbox: {
+        enabled: undefined,
+        network: undefined,
+        readOnlyRoot: undefined,
+        allowPaths: "",
+        memoryMb: "",
+        cpuSec: "",
+        nproc: "",
+        nofile: "",
+      },
     },
   })
 
@@ -125,6 +139,8 @@ export default function McpServersPage() {
       }
     }
 
+    const sandbox = sandboxFormToConfig(data.sandbox)
+
     const request: CreateMcpServerRequest = {
       name: data.name,
       description: data.description,
@@ -136,6 +152,7 @@ export default function McpServersPage() {
       bearerToken: data.bearerToken,
       headers: headersObject,
       user_id: data.user_id,
+      sandbox,
     }
 
     createMutation.mutate(request)
@@ -440,6 +457,10 @@ export default function McpServersPage() {
                       />
                     </>
                   )}
+
+                  <McpServerSandboxFields
+                    form={form as unknown as SandboxFieldsForm}
+                  />
 
                   <div className="flex justify-end space-x-2">
                     <Button

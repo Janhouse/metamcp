@@ -26,6 +26,8 @@ export class McpServersSerializer {
       bearerToken: redact ? undefined : dbServer.bearerToken,
       headers: redact ? {} : dbServer.headers,
       user_id: dbServer.user_id,
+      // Sandbox config is not a secret (no credentials) — never redacted.
+      sandbox: dbServer.sandbox ?? null,
     }
   }
 

@@ -3,11 +3,12 @@
 # MCP servers as child processes during development.
 FROM oven/bun:canary AS base
 
-# Node.js (node/npx MCP servers), Docker CLI (container management), Tini (signals).
+# Node.js (node/npx MCP servers), Docker CLI (container management), Tini (signals),
+# bubblewrap + util-linux (MCP sandbox: MCP_SANDBOX=bwrap and MCP_LIMIT_* via prlimit).
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash curl ca-certificates gnupg \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs docker.io tini \
+    && apt-get install -y --no-install-recommends nodejs docker.io tini bubblewrap util-linux \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # uv / uvx (Python-based MCP servers).

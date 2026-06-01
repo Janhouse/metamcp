@@ -9,8 +9,13 @@ import logger from "@/utils/logger"
 
 import { ProcessManagedStdioTransport } from "../stdio-transport/process-managed-transport"
 import { metamcpLogStore } from "./log-store"
+import {
+  buildChildEnv,
+  getSandboxCwd,
+  resolveSandboxConfig,
+  wrapCommand,
+} from "./sandbox"
 import { serverErrorTracker } from "./server-error-tracker"
-import { resolveEnvVariables } from "./utils"
 
 const sleep = (time: number) =>
   new Promise<void>((resolve) => setTimeout(() => resolve(), time))
@@ -43,16 +48,22 @@ export const createMetaMcpClient = (
   // Create the appropriate transport based on server type
   // Default to "STDIO" if type is undefined
   if (!serverParams.type || serverParams.type === "STDIO") {
-    // Resolve environment variable placeholders
-    const resolvedEnv = serverParams.env
-      ? resolveEnvVariables(serverParams.env)
-      : undefined
+    // Deny-by-default env (never inherits the full process.env) and optional
+    // per-process resource/namespace sandboxing around the spawned server.
+    const childEnv = buildChildEnv(serverParams.env)
+    const sandboxCfg = resolveSandboxConfig(serverParams.sandbox)
+    const wrapped = wrapCommand(
+      serverParams.command || "",
+      serverParams.args || [],
+      sandboxCfg,
+    )
 
     const stdioParams: StdioServerParameters = {
-      command: serverParams.command || "",
-      args: serverParams.args || undefined,
-      env: resolvedEnv,
+      command: wrapped.command,
+      args: wrapped.args.length > 0 ? wrapped.args : undefined,
+      env: childEnv,
       stderr: "pipe",
+      cwd: getSandboxCwd(sandboxCfg),
     }
     transport = new ProcessManagedStdioTransport(stdioParams)
 

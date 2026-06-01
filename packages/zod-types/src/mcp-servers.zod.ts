@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { SandboxConfigSchema } from "./sandbox.zod"
+
 export const McpServerTypeEnum = z.enum(["STDIO", "SSE", "STREAMABLE_HTTP"])
 export const McpServerStatusEnum = z.enum(["ACTIVE", "INACTIVE"])
 
@@ -25,6 +27,20 @@ export const createServerFormSchema = z
     headers: z.string().optional(),
     env: z.string().optional(),
     user_id: z.string().nullable().optional(),
+    // Sandbox / isolation overrides. Number inputs are kept as strings here
+    // (HTML inputs yield strings) and coerced when building the request.
+    sandbox: z
+      .object({
+        enabled: z.boolean().optional(),
+        network: z.boolean().optional(),
+        readOnlyRoot: z.boolean().optional(),
+        allowPaths: z.string().optional(),
+        memoryMb: z.string().optional(),
+        cpuSec: z.string().optional(),
+        nproc: z.string().optional(),
+        nofile: z.string().optional(),
+      })
+      .optional(),
   })
   .refine(
     (data) => {
@@ -87,6 +103,20 @@ export const EditServerFormSchema = z
     headers: z.string().optional(),
     env: z.string().optional(),
     user_id: z.string().nullable().optional(),
+    // Sandbox / isolation overrides. Number inputs are kept as strings here
+    // (HTML inputs yield strings) and coerced when building the request.
+    sandbox: z
+      .object({
+        enabled: z.boolean().optional(),
+        network: z.boolean().optional(),
+        readOnlyRoot: z.boolean().optional(),
+        allowPaths: z.string().optional(),
+        memoryMb: z.string().optional(),
+        cpuSec: z.string().optional(),
+        nproc: z.string().optional(),
+        nofile: z.string().optional(),
+      })
+      .optional(),
   })
   .refine(
     (data) => {
@@ -151,6 +181,7 @@ export const CreateMcpServerRequestSchema = z
     bearerToken: z.string().optional(),
     headers: z.record(z.string(), z.string()).optional(),
     user_id: z.string().nullable().optional(),
+    sandbox: SandboxConfigSchema.nullable().optional(),
   })
   .refine(
     (data) => {
@@ -191,6 +222,7 @@ export const McpServerSchema = z.object({
   headers: z.record(z.string(), z.string()),
   user_id: z.string().nullable(),
   error_status: McpServerErrorStatusEnum.optional(),
+  sandbox: SandboxConfigSchema.nullable().optional(),
 })
 
 export const CreateMcpServerResponseSchema = z.object({
@@ -333,6 +365,7 @@ export const UpdateMcpServerRequestSchema = z
     bearerToken: z.string().optional(),
     headers: z.record(z.string(), z.string()).optional(),
     user_id: z.string().nullable().optional(),
+    sandbox: SandboxConfigSchema.nullable().optional(),
   })
   .refine(
     (data) => {
@@ -403,6 +436,7 @@ export const McpServerCreateInputSchema = z.object({
   bearerToken: z.string().nullable().optional(),
   headers: z.record(z.string(), z.string()).optional(),
   user_id: z.string().nullable().optional(),
+  sandbox: SandboxConfigSchema.nullable().optional(),
 })
 
 export const McpServerUpdateInputSchema = z.object({
@@ -427,6 +461,7 @@ export const McpServerUpdateInputSchema = z.object({
   bearerToken: z.string().nullable().optional(),
   headers: z.record(z.string(), z.string()).optional(),
   user_id: z.string().nullable().optional(),
+  sandbox: SandboxConfigSchema.nullable().optional(),
 })
 
 export type McpServerCreateInput = z.infer<typeof McpServerCreateInputSchema>
@@ -447,6 +482,7 @@ export const DatabaseMcpServerSchema = z.object({
   bearerToken: z.string().nullable(),
   headers: z.record(z.string(), z.string()),
   user_id: z.string().nullable(),
+  sandbox: SandboxConfigSchema.nullable().optional(),
 })
 
 export type DatabaseMcpServer = z.infer<typeof DatabaseMcpServerSchema>

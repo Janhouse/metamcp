@@ -6,6 +6,7 @@ import {
   McpServerErrorStatusEnum,
   McpServerStatusEnum,
   McpServerTypeEnum,
+  type SandboxConfig,
 } from "@repo/zod-types"
 import { sql } from "drizzle-orm"
 import {
@@ -61,6 +62,8 @@ export const mcpServersTable = pgTable(
       .$type<{ [key: string]: string }>()
       .notNull()
       .default(sql`'{}'::jsonb`),
+    // Per-server sandbox / isolation overrides. NULL = inherit global defaults.
+    sandbox: jsonb("sandbox").$type<SandboxConfig>(),
     user_id: text("user_id").references(() => usersTable.id, {
       onDelete: "cascade",
     }),
