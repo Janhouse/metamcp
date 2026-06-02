@@ -237,6 +237,50 @@ export const ListMcpServersResponseSchema = z.object({
   message: z.string().optional(),
 })
 
+// Memory usage reporting (per-server resident memory + overall budget)
+export const McpServerMemorySourceEnum = z.enum([
+  "cgroup_v2",
+  "cgroup_v1",
+  "host",
+])
+
+export const McpServerMemoryEntrySchema = z.object({
+  uuid: z.string(),
+  name: z.string(),
+  // Resident memory (bytes) summed over the server's spawned process tree.
+  memoryBytes: z.number(),
+  // Number of live spawned processes for this server (idle + active sessions).
+  processCount: z.number(),
+})
+
+export const McpServersMemoryUsageSchema = z.object({
+  // Total memory available to metamcp (cgroup limit, or host total RAM).
+  total: z.number(),
+  // Memory currently used (cgroup current, or host total - free).
+  used: z.number(),
+  free: z.number(),
+  source: McpServerMemorySourceEnum,
+  // Resident memory of the metamcp backend process itself.
+  metamcpBytes: z.number(),
+  // False when per-process memory can't be read (e.g. non-Linux, no /proc) —
+  // in that case `servers` is empty.
+  available: z.boolean(),
+  // One entry per real (STDIO) server that currently has a live process.
+  servers: z.array(McpServerMemoryEntrySchema),
+})
+
+export const GetMcpServersMemoryResponseSchema = z.object({
+  success: z.boolean(),
+  data: McpServersMemoryUsageSchema.optional(),
+  message: z.string().optional(),
+})
+
+export type McpServerMemoryEntry = z.infer<typeof McpServerMemoryEntrySchema>
+export type McpServersMemoryUsage = z.infer<typeof McpServersMemoryUsageSchema>
+export type GetMcpServersMemoryResponse = z.infer<
+  typeof GetMcpServersMemoryResponseSchema
+>
+
 export const GetMcpServerResponseSchema = z.object({
   success: z.boolean(),
   data: McpServerSchema.optional(),

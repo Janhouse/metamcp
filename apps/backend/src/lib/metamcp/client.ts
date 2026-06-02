@@ -24,6 +24,14 @@ export interface ConnectedClient {
   client: Client
   cleanup: () => Promise<void>
   onProcessCrash?: (exitCode: number | null, signal: string | null) => void
+  /**
+   * OS pid of the spawned child process for STDIO servers, or null for
+   * URL-based (SSE / STREAMABLE_HTTP) servers that spawn no local process.
+   * Used for per-server memory reporting. For sandboxed servers this is the
+   * wrapper pid (prlimit/bwrap) — the real server is a descendant, so memory
+   * must be summed over the whole process tree rooted at this pid.
+   */
+  pid: number | null
 }
 
 /**
@@ -256,6 +264,10 @@ export const connectMetaMcpClient = async (
       const connectedClient = client
       return {
         client,
+        pid:
+          connectedTransport instanceof ProcessManagedStdioTransport
+            ? connectedTransport.pid
+            : null,
         cleanup: async () => {
           await connectedTransport.close()
           await connectedClient.close()

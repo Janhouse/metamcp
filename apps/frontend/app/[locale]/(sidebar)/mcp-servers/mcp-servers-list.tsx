@@ -27,7 +27,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { EditMcpServer } from "@/components/edit-mcp-server"
@@ -59,7 +59,9 @@ import {
 } from "@/components/ui/table"
 import { useTranslations } from "@/hooks/useTranslations"
 import { trpc } from "@/lib/trpc"
-import { copyToClipboard } from "@/lib/utils"
+import { copyToClipboard, formatBytes } from "@/lib/utils"
+
+import { MemoryUsageBar } from "./memory-usage-bar"
 
 interface McpServersListProps {
   onRefresh?: () => void
@@ -123,6 +125,24 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
   })
 
   const servers = serversResponse?.success ? serversResponse.data : []
+
+  // Live per-server memory usage + overall budget. Polled so the bar and the
+  // Memory column stay current while the page is open.
+  const { data: memoryResponse } =
+    trpc.frontend.mcpServers.getMemoryUsage.useQuery(undefined, {
+      refetchInterval: 3000,
+    })
+  const memoryData =
+    memoryResponse?.success && memoryResponse.data
+      ? memoryResponse.data
+      : undefined
+  const memoryByUuid = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const s of memoryData?.servers ?? []) {
+      map.set(s.uuid, s.memoryBytes)
+    }
+    return map
+  }, [memoryData])
 
   // Handle delete server
   const handleDeleteServer = async (server: McpServer) => {
@@ -189,6 +209,32 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
         return (
           <div className="px-3 py-2">
             <Badge variant="info">{type.toUpperCase()}</Badge>
+          </div>
+        )
+      },
+    },
+    {
+      id: "memory",
+      size: 120,
+      header: t("mcp-servers:list.memory"),
+      cell: ({ row }) => {
+        const server = row.original
+        // Memory is only meaningful for real (STDIO) servers, which spawn a
+        // local process. URL-based servers (SSE / STREAMABLE_HTTP, including
+        // auto-generated endpoint servers) have no local process to measure.
+        if (server.type !== McpServerTypeEnum.enum.STDIO) {
+          return (
+            <div className="px-3 py-2 text-sm text-muted-foreground">—</div>
+          )
+        }
+        const bytes = memoryByUuid.get(server.uuid)
+        return (
+          <div className="px-3 py-2 text-sm tabular-nums">
+            {bytes !== undefined ? (
+              formatBytes(bytes)
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
           </div>
         )
       },
@@ -540,6 +586,11 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
       </Dialog>
 
       <div className="space-y-4">
+        {memoryData && (
+          <div className="rounded-md border p-4">
+            <MemoryUsageBar data={memoryData} />
+          </div>
+        )}
         <div className="flex items-center space-x-2">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

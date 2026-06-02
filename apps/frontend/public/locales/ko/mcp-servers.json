@@ -129,9 +129,20 @@
     "url": "URL: {{url}}",
     "envVars": "Env: {{count}}개 변수",
     "streamableHttp": "STREAMABLE_HTTP",
+    "memory": "메모리",
     "errorStatus": "오류 상태",
     "error": "오류",
     "noError": "오류 없음"
+  },
+  "memoryBar": {
+    "title": "메모리 사용량",
+    "metamcp": "MetaMCP",
+    "other": "기타",
+    "free": "여유",
+    "hostMemory": "호스트 메모리",
+    "containerLimit": "컨테이너 제한",
+    "usedOfTotal": "{{used}} / {{total}} 사용 중",
+    "perServerUnavailable": "이 플랫폼에서는 서버별 메모리를 사용할 수 없습니다."
   },
   "detail": {
     "backToServers": "MCP Server로 돌아가기",

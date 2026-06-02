@@ -1,3 +1,5 @@
+import process from "node:process"
+
 import {
   type BulkImportMcpServersRequestSchema,
   type BulkImportMcpServersResponseSchema,
@@ -5,7 +7,9 @@ import {
   type CreateMcpServerResponseSchema,
   type DeleteMcpServerResponseSchema,
   type GetMcpServerResponseSchema,
+  type GetMcpServersMemoryResponseSchema,
   type ListMcpServersResponseSchema,
+  type McpServerMemoryEntry,
   McpServerTypeEnum,
   type UpdateMcpServerRequestSchema,
   type UpdateMcpServerResponseSchema,
@@ -24,7 +28,9 @@ import { canManageResource, resolveOwnerUserId } from "../lib/authz"
 import { mcpServerPool } from "../lib/metamcp/mcp-server-pool"
 import { clearOverrideCache } from "../lib/metamcp/metamcp-middleware/tool-overrides.functional"
 import { metaMcpServerPool } from "../lib/metamcp/metamcp-server-pool"
+import { readProcStats, sumProcessTreeRss } from "../lib/metamcp/process-memory"
 import { serverErrorTracker } from "../lib/metamcp/server-error-tracker"
+import { getMemoryBudget } from "../lib/metamcp/system-memory"
 import { convertDbServerToParams } from "../lib/metamcp/utils"
 
 export const mcpServersImplementations = {
@@ -106,6 +112,58 @@ export const mcpServersImplementations = {
         success: false as const,
         data: [],
         message: "Failed to fetch MCP servers",
+      }
+    }
+  },
+
+  getMemoryUsage: async (
+    userId: string,
+  ): Promise<z.infer<typeof GetMcpServersMemoryResponseSchema>> => {
+    try {
+      // Only attribute memory for servers the requester can see (public + own),
+      // mirroring `list`. The map also supplies display names.
+      const servers = await mcpServersRepository.findAllAccessibleToUser(userId)
+      const accessibleNames = new Map(servers.map((s) => [s.uuid, s.name]))
+
+      // Per-server pids come from the live pool; resident memory is summed over
+      // each spawned process tree (the sandbox wrapper plus its descendants).
+      const pidsByServer = mcpServerPool.getServerPids()
+      const stats = readProcStats()
+
+      const serverEntries: McpServerMemoryEntry[] = []
+      if (stats) {
+        for (const [uuid, name] of accessibleNames) {
+          const pids = pidsByServer[uuid]
+          if (!pids || pids.length === 0) continue
+          serverEntries.push({
+            uuid,
+            name,
+            memoryBytes: sumProcessTreeRss(pids, stats),
+            processCount: pids.length,
+          })
+        }
+      }
+
+      const budget = getMemoryBudget()
+
+      return {
+        success: true as const,
+        data: {
+          total: budget.total,
+          used: budget.used,
+          free: budget.free,
+          source: budget.source,
+          metamcpBytes: process.memoryUsage().rss,
+          available: stats !== null,
+          servers: serverEntries,
+        },
+        message: "MCP server memory usage retrieved successfully",
+      }
+    } catch (error) {
+      logger.error("Error fetching MCP server memory usage:", error)
+      return {
+        success: false as const,
+        message: "Failed to fetch MCP server memory usage",
       }
     }
   },
