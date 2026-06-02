@@ -183,7 +183,7 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
                   {formatBytes(seg.bytes)} · {formatPct(seg.bytes)}
                 </div>
                 {seg.detail && (
-                  <div className="text-muted-foreground">{seg.detail}</div>
+                  <div className="text-primary-foreground/75">{seg.detail}</div>
                 )}
               </TooltipContent>
             </Tooltip>
