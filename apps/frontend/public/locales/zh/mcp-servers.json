@@ -139,6 +139,7 @@
     "backend": "后端",
     "frontend": "前端",
     "shared": "共享",
+    "unique": "独占",
     "sharedHint": "共享页（运行时、库）—— 实际只占用一次；RSS 会按每个进程重复计入。",
     "other": "其他",
     "otherHint": "页缓存、内核、共享内存、其他进程。",

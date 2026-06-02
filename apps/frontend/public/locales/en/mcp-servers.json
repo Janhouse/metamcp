@@ -139,6 +139,7 @@
     "backend": "Backend",
     "frontend": "Frontend",
     "shared": "Shared",
+    "unique": "Unique",
     "sharedHint": "Shared pages (runtime, libraries) — counted once; RSS bills them to every process.",
     "other": "Other",
     "otherHint": "Page cache, kernel, shared memory, other processes.",

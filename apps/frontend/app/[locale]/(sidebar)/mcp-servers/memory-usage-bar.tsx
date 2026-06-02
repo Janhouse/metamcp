@@ -40,6 +40,8 @@ interface Segment {
   bytes: number
   color?: string
   striped?: boolean
+  /** Optional qualifier shown before the value (e.g. "Unique"). */
+  valueLabel?: string
   /** Optional rss/pss detail line for the tooltip. */
   detail?: string
 }
@@ -58,6 +60,9 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
 
   const { total, used, backend, frontend, servers, sharedBytes, metric } = data
   const hasSplit = metric === "smaps"
+  // The solid slices draw each entity's PRIVATE memory, so label the headline
+  // "Unique" (only meaningful when we have the smaps split).
+  const uniqueLabel = hasSplit ? t("mcp-servers:memoryBar.unique") : undefined
 
   // Detail line showing how RSS over-counts vs the deduplicated PSS.
   const procDetail = (m: { rssBytes: number; pssBytes: number }) =>
@@ -84,6 +89,7 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
       label: t("mcp-servers:memoryBar.backend"),
       bytes: backend.privateBytes,
       color: BACKEND_COLOR,
+      valueLabel: uniqueLabel,
       detail: procDetail(backend),
     },
   ]
@@ -93,6 +99,7 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
       label: t("mcp-servers:memoryBar.frontend"),
       bytes: frontend.privateBytes,
       color: FRONTEND_COLOR,
+      valueLabel: uniqueLabel,
       detail: procDetail(frontend),
     })
   }
@@ -102,6 +109,7 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
       label: srv.name,
       bytes: srv.privateBytes,
       color: SERVER_COLORS[i % SERVER_COLORS.length],
+      valueLabel: uniqueLabel,
       detail: hasSplit
         ? t("mcp-servers:memoryBar.rssPssProcs", {
             rss: formatBytes(srv.rssBytes),
@@ -180,6 +188,7 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
               <TooltipContent>
                 <div className="font-medium">{seg.label}</div>
                 <div>
+                  {seg.valueLabel ? `${seg.valueLabel} ` : ""}
                   {formatBytes(seg.bytes)} · {formatPct(seg.bytes)}
                 </div>
                 {seg.detail && (
