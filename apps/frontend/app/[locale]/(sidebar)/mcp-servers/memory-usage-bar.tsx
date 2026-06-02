@@ -18,22 +18,33 @@ const SERVER_COLORS = [
   "#22c55e", // green-500
   "#f59e0b", // amber-500
   "#ec4899", // pink-500
-  "#8b5cf6", // violet-500
   "#14b8a6", // teal-500
   "#ef4444", // red-500
   "#84cc16", // lime-500
   "#06b6d4", // cyan-500
   "#f97316", // orange-500
+  "#d946ef", // fuchsia-500
 ]
-const METAMCP_COLOR = "#6366f1" // indigo-500
-const OTHER_COLOR = "#9ca3af" // gray-400
+const BACKEND_COLOR = "#6366f1" // indigo-500
+const FRONTEND_COLOR = "#a855f7" // purple-500
+const OTHER_COLOR = "#9ca3af" // gray-400 — hard (kernel/shmem)
+const CACHE_COLOR = "#cbd5e1" // slate-300 — soft (reclaimable cache)
+
+// Diagonal stripes for the de-duplicated shared block.
+const SHARED_STRIPES =
+  "repeating-linear-gradient(45deg, rgba(255,255,255,0.45) 0, rgba(255,255,255,0.45) 3px, transparent 3px, transparent 6px)"
 
 interface Segment {
   key: string
   label: string
+  /** Width of the segment, in bytes (relative to total). */
   bytes: number
-  /** Inline color; when omitted the segment uses the muted track (free space). */
   color?: string
+  striped?: boolean
+  /** Optional qualifier shown before the value (e.g. "Unique"). */
+  valueLabel?: string
+  /** Optional rss/pss detail line for the tooltip. */
+  detail?: string
 }
 
 interface MemoryUsageBarProps {
@@ -48,39 +59,109 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
     return null
   }
 
-  const { total, used, metamcpBytes, servers } = data
-  const serversTotal = servers.reduce((sum, s) => sum + s.memoryBytes, 0)
-  // "Other" = everything used that isn't metamcp itself or an MCP server
-  // (frontend, database, OS page cache, other container processes).
-  const other = Math.max(0, used - metamcpBytes - serversTotal)
+  const { total, used, backend, frontend, servers, sharedBytes, metric } = data
+  const hasSplit = metric === "smaps"
+  // The solid slices draw each entity's PRIVATE memory, so label the headline
+  // "Unique" (only meaningful when we have the smaps split).
+  const uniqueLabel = hasSplit ? t("mcp-servers:memoryBar.unique") : undefined
+
+  // Detail line showing how RSS over-counts vs the deduplicated PSS.
+  const procDetail = (m: { rssBytes: number; pssBytes: number }) =>
+    hasSplit
+      ? t("mcp-servers:memoryBar.rssPss", {
+          rss: formatBytes(m.rssBytes),
+          pss: formatBytes(m.pssBytes),
+        })
+      : undefined
+
+  const sumPrivate =
+    backend.privateBytes +
+    (frontend?.privateBytes ?? 0) +
+    servers.reduce((s, srv) => s + srv.privateBytes, 0)
+
+  // Solid slices use each entity's PRIVATE (unique) memory; the shared pages are
+  // their own striped block so they're only drawn once.
+  const other = Math.max(0, used - sumPrivate - sharedBytes)
   const free = Math.max(0, total - used)
 
   const segments: Segment[] = [
     {
-      key: "metamcp",
-      label: t("mcp-servers:memoryBar.metamcp"),
-      bytes: metamcpBytes,
-      color: METAMCP_COLOR,
+      key: "backend",
+      label: t("mcp-servers:memoryBar.backend"),
+      bytes: backend.privateBytes,
+      color: BACKEND_COLOR,
+      valueLabel: uniqueLabel,
+      detail: procDetail(backend),
     },
-    ...servers.map((s, i) => ({
-      key: `server-${s.uuid}`,
-      label: s.name,
-      bytes: s.memoryBytes,
+  ]
+  if (frontend) {
+    segments.push({
+      key: "frontend",
+      label: t("mcp-servers:memoryBar.frontend"),
+      bytes: frontend.privateBytes,
+      color: FRONTEND_COLOR,
+      valueLabel: uniqueLabel,
+      detail: procDetail(frontend),
+    })
+  }
+  servers.forEach((srv, i) => {
+    segments.push({
+      key: `server-${srv.uuid}`,
+      label: srv.name,
+      bytes: srv.privateBytes,
       color: SERVER_COLORS[i % SERVER_COLORS.length],
-    })),
-    {
+      valueLabel: uniqueLabel,
+      detail: hasSplit
+        ? t("mcp-servers:memoryBar.rssPssProcs", {
+            rss: formatBytes(srv.rssBytes),
+            pss: formatBytes(srv.pssBytes),
+            count: srv.processCount,
+          })
+        : t("mcp-servers:memoryBar.procs", { count: srv.processCount }),
+    })
+  })
+  if (hasSplit && sharedBytes > 0) {
+    segments.push({
+      key: "shared",
+      label: t("mcp-servers:memoryBar.shared"),
+      bytes: sharedBytes,
+      color: OTHER_COLOR,
+      striped: true,
+      detail: t("mcp-servers:memoryBar.sharedHint"),
+    })
+  }
+  // Split "other" into reclaimable cache (evicted before OOM) vs hard
+  // kernel/shmem/anon, when the cgroup exposes the reclaimable figure.
+  if (data.reclaimableBytes != null) {
+    const cache = Math.min(other, data.reclaimableBytes)
+    segments.push({
+      key: "cache",
+      label: t("mcp-servers:memoryBar.cache"),
+      bytes: cache,
+      color: CACHE_COLOR,
+      detail: t("mcp-servers:memoryBar.cacheHint"),
+    })
+    segments.push({
+      key: "kernelShmem",
+      label: t("mcp-servers:memoryBar.kernelShmem"),
+      bytes: Math.max(0, other - cache),
+      color: OTHER_COLOR,
+      detail: t("mcp-servers:memoryBar.kernelShmemHint"),
+    })
+  } else {
+    segments.push({
       key: "other",
       label: t("mcp-servers:memoryBar.other"),
       bytes: other,
       color: OTHER_COLOR,
-    },
-    {
-      key: "free",
-      label: t("mcp-servers:memoryBar.free"),
-      bytes: free,
-      // no color -> muted track
-    },
-  ]
+      detail: t("mcp-servers:memoryBar.otherHint"),
+    })
+  }
+  segments.push({
+    key: "free",
+    label: t("mcp-servers:memoryBar.free"),
+    bytes: free,
+  })
 
   const pct = (bytes: number) => (total > 0 ? (bytes / total) * 100 : 0)
   const formatPct = (bytes: number) => {
@@ -116,22 +197,24 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
             <Tooltip key={seg.key}>
               <TooltipTrigger asChild>
                 <div
-                  className={cn(
-                    "h-full transition-[width]",
-                    !seg.color && "bg-muted",
-                  )}
+                  className={cn("h-full", !seg.color && "bg-muted")}
                   style={{
                     width: `${pct(seg.bytes)}%`,
                     minWidth: "2px",
                     backgroundColor: seg.color,
+                    backgroundImage: seg.striped ? SHARED_STRIPES : undefined,
                   }}
                 />
               </TooltipTrigger>
               <TooltipContent>
                 <div className="font-medium">{seg.label}</div>
                 <div>
+                  {seg.valueLabel ? `${seg.valueLabel} ` : ""}
                   {formatBytes(seg.bytes)} · {formatPct(seg.bytes)}
                 </div>
+                {seg.detail && (
+                  <div className="text-primary-foreground/75">{seg.detail}</div>
+                )}
               </TooltipContent>
             </Tooltip>
           ),
@@ -145,7 +228,14 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
               className={cn("inline-block h-2.5 w-2.5 rounded-sm", {
                 "bg-muted-foreground/30": !seg.color,
               })}
-              style={seg.color ? { backgroundColor: seg.color } : undefined}
+              style={
+                seg.color
+                  ? {
+                      backgroundColor: seg.color,
+                      backgroundImage: seg.striped ? SHARED_STRIPES : undefined,
+                    }
+                  : undefined
+              }
             />
             <span>
               {seg.label} — {formatBytes(seg.bytes)}

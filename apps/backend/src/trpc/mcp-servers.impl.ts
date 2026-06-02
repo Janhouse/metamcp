@@ -28,7 +28,13 @@ import { canManageResource, resolveOwnerUserId } from "../lib/authz"
 import { mcpServerPool } from "../lib/metamcp/mcp-server-pool"
 import { clearOverrideCache } from "../lib/metamcp/metamcp-middleware/tool-overrides.functional"
 import { metaMcpServerPool } from "../lib/metamcp/metamcp-server-pool"
-import { readProcStats, sumProcessTreeRss } from "../lib/metamcp/process-memory"
+import {
+  expandTree,
+  findPidsByCmdline,
+  measurePids,
+  readProcStats,
+  readSmapsRollup,
+} from "../lib/metamcp/process-memory"
 import { serverErrorTracker } from "../lib/metamcp/server-error-tracker"
 import { getMemoryBudget } from "../lib/metamcp/system-memory"
 import { convertDbServerToParams } from "../lib/metamcp/utils"
@@ -125,26 +131,67 @@ export const mcpServersImplementations = {
       const servers = await mcpServersRepository.findAllAccessibleToUser(userId)
       const accessibleNames = new Map(servers.map((s) => [s.uuid, s.name]))
 
-      // Per-server pids come from the live pool; resident memory is summed over
-      // each spawned process tree (the sandbox wrapper plus its descendants).
-      const pidsByServer = mcpServerPool.getServerPids()
+      const budget = getMemoryBudget()
       const stats = readProcStats()
 
-      const serverEntries: McpServerMemoryEntry[] = []
-      if (stats) {
-        for (const [uuid, name] of accessibleNames) {
-          const pids = pidsByServer[uuid]
-          if (!pids || pids.length === 0) continue
-          serverEntries.push({
-            uuid,
-            name,
-            memoryBytes: sumProcessTreeRss(pids, stats),
-            processCount: pids.length,
-          })
+      // Non-Linux / no /proc: report only the backend RSS, no breakdown.
+      if (!stats) {
+        const rss = process.memoryUsage().rss
+        return {
+          success: true as const,
+          data: {
+            total: budget.total,
+            used: budget.used,
+            free: budget.free,
+            source: budget.source,
+            available: false,
+            metric: "rss" as const,
+            sharedBytes: 0,
+            reclaimableBytes: budget.reclaimableBytes,
+            backend: { rssBytes: rss, pssBytes: rss, privateBytes: rss },
+            frontend: null,
+            servers: [],
+          },
+          message: "MCP server memory usage retrieved successfully",
         }
       }
 
-      const budget = getMemoryBudget()
+      const metric = readSmapsRollup(process.pid) !== null ? "smaps" : "rss"
+
+      // Backend = just this process. MCP servers are spawned as its children,
+      // so we must NOT expand the backend tree (that would re-count them); they
+      // are measured separately below.
+      const backend = measurePids([process.pid], stats)
+
+      // Frontend = the Next.js standalone server (`bun apps/frontend/server.js`),
+      // a sibling process in the same container/cgroup. Discover it by cmdline.
+      const frontendRoots = findPidsByCmdline(
+        "apps/frontend/server.js",
+        stats,
+      ).filter((pid) => pid !== process.pid)
+      const frontend =
+        frontendRoots.length > 0
+          ? measurePids(expandTree(frontendRoots, stats), stats)
+          : null
+
+      // Per-server: resident memory summed over each spawned process tree (the
+      // sandbox/launcher wrapper plus its descendants).
+      const pidsByServer = mcpServerPool.getServerPids()
+      const serverEntries: McpServerMemoryEntry[] = []
+      let sumPss = backend.pssBytes + (frontend?.pssBytes ?? 0)
+      let sumPrivate = backend.privateBytes + (frontend?.privateBytes ?? 0)
+      for (const [uuid, name] of accessibleNames) {
+        const roots = pidsByServer[uuid]
+        if (!roots || roots.length === 0) continue
+        const mem = measurePids(expandTree(roots, stats), stats)
+        sumPss += mem.pssBytes
+        sumPrivate += mem.privateBytes
+        serverEntries.push({ uuid, name, ...mem, processCount: roots.length })
+      }
+
+      // Shared pages counted once across everything measured: Σpss − Σprivate.
+      // (Backend, frontend and server trees are disjoint process sets.)
+      const sharedBytes = Math.max(0, sumPss - sumPrivate)
 
       return {
         success: true as const,
@@ -153,8 +200,12 @@ export const mcpServersImplementations = {
           used: budget.used,
           free: budget.free,
           source: budget.source,
-          metamcpBytes: process.memoryUsage().rss,
-          available: stats !== null,
+          available: true,
+          metric,
+          sharedBytes,
+          reclaimableBytes: budget.reclaimableBytes,
+          backend,
+          frontend,
           servers: serverEntries,
         },
         message: "MCP server memory usage retrieved successfully",

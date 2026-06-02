@@ -148,3 +148,121 @@ export function getRssForPids(pids: number[]): number | null {
   if (pids.length === 0) return 0
   return sumProcessTreeRss(pids, stats)
 }
+
+// ---------------------------------------------------------------------------
+// Shared vs private breakdown (via /proc/<pid>/smaps_rollup)
+// ---------------------------------------------------------------------------
+
+/** Per-process memory split. `private` = pages mapped only by this process. */
+export interface ProcMemory {
+  rssBytes: number
+  pssBytes: number
+  privateBytes: number
+}
+
+/**
+ * Parse `/proc/<pid>/smaps_rollup`. `Pss` (proportional set size) splits shared
+ * pages across their sharers; `Private_Clean + Private_Dirty` is the memory
+ * unique to this process. Returns null if the required fields are absent (older
+ * kernels without smaps_rollup).
+ */
+export function parseSmapsRollup(content: string): ProcMemory | null {
+  const field = (name: string): number | null => {
+    const m = content.match(new RegExp(`^${name}:\\s+(\\d+)\\s*kB`, "m"))
+    return m ? Number.parseInt(m[1], 10) : null
+  }
+  const rss = field("Rss")
+  const pss = field("Pss")
+  if (rss === null || pss === null) return null
+  const priv = (field("Private_Clean") ?? 0) + (field("Private_Dirty") ?? 0)
+  return {
+    rssBytes: rss * 1024,
+    pssBytes: pss * 1024,
+    privateBytes: priv * 1024,
+  }
+}
+
+/** Read the smaps rollup for one pid, or null if unavailable/unreadable. */
+export function readSmapsRollup(pid: number): ProcMemory | null {
+  try {
+    return parseSmapsRollup(readFileSync(`/proc/${pid}/smaps_rollup`, "utf8"))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Expand root pids to the full set of pids in their process trees (inclusive),
+ * walking children by ppid. Only pids present in `stats` are returned.
+ */
+export function expandTree(
+  rootPids: number[],
+  stats: Map<number, ProcStat>,
+): number[] {
+  const children = new Map<number, number[]>()
+  for (const [pid, stat] of stats) {
+    const siblings = children.get(stat.ppid)
+    if (siblings) siblings.push(pid)
+    else children.set(stat.ppid, [pid])
+  }
+
+  const visited = new Set<number>()
+  const out: number[] = []
+  const stack = [...rootPids]
+  while (stack.length > 0) {
+    const pid = stack.pop() as number
+    if (visited.has(pid)) continue
+    visited.add(pid)
+    if (stats.has(pid)) out.push(pid)
+    const kids = children.get(pid)
+    if (kids) {
+      for (const kid of kids) if (!visited.has(kid)) stack.push(kid)
+    }
+  }
+  return out
+}
+
+/** Find pids whose (null-separated) cmdline contains `needle`. */
+export function findPidsByCmdline(
+  needle: string,
+  stats: Map<number, ProcStat>,
+): number[] {
+  const out: number[] = []
+  for (const pid of stats.keys()) {
+    try {
+      const cmd = readFileSync(`/proc/${pid}/cmdline`, "utf8")
+      if (cmd.includes(needle)) out.push(pid)
+    } catch {
+      // exited between snapshot and read — ignore
+    }
+  }
+  return out
+}
+
+/**
+ * Sum rss/pss/private over the given pids. Uses smaps_rollup per process; when a
+ * process's rollup can't be read it falls back to treating its full RSS as
+ * private (so it still contributes, just without a shared split).
+ */
+export function measurePids(
+  pids: number[],
+  stats: Map<number, ProcStat>,
+): ProcMemory {
+  let rssBytes = 0
+  let pssBytes = 0
+  let privateBytes = 0
+  for (const pid of pids) {
+    const rollup = readSmapsRollup(pid)
+    if (rollup) {
+      rssBytes += rollup.rssBytes
+      pssBytes += rollup.pssBytes
+      privateBytes += rollup.privateBytes
+    } else {
+      const rss = stats.get(pid)?.rssBytes ?? 0
+      rssBytes += rss
+      pssBytes += rss
+      privateBytes += rss
+    }
+  }
+  return { rssBytes, pssBytes, privateBytes }
+}
