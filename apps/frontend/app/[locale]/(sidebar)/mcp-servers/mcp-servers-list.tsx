@@ -136,10 +136,13 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
     memoryResponse?.success && memoryResponse.data
       ? memoryResponse.data
       : undefined
+  // Use PSS (proportional set size): shared pages — e.g. a Python/Node runtime
+  // shared by multiple sessions of the same server — are split across sharers
+  // rather than counted in full for each, so this reflects the real footprint.
   const memoryByUuid = useMemo(() => {
     const map = new Map<string, number>()
     for (const s of memoryData?.servers ?? []) {
-      map.set(s.uuid, s.memoryBytes)
+      map.set(s.uuid, s.pssBytes)
     }
     return map
   }, [memoryData])

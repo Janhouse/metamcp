@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   type ProcStat,
+  parseSmapsRollup,
   parseStatLine,
   sumProcessTreeRss,
 } from "./process-memory"
@@ -68,5 +69,39 @@ describe("sumProcessTreeRss", () => {
 
   it("returns 0 for an unknown pid", () => {
     expect(sumProcessTreeRss([999], stats)).toBe(0)
+  })
+})
+
+describe("parseSmapsRollup", () => {
+  const sample = [
+    "55a0b2c00000-7ffd00000000 ---p 00000000 00:00 0  [rollup]",
+    "Rss:                4096 kB",
+    "Pss:                1500 kB",
+    "Shared_Clean:       2000 kB",
+    "Shared_Dirty:        500 kB",
+    "Private_Clean:       600 kB",
+    "Private_Dirty:      1000 kB",
+    "Referenced:         4096 kB",
+  ].join("\n")
+
+  it("parses rss, pss and sums private clean+dirty", () => {
+    expect(parseSmapsRollup(sample)).toEqual({
+      rssBytes: 4096 * 1024,
+      pssBytes: 1500 * 1024,
+      privateBytes: (600 + 1000) * 1024,
+    })
+  })
+
+  it("treats missing private fields as zero", () => {
+    const m = parseSmapsRollup("Rss:  100 kB\nPss:   80 kB\n")
+    expect(m).toEqual({
+      rssBytes: 100 * 1024,
+      pssBytes: 80 * 1024,
+      privateBytes: 0,
+    })
+  })
+
+  it("returns null without rss/pss (no smaps_rollup support)", () => {
+    expect(parseSmapsRollup("Referenced: 4096 kB")).toBeNull()
   })
 })

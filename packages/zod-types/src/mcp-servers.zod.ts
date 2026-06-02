@@ -244,11 +244,19 @@ export const McpServerMemorySourceEnum = z.enum([
   "host",
 ])
 
-export const McpServerMemoryEntrySchema = z.object({
+// rss/pss/private breakdown for a process or process tree.
+// - rss: resident memory; counts shared pages once per process (over-counts).
+// - pss: proportional set size; splits shared pages across sharers.
+// - private: pages mapped only by these processes (truly unique footprint).
+export const MemoryProcessSchema = z.object({
+  rssBytes: z.number(),
+  pssBytes: z.number(),
+  privateBytes: z.number(),
+})
+
+export const McpServerMemoryEntrySchema = MemoryProcessSchema.extend({
   uuid: z.string(),
   name: z.string(),
-  // Resident memory (bytes) summed over the server's spawned process tree.
-  memoryBytes: z.number(),
   // Number of live spawned processes for this server (idle + active sessions).
   processCount: z.number(),
 })
@@ -260,11 +268,17 @@ export const McpServersMemoryUsageSchema = z.object({
   used: z.number(),
   free: z.number(),
   source: McpServerMemorySourceEnum,
-  // Resident memory of the metamcp backend process itself.
-  metamcpBytes: z.number(),
-  // False when per-process memory can't be read (e.g. non-Linux, no /proc) —
-  // in that case `servers` is empty.
+  // False when per-process memory can't be read (e.g. non-Linux, no /proc).
   available: z.boolean(),
+  // "smaps" = real shared/private split available; "rss" = fallback (no split,
+  // so sharedBytes is 0 and private == rss).
+  metric: z.enum(["smaps", "rss"]),
+  // De-duplicated shared pages across all measured processes — the part RSS
+  // bills to every process but the kernel (and the cgroup limit) counts once.
+  sharedBytes: z.number(),
+  // The metamcp app processes, split so each is its own bar segment.
+  backend: MemoryProcessSchema,
+  frontend: MemoryProcessSchema.nullable(),
   // One entry per real (STDIO) server that currently has a live process.
   servers: z.array(McpServerMemoryEntrySchema),
 })
@@ -275,6 +289,7 @@ export const GetMcpServersMemoryResponseSchema = z.object({
   message: z.string().optional(),
 })
 
+export type MemoryProcess = z.infer<typeof MemoryProcessSchema>
 export type McpServerMemoryEntry = z.infer<typeof McpServerMemoryEntrySchema>
 export type McpServersMemoryUsage = z.infer<typeof McpServersMemoryUsageSchema>
 export type GetMcpServersMemoryResponse = z.infer<

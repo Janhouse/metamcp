@@ -136,12 +136,19 @@
   },
   "memoryBar": {
     "title": "Memory usage",
-    "metamcp": "MetaMCP",
+    "backend": "Backend",
+    "frontend": "Frontend",
+    "shared": "Shared",
+    "sharedHint": "Shared pages (runtime, libraries) — counted once; RSS bills them to every process.",
     "other": "Other",
+    "otherHint": "Page cache, kernel, shared memory, other processes.",
     "free": "Free",
     "hostMemory": "Host memory",
     "containerLimit": "Container limit",
     "usedOfTotal": "{{used}} / {{total}} used",
+    "rssPss": "RSS {{rss}} · PSS {{pss}}",
+    "rssPssProcs": "RSS {{rss}} · PSS {{pss}} · {{count}} proc",
+    "procs": "{{count}} proc",
     "perServerUnavailable": "Per-server memory is unavailable on this platform."
   },
   "detail": {

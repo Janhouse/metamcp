@@ -136,12 +136,19 @@
   },
   "memoryBar": {
     "title": "메모리 사용량",
-    "metamcp": "MetaMCP",
+    "backend": "백엔드",
+    "frontend": "프런트엔드",
+    "shared": "공유",
+    "sharedHint": "공유 페이지(런타임, 라이브러리) — 실제로는 한 번만 차지하지만 RSS는 프로세스마다 합산합니다.",
     "other": "기타",
+    "otherHint": "페이지 캐시, 커널, 공유 메모리, 기타 프로세스.",
     "free": "여유",
     "hostMemory": "호스트 메모리",
     "containerLimit": "컨테이너 제한",
     "usedOfTotal": "{{used}} / {{total}} 사용 중",
+    "rssPss": "RSS {{rss}} · PSS {{pss}}",
+    "rssPssProcs": "RSS {{rss}} · PSS {{pss}} · {{count}}개",
+    "procs": "{{count}}개",
     "perServerUnavailable": "이 플랫폼에서는 서버별 메모리를 사용할 수 없습니다."
   },
   "detail": {
