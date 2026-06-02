@@ -436,6 +436,39 @@ export class McpServerPool {
   }
 
   /**
+   * Collect the OS pids of every live connection, grouped by serverUuid.
+   *
+   * A server can have one idle session plus multiple active sessions, each a
+   * separately spawned process — so a server maps to one or more pids. Only
+   * STDIO servers have a pid; URL-based servers contribute nothing. Used by the
+   * memory-usage endpoint to attribute resident memory per server.
+   */
+  getServerPids(): Record<string, number[]> {
+    const result: Record<string, Set<number>> = {}
+
+    const add = (serverUuid: string, client: ConnectedClient) => {
+      if (client.pid == null) return
+      if (!result[serverUuid]) {
+        result[serverUuid] = new Set<number>()
+      }
+      result[serverUuid].add(client.pid)
+    }
+
+    for (const [serverUuid, client] of Object.entries(this.idleSessions)) {
+      add(serverUuid, client)
+    }
+    for (const sessionServers of Object.values(this.activeSessions)) {
+      for (const [serverUuid, client] of Object.entries(sessionServers)) {
+        add(serverUuid, client)
+      }
+    }
+
+    return Object.fromEntries(
+      Object.entries(result).map(([uuid, pids]) => [uuid, Array.from(pids)]),
+    )
+  }
+
+  /**
    * Get total connection count (idle + active + pending)
    */
   private getTotalConnectionCount(): number {

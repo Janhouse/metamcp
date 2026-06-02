@@ -129,9 +129,20 @@
     "url": "URL: {{url}}",
     "envVars": "Env: {{count}} vars",
     "streamableHttp": "STREAMABLE_HTTP",
+    "memory": "Memory",
     "errorStatus": "Error Status",
     "error": "Error",
     "noError": "No Error"
+  },
+  "memoryBar": {
+    "title": "Memory usage",
+    "metamcp": "MetaMCP",
+    "other": "Other",
+    "free": "Free",
+    "hostMemory": "Host memory",
+    "containerLimit": "Container limit",
+    "usedOfTotal": "{{used}} / {{total}} used",
+    "perServerUnavailable": "Per-server memory is unavailable on this platform."
   },
   "detail": {
     "backToServers": "Back to MCP Servers",

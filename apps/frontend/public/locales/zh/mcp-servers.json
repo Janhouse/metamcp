@@ -129,9 +129,20 @@
     "url": "URL：{{url}}",
     "envVars": "环境变量：{{count}} 个",
     "streamableHttp": "可流式传输 HTTP",
+    "memory": "内存",
     "errorStatus": "错误状态",
     "error": "错误",
     "noError": "无错误"
+  },
+  "memoryBar": {
+    "title": "内存使用",
+    "metamcp": "MetaMCP",
+    "other": "其他",
+    "free": "空闲",
+    "hostMemory": "主机内存",
+    "containerLimit": "容器限制",
+    "usedOfTotal": "已使用 {{used}} / {{total}}",
+    "perServerUnavailable": "此平台不支持按服务器显示内存。"
   },
   "detail": {
     "backToServers": "返回 MCP 服务器",

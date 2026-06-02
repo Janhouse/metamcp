@@ -5,6 +5,7 @@ import {
   CreateMcpServerResponseSchema,
   DeleteMcpServerResponseSchema,
   GetMcpServerResponseSchema,
+  GetMcpServersMemoryResponseSchema,
   ListMcpServersResponseSchema,
   UpdateMcpServerRequestSchema,
   UpdateMcpServerResponseSchema,
@@ -25,6 +26,9 @@ export const createMcpServersRouter = (
     list: (
       userId: string,
     ) => Promise<z.infer<typeof ListMcpServersResponseSchema>>
+    getMemoryUsage: (
+      userId: string,
+    ) => Promise<z.infer<typeof GetMcpServersMemoryResponseSchema>>
     bulkImport: (
       input: z.infer<typeof BulkImportMcpServersRequestSchema>,
       userId: string,
@@ -53,6 +57,13 @@ export const createMcpServersRouter = (
       .output(ListMcpServersResponseSchema)
       .query(async ({ ctx }) => {
         return await implementations.list(ctx.user.id)
+      }),
+
+    // Protected: Per-server memory usage + overall memory budget
+    getMemoryUsage: protectedProcedure
+      .output(GetMcpServersMemoryResponseSchema)
+      .query(async ({ ctx }) => {
+        return await implementations.getMemoryUsage(ctx.user.id)
       }),
 
     // Protected: Get single MCP server by UUID
