@@ -22,6 +22,13 @@ export interface MemoryBudget {
   /** Bytes free (total - used). */
   free: number
   source: MemorySource
+  /**
+   * Reclaimable bytes — unmapped page cache plus reclaimable slab — that the
+   * kernel evicts under pressure before OOM. Lets the UI split "used" into soft
+   * (cache) vs hard (kernel/shmem/anon). Null when not derivable (host, cgroup
+   * v1, or no `memory.stat`).
+   */
+  reclaimableBytes: number | null
 }
 
 /**
@@ -62,7 +69,11 @@ function cgroupV2Dirs(): string[] {
   return dirs
 }
 
-function readCgroupV2(): { total: number; used: number } | null {
+function readCgroupV2(): {
+  total: number
+  used: number
+  dir: string
+} | null {
   const hostTotal = os.totalmem()
   for (const dir of cgroupV2Dirs()) {
     const max = readCgroupValue(`${dir}/memory.max`)
@@ -74,11 +85,41 @@ function readCgroupV2(): { total: number; used: number } | null {
       return {
         total: max,
         used: current !== null && Number.isFinite(current) ? current : 0,
+        dir,
       }
     }
     return null
   }
   return null
+}
+
+/** Parse a cgroup `memory.stat` file ("key value\n" lines) into a map. */
+function parseMemoryStat(content: string): Map<string, number> {
+  const stat = new Map<string, number>()
+  for (const line of content.split("\n")) {
+    const sp = line.indexOf(" ")
+    if (sp === -1) continue
+    const value = Number.parseInt(line.slice(sp + 1), 10)
+    if (Number.isFinite(value)) stat.set(line.slice(0, sp), value)
+  }
+  return stat
+}
+
+/**
+ * Reclaimable bytes from a cgroup v2 `memory.stat`: page cache not mapped into
+ * any process (`file − file_mapped`, so it doesn't overlap mapped pages already
+ * counted in per-process PSS) plus reclaimable slab (dentry/inode caches).
+ */
+function readReclaimableV2(dir: string): number | null {
+  try {
+    const stat = parseMemoryStat(readFileSync(`${dir}/memory.stat`, "utf8"))
+    const file = stat.get("file") ?? 0
+    const fileMapped = stat.get("file_mapped") ?? 0
+    const slabReclaimable = stat.get("slab_reclaimable") ?? 0
+    return Math.max(0, file - fileMapped) + slabReclaimable
+  } catch {
+    return null
+  }
 }
 
 function readCgroupV1(): { total: number; used: number } | null {
@@ -104,6 +145,7 @@ export function getMemoryBudget(): MemoryBudget {
         used: v2.used,
         free: Math.max(0, v2.total - v2.used),
         source: "cgroup_v2",
+        reclaimableBytes: readReclaimableV2(v2.dir),
       }
     }
     const v1 = readCgroupV1()
@@ -113,11 +155,18 @@ export function getMemoryBudget(): MemoryBudget {
         used: v1.used,
         free: Math.max(0, v1.total - v1.used),
         source: "cgroup_v1",
+        reclaimableBytes: null,
       }
     }
   }
 
   const total = os.totalmem()
   const free = os.freemem()
-  return { total, used: Math.max(0, total - free), free, source: "host" }
+  return {
+    total,
+    used: Math.max(0, total - free),
+    free,
+    source: "host",
+    reclaimableBytes: null,
+  }
 }

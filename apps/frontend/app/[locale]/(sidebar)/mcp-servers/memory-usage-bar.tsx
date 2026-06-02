@@ -27,7 +27,8 @@ const SERVER_COLORS = [
 ]
 const BACKEND_COLOR = "#6366f1" // indigo-500
 const FRONTEND_COLOR = "#a855f7" // purple-500
-const OTHER_COLOR = "#9ca3af" // gray-400
+const OTHER_COLOR = "#9ca3af" // gray-400 — hard (kernel/shmem)
+const CACHE_COLOR = "#cbd5e1" // slate-300 — soft (reclaimable cache)
 
 // Diagonal stripes for the de-duplicated shared block.
 const SHARED_STRIPES =
@@ -129,13 +130,33 @@ export function MemoryUsageBar({ data, className }: MemoryUsageBarProps) {
       detail: t("mcp-servers:memoryBar.sharedHint"),
     })
   }
-  segments.push({
-    key: "other",
-    label: t("mcp-servers:memoryBar.other"),
-    bytes: other,
-    color: OTHER_COLOR,
-    detail: t("mcp-servers:memoryBar.otherHint"),
-  })
+  // Split "other" into reclaimable cache (evicted before OOM) vs hard
+  // kernel/shmem/anon, when the cgroup exposes the reclaimable figure.
+  if (data.reclaimableBytes != null) {
+    const cache = Math.min(other, data.reclaimableBytes)
+    segments.push({
+      key: "cache",
+      label: t("mcp-servers:memoryBar.cache"),
+      bytes: cache,
+      color: CACHE_COLOR,
+      detail: t("mcp-servers:memoryBar.cacheHint"),
+    })
+    segments.push({
+      key: "kernelShmem",
+      label: t("mcp-servers:memoryBar.kernelShmem"),
+      bytes: Math.max(0, other - cache),
+      color: OTHER_COLOR,
+      detail: t("mcp-servers:memoryBar.kernelShmemHint"),
+    })
+  } else {
+    segments.push({
+      key: "other",
+      label: t("mcp-servers:memoryBar.other"),
+      bytes: other,
+      color: OTHER_COLOR,
+      detail: t("mcp-servers:memoryBar.otherHint"),
+    })
+  }
   segments.push({
     key: "free",
     label: t("mcp-servers:memoryBar.free"),

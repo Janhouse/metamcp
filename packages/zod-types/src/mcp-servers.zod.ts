@@ -276,6 +276,10 @@ export const McpServersMemoryUsageSchema = z.object({
   // De-duplicated shared pages across all measured processes — the part RSS
   // bills to every process but the kernel (and the cgroup limit) counts once.
   sharedBytes: z.number(),
+  // Reclaimable bytes (unmapped page cache + reclaimable slab) the kernel evicts
+  // before OOM. Lets the UI split "other" into soft cache vs hard kernel/shmem.
+  // Null when not derivable (host, cgroup v1).
+  reclaimableBytes: z.number().nullable(),
   // The metamcp app processes, split so each is its own bar segment.
   backend: MemoryProcessSchema,
   frontend: MemoryProcessSchema.nullable(),
