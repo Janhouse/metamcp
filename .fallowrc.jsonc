@@ -3,7 +3,17 @@
   // bun workspaces (apps/*, packages/*) are auto-detected from package.json.
   // apps/*/components/ui/** is vendored shadcn/ui: treat as entry surface so its
   // full API is not flagged unused while its imports still count as used deps.
-  "entry": ["apps/*/components/ui/**"],
+  // docs/** is a standalone Mintlify documentation site (.mdx authored content,
+  // not imported by application code): treat as entry so its pages and their
+  // cross-references are not flagged unused/unresolved.
+  "entry": ["apps/*/components/ui/**", "docs/**"],
+  // Internal workspace packages are consumed via their built dist/ output
+  // (workspace:* + package "exports"), which static resolution does not follow
+  // back to source, so they are reported unused despite being imported widely.
+  "ignoreDependencies": ["@repo/trpc", "@repo/zod-types"],
+  // Mintlify snippet include in docs/** uses a root-relative .mdx path resolved
+  // by the docs build, not by TS/static module resolution.
+  "ignoreUnresolvedImports": ["/snippets/snippet-intro.mdx"],
   "duplicates": {
     "minOccurrences": 3
   },
