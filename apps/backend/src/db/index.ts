@@ -14,7 +14,7 @@ if (!DATABASE_URL) {
 // Use an explicit pg Pool so we can attach a global error handler.
 // This prevents unhandled 'error' events from bringing down the Node process
 // when the database terminates idle connections (e.g., during maintenance).
-export const pool = new Pool({
+const pool = new Pool({
   connectionString: DATABASE_URL,
   ...(POSTGRES_CA_CERT && {
     ssl: {
