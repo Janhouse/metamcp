@@ -45,3 +45,6 @@ yarn-error.log*
 docker-compose.override.yml
 compose.override.yml
 .claude/
+
+# fallow
+.fallow/
