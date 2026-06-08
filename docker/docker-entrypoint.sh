@@ -7,11 +7,23 @@ echo "Starting MetaMCP services..."
 # Default Postgres connection details (used only to wait for readiness).
 POSTGRES_HOST=${POSTGRES_HOST:-postgres}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
-POSTGRES_USER=${POSTGRES_USER:-postgres}
 
+# Probe the Postgres TCP port with Bun (already in the image) instead of
+# pg_isready. This drops the postgresql-client apt package, which depended on
+# Perl and dragged a large CVE surface into the image for a single readiness
+# check. A successful TCP connect is enough: Postgres binds its port only once
+# it is accepting connections, and the backend then runs migrations in-process
+# (apps/backend/src/db/migrate.ts) with its own connection handling.
 wait_for_postgres() {
     echo "Waiting for PostgreSQL to be ready..."
-    until pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER"; do
+    until POSTGRES_HOST="$POSTGRES_HOST" POSTGRES_PORT="$POSTGRES_PORT" bun -e '
+      const ok = await Bun.connect({
+        hostname: process.env.POSTGRES_HOST || "postgres",
+        port: Number(process.env.POSTGRES_PORT || 5432),
+        socket: { open(s) { s.end(); }, data() {}, error() {} },
+      }).then(() => true).catch(() => false);
+      process.exit(ok ? 0 : 1);
+    '; do
         echo "PostgreSQL is not ready - sleeping 2 seconds"
         sleep 2
     done
