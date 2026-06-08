@@ -4,35 +4,9 @@ set -e
 
 echo "Starting MetaMCP services..."
 
-# Default Postgres connection details (used only to wait for readiness).
-POSTGRES_HOST=${POSTGRES_HOST:-postgres}
-POSTGRES_PORT=${POSTGRES_PORT:-5432}
-
-# Probe the Postgres TCP port with Bun (already in the image) instead of
-# pg_isready. This drops the postgresql-client apt package, which depended on
-# Perl and dragged a large CVE surface into the image for a single readiness
-# check. A successful TCP connect is enough: Postgres binds its port only once
-# it is accepting connections, and the backend then runs migrations in-process
-# (apps/backend/src/db/migrate.ts) with its own connection handling.
-wait_for_postgres() {
-    echo "Waiting for PostgreSQL to be ready..."
-    until POSTGRES_HOST="$POSTGRES_HOST" POSTGRES_PORT="$POSTGRES_PORT" bun -e '
-      const ok = await Bun.connect({
-        hostname: process.env.POSTGRES_HOST || "postgres",
-        port: Number(process.env.POSTGRES_PORT || 5432),
-        socket: { open(s) { s.end(); }, data() {}, error() {} },
-      }).then(() => true).catch(() => false);
-      process.exit(ok ? 0 : 1);
-    '; do
-        echo "PostgreSQL is not ready - sleeping 2 seconds"
-        sleep 2
-    done
-    echo "PostgreSQL is ready!"
-}
-
-# Wait so the in-process migration step (see apps/backend/src/db/migrate.ts)
-# doesn't fail-fast against a not-yet-ready database on a cold start.
-wait_for_postgres
+# The backend waits for Postgres itself before running migrations (see
+# waitForDatabaseReady in apps/backend/src/db/index.ts), so there is no
+# readiness wait here — no pg_isready, no postgresql-client in the image.
 
 # Start the backend (Bun runtime, compiled bundle). Database migrations run
 # in-process at boot from apps/backend/dist (replacing the old drizzle-kit
