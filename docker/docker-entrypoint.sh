@@ -4,23 +4,9 @@ set -e
 
 echo "Starting MetaMCP services..."
 
-# Default Postgres connection details (used only to wait for readiness).
-POSTGRES_HOST=${POSTGRES_HOST:-postgres}
-POSTGRES_PORT=${POSTGRES_PORT:-5432}
-POSTGRES_USER=${POSTGRES_USER:-postgres}
-
-wait_for_postgres() {
-    echo "Waiting for PostgreSQL to be ready..."
-    until pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER"; do
-        echo "PostgreSQL is not ready - sleeping 2 seconds"
-        sleep 2
-    done
-    echo "PostgreSQL is ready!"
-}
-
-# Wait so the in-process migration step (see apps/backend/src/db/migrate.ts)
-# doesn't fail-fast against a not-yet-ready database on a cold start.
-wait_for_postgres
+# The backend waits for Postgres itself before running migrations (see
+# waitForDatabaseReady in apps/backend/src/db/index.ts), so there is no
+# readiness wait here — no pg_isready, no postgresql-client in the image.
 
 # Start the backend (Bun runtime, compiled bundle). Database migrations run
 # in-process at boot from apps/backend/dist (replacing the old drizzle-kit

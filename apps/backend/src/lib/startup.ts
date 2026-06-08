@@ -1,5 +1,6 @@
 import type { ServerParameters } from "@repo/zod-types"
 
+import { waitForDatabaseReady } from "../db"
 import { runMigrations } from "../db/migrate"
 import { mcpServersRepository, namespacesRepository } from "../db/repositories"
 import { initializeEnvironmentConfiguration } from "./bootstrap.service"
@@ -12,6 +13,11 @@ import { convertDbServerToParams } from "./metamcp/utils"
  * IMPORTANT: This function does not prevent the app from starting unless BOOTSTRAP_FAIL_HARD=true.
  */
 export async function initializeOnStartup(): Promise<void> {
+  // Wait for the database to accept connections before touching it. This
+  // replaces the entrypoint's shell-level readiness wait so the app is
+  // self-sufficient regardless of how it's launched.
+  await waitForDatabaseReady()
+
   // Apply DB migrations before anything touches the database. Intentionally
   // NOT wrapped in try/catch: a migration failure must abort startup (the
   // process exits before listening), preserving the old entrypoint behavior.

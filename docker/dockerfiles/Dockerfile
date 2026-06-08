@@ -81,10 +81,6 @@ LABEL org.opencontainers.image.vendor="metatool-ai"
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# curl for the healthcheck, postgresql-client for pg_isready in the entrypoint.
-RUN apt-get update && apt-get install -y --no-install-recommends curl postgresql-client \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
 # Non-root user with a real home for any runtime caches (npx/uv/go).
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 --home /home/nextjs nextjs \
