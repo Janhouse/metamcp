@@ -7,6 +7,18 @@ const nextConfig = {
   // hoisted node_modules and workspace packages (@repo/*). Without this, Next
   // guesses the tracing root from the nearest lockfile and can omit files.
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
+  // sharp >=0.35 hides libvips-cpp.so behind a stub.node that output tracing
+  // can't follow (lovell/sharp#4543); force-include the glibc variant (the
+  // oven/bun:canary runner is Debian). Path is relative to this app dir;
+  // node_modules is hoisted at the workspace root.
+  outputFileTracingIncludes: {
+    "/*": [
+      // hoisted layout
+      "../../node_modules/@img/sharp-libvips-linux-x64/**/*",
+      // bun isolated-install store layout
+      "../../node_modules/.bun/@img+sharp-libvips-linux-x64@*/**/*",
+    ],
+  },
   experimental: {
     proxyTimeout: 1000 * 120,
   },
