@@ -2,14 +2,14 @@ name: Dependency updates
 run-name: Weekly dependency update by ${{ gitea.actor }} 📦
 on:
   schedule:
-    - cron: '0 6 * * 1'
+    - cron: '20 7 * * 1'
   workflow_dispatch:
 
 jobs:
   update:
     # Bun-based weekly updater (honors bunfig.toml minimumReleaseAge). Pinned to
     # a SHA for supply-chain safety; bump deliberately when the workflow changes.
-    uses: https://git.janhouse.lv/janhouse/gitea-bun-deps-update/.gitea/workflows/run.yml@e3da17c025be5df87f75c554fdf5e324296991b4
+    uses: https://git.janhouse.lv/janhouse/gitea-bun-deps-update/.gitea/workflows/run.yml@7943f69fbe2195722afe584d2a0bf3dc39a206ff
     with:
       base-branch: main
       monitor-ci: true
