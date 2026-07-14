@@ -9,7 +9,7 @@ jobs:
   update:
     # Bun-based weekly updater (honors bunfig.toml minimumReleaseAge). Pinned to
     # a SHA for supply-chain safety; bump deliberately when the workflow changes.
-    uses: https://git.janhouse.lv/janhouse/gitea-bun-deps-update/.gitea/workflows/run.yml@7943f69fbe2195722afe584d2a0bf3dc39a206ff
+    uses: https://git.janhouse.lv/janhouse/gitea-bun-deps-update/.gitea/workflows/run.yml@14ee3594cc92d0d2669fa62680b421271411daf2
     with:
       base-branch: main
       monitor-ci: true
