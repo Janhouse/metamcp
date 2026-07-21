@@ -11,7 +11,7 @@ export default defineConfig({
   bundle: true,
   keepNames: true,
   minify: false,
-  dts: true, // Generate TypeScript declaration files
+  dts: false, // Declaration files generated separately via tsc --emitDeclarationOnly
   outExtension() {
     return {
       js: `.js`, // Ensure .js output instead of .mjs

@@ -6,7 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc --emitDeclarationOnly",
     "check-types": "tsc --noEmit",
     "dev": "tsup --watch",
     "clean": "rm -rf dist"
@@ -19,7 +19,7 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "tsup": "^8.5.1",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "exports": {
     ".": {

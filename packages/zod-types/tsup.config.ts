@@ -11,6 +11,6 @@ export default defineConfig({
   bundle: true, // Bundle to resolve imports properly
   keepNames: true,
   minify: false,
-  dts: true, // Generate TypeScript declaration files
+  dts: false, // Declaration files generated separately via tsc --emitDeclarationOnly
   external: ["zod"],
 })
