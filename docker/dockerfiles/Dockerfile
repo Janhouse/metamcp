@@ -56,11 +56,13 @@ RUN bun install --frozen-lockfile
 # ---------------------------------------------------------------------------
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules
-COPY --from=deps /app/apps/backend/node_modules ./apps/backend/node_modules
-COPY --from=deps /app/packages/trpc/node_modules ./packages/trpc/node_modules
-COPY --from=deps /app/packages/zod-types/node_modules ./packages/zod-types/node_modules
+# Bun's default workspace linker flips between "hoisted" (everything at the
+# root) and "isolated" (root node_modules/.bun plus a node_modules symlink farm
+# in every workspace) from one canary to the next. Copying the deps stage
+# wholesale is layout-agnostic; naming per-workspace node_modules paths breaks
+# the build the moment canary lands on hoisted and those dirs don't exist.
+# `.dockerignore` excludes **/node_modules, so `COPY . .` can't clobber them.
+COPY --from=deps /app ./
 COPY . .
 RUN bunx turbo run build
 
