@@ -12,4 +12,4 @@ minimumReleaseAge = 604800
 # sub-packages (e.g. @biomejs/cli-linux-x64), so excluding e.g. @biomejs/biome
 # while it's <7d old yields a main/binary version mismatch. Prefer letting the
 # gate pick a mature version over excluding.
-# minimumReleaseAgeExcludes = ["@yourorg/internal"]
+minimumReleaseAgeExcludes = ["next", "@next/env", "eslint-config-next", "@next/eslint-plugin-next"]
