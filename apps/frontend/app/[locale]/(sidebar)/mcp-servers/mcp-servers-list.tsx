@@ -8,11 +8,8 @@ import {
 import {
   type ColumnDef,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
   type SortingState,
-  useReactTable,
+  useTable,
 } from "@tanstack/react-table"
 import {
   ArrowUpDown,
@@ -58,6 +55,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTranslations } from "@/hooks/useTranslations"
+import { type DataTableFeatures, dataTableFeatures } from "@/lib/table-features"
 import { trpc } from "@/lib/trpc"
 import { copyToClipboard, formatBytes } from "@/lib/utils"
 
@@ -164,7 +162,7 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
   }
 
   // Define columns for the data table
-  const columns: ColumnDef<McpServer>[] = [
+  const columns: ColumnDef<DataTableFeatures, McpServer>[] = [
     {
       accessorKey: "name",
       size: 200,
@@ -475,15 +473,13 @@ export function McpServersList({ onRefresh }: McpServersListProps) {
     },
   ]
 
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data: servers,
     columns,
     onSortingChange: setSorting,
     onGlobalFilterChange: (value) => setGlobalFilter(value || ""),
     globalFilterFn: "includesString",
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => row.uuid,
     state: {
       sorting,

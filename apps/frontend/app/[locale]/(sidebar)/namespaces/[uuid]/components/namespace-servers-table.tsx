@@ -8,11 +8,8 @@ import {
 import {
   type ColumnDef,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
   type SortingState,
-  useReactTable,
+  useTable,
 } from "@tanstack/react-table"
 import {
   ArrowUpDown,
@@ -48,6 +45,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTranslations } from "@/hooks/useTranslations"
+import { type DataTableFeatures, dataTableFeatures } from "@/lib/table-features"
 import { trpc } from "@/lib/trpc"
 import { copyToClipboard } from "@/lib/utils"
 
@@ -176,7 +174,7 @@ export function NamespaceServersTable({
   }
 
   // Define columns for the data table
-  const columns: ColumnDef<NamespaceServer>[] = [
+  const columns: ColumnDef<DataTableFeatures, NamespaceServer>[] = [
     {
       accessorKey: "name",
       header: ({ column }) => {
@@ -444,15 +442,13 @@ export function NamespaceServersTable({
     },
   ]
 
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data: servers,
     columns,
     onSortingChange: setSorting,
     onGlobalFilterChange: (value) => setGlobalFilter(value || ""),
     globalFilterFn: "includesString",
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => row.uuid,
     state: {
       sorting,
