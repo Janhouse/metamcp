@@ -21,6 +21,7 @@ jobs:
       - name: Setup Bun (canary / Rust build)
         uses: oven-sh/setup-bun@v2
         with:
+          token: ${{ secrets.GHCR_ACCESS_TOKEN }}
           bun-version: canary
 
       - name: Cache Bun dependencies
