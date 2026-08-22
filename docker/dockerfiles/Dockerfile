@@ -2,12 +2,13 @@
 # ---------------------------------------------------------------------------
 # MetaMCP production image
 #
-# Bun canary (the Rust build) is the application runtime for BOTH the backend
-# (a compiled, self-contained bundle) and the frontend (Next.js standalone
-# output). Node, uv and Go remain installed because MCP servers are spawned as
-# child processes and may be node/npx, Python (uvx) or Go (`go run`) programs.
+# Bun 1.4 (the Rust build, stable since 1.4.0) is the application runtime for
+# BOTH the backend (a compiled, self-contained bundle) and the frontend
+# (Next.js standalone output). Node, uv and Go remain installed because MCP
+# servers are spawned as child processes and may be node/npx, Python (uvx) or
+# Go (`go run`) programs.
 # ---------------------------------------------------------------------------
-FROM oven/bun:canary AS base
+FROM oven/bun:1.4 AS base
 
 # Node.js (for node/npx-based MCP servers). bash is needed by the NodeSource
 # setup script. ca-certificates/gnupg for the apt repo signing key.
@@ -56,11 +57,11 @@ RUN bun install --frozen-lockfile
 # ---------------------------------------------------------------------------
 FROM base AS builder
 WORKDIR /app
-# Bun's default workspace linker flips between "hoisted" (everything at the
-# root) and "isolated" (root node_modules/.bun plus a node_modules symlink farm
-# in every workspace) from one canary to the next. Copying the deps stage
-# wholesale is layout-agnostic; naming per-workspace node_modules paths breaks
-# the build the moment canary lands on hoisted and those dirs don't exist.
+# Bun's default workspace linker has flipped between "hoisted" (everything at
+# the root) and "isolated" (root node_modules/.bun plus a node_modules symlink
+# farm in every workspace) across releases. Copying the deps stage wholesale is
+# layout-agnostic; naming per-workspace node_modules paths breaks the build the
+# moment a release lands on hoisted and those dirs don't exist.
 # `.dockerignore` excludes **/node_modules, so `COPY . .` can't clobber them.
 COPY --from=deps /app ./
 COPY . .

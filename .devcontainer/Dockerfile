@@ -1,7 +1,7 @@
 # DevContainer Dockerfile optimized for VS Code development
-# Bun canary (Rust build) is the dev runtime; Node + uv remain for spawning
+# Bun 1.4 (Rust build) is the dev runtime; Node + uv remain for spawning
 # MCP servers as child processes during development.
-FROM oven/bun:canary AS base
+FROM oven/bun:1.4 AS base
 
 # Node.js + common development tools
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -1,7 +1,7 @@
 # Development Dockerfile with hot reload support
-# Bun canary (Rust build) is the dev runtime; Node + uv remain for spawning
+# Bun 1.4 (Rust build) is the dev runtime; Node + uv remain for spawning
 # MCP servers as child processes during development.
-FROM oven/bun:canary AS base
+FROM oven/bun:1.4 AS base
 
 # Node.js (node/npx MCP servers), Docker CLI (container management), Tini (signals),
 # bubblewrap + util-linux (MCP sandbox: MCP_SANDBOX=bwrap and MCP_LIMIT_* via prlimit).
