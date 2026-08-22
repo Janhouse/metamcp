@@ -10,7 +10,7 @@ We welcome contributions to MetaMCP! This guide will help you get started.
    cd metamcp
    ```
 
-2. Install dependencies (requires [Bun](https://bun.sh); the canary/Rust build is used in CI and Docker):
+2. Install dependencies (requires [Bun](https://bun.sh) 1.4+; the Rust build, used in CI and Docker):
    ```bash
    bun install
    ```

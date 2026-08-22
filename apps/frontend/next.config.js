@@ -9,7 +9,7 @@ const nextConfig = {
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   // sharp >=0.35 hides libvips-cpp.so behind a stub.node that output tracing
   // can't follow (lovell/sharp#4543); force-include the glibc variant (the
-  // oven/bun:canary runner is Debian). Path is relative to this app dir;
+  // oven/bun:1.4 runner is Debian). Path is relative to this app dir;
   // node_modules is hoisted at the workspace root.
   outputFileTracingIncludes: {
     "/*": [
