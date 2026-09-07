@@ -120,6 +120,13 @@
       "when": 1780261284041,
       "tag": "0016_fancy_logan",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1788773801693,
+      "tag": "0017_add_account_issuer",
+      "breakpoints": true
     }
   ]
 }

@@ -181,31 +181,47 @@ export const sessionsTable = pgTable("sessions", {
     .references(() => usersTable.id, { onDelete: "cascade" }),
 })
 
-export const accountsTable = pgTable("accounts", {
-  id: text("id").primaryKey(),
-  accountId: text("account_id").notNull(),
-  providerId: text("provider_id").notNull(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  idToken: text("id_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at", {
-    withTimezone: true,
-  }),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
-    withTimezone: true,
-  }),
-  scope: text("scope"),
-  password: text("password"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-})
+export const accountsTable = pgTable(
+  "accounts",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    // Identity namespace an account ID belongs to. Required by better-auth
+    // >= 1.7, which looks accounts up by (issuer, accountId) rather than
+    // (providerId, accountId). Local methods use `local:<providerId>`
+    // (e.g. `local:credential`), OAuth/OIDC providers `local:oauth:<providerId>`
+    // unless the provider config pins an explicit issuer — see
+    // `accountIssuer` in apps/backend/src/auth.ts.
+    issuer: text("issuer").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+    }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+      withTimezone: true,
+    }),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("accounts_issuer_account_id_unique_idx").on(
+      table.issuer,
+      table.accountId,
+    ),
+  ],
+)
 
 export const verificationsTable = pgTable("verifications", {
   id: text("id").primaryKey(),
