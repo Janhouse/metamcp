@@ -37,14 +37,31 @@ const oidcProviders: GenericOAuthConfig[] = []
 
 // Add OIDC provider if configured
 if (process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET) {
+  const providerId = process.env.OIDC_PROVIDER_ID || "oidc"
+
   const oidcConfig: GenericOAuthConfig = {
-    providerId: process.env.OIDC_PROVIDER_ID || "oidc",
+    providerId,
     clientId: process.env.OIDC_CLIENT_ID,
     clientSecret: process.env.OIDC_CLIENT_SECRET,
     scopes: (process.env.OIDC_SCOPES || "openid email profile").split(" "),
     pkce: process.env.OIDC_PKCE !== "false", // Enable PKCE by default for security
     discoveryUrl: process.env.OIDC_DISCOVERY_URL,
     authorizationUrl: process.env.OIDC_AUTHORIZATION_URL, //this is required due to a bug in better-auth: https://github.com/better-auth/better-auth/issues/3278
+    // better-auth >= 1.7 keys accounts on (issuer, accountId). Left to itself
+    // a provider with `discoveryUrl` adopts the IdP's discovered issuer, which
+    // no static migration can know — so every account linked before the
+    // upgrade would stop resolving and users would be silently re-provisioned.
+    // Pin the issuer to the synthetic per-provider namespace instead: it is
+    // exactly the pre-1.7 identity (providerId + accountId), so migration
+    // 0017 can backfill existing rows to match. Safe here because MetaMCP
+    // registers at most one generic-OAuth provider.
+    //
+    // Set OIDC_ACCOUNT_ISSUER to the IdP's real issuer to opt into
+    // issuer-scoped identity — only on a fresh deployment, or after
+    // rewriting `accounts.issuer` for that provider's rows by hand.
+    accountIssuer:
+      process.env.OIDC_ACCOUNT_ISSUER ||
+      `local:oauth:${encodeURIComponent(providerId)}`,
   }
 
   oidcProviders.push(oidcConfig)

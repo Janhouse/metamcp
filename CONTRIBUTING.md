@@ -85,14 +85,21 @@ Once configured, users will see a "Login with OIDC" button on the login page. Th
 ### Security Considerations
 
 - PKCE (Proof Key for Code Exchange) is enabled by default for enhanced security
-- The redirect URI is automatically configured as `${APP_URL}/api/auth/oauth2/callback/oidc`
+- The redirect URI is automatically configured as `${APP_URL}/api/auth/callback/oidc`
 - Ensure your OIDC provider is configured to allow this redirect URI
+
+> **Upgrading from a build before better-auth 1.7:** the callback moved from
+> `/api/auth/oauth2/callback/oidc` to `/api/auth/callback/oidc`. Register the new
+> redirect URI with your IdP before deploying, or SSO sign-in will fail. Migration
+> `0017_add_account_issuer` backfills the new `accounts.issuer` column so existing
+> linked accounts keep resolving; see `OIDC_ACCOUNT_ISSUER` in `example.env` if you
+> want accounts keyed by your IdP's real issuer instead.
 
 ### Troubleshooting
 
 **Common Issues:**
 
-1. **Invalid Redirect URI**: Ensure your OIDC provider allows `${APP_URL}/api/auth/oauth2/callback/oidc`
+1. **Invalid Redirect URI**: Ensure your OIDC provider allows `${APP_URL}/api/auth/callback/oidc`
 2. **Scope Issues**: Some providers require specific scopes beyond the default `openid email profile`
 3. **User Creation**: Users are automatically created on first login. Ensure your provider returns email and name claims
 
