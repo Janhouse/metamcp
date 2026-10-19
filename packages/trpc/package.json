@@ -14,7 +14,7 @@
   "dependencies": {
     "@repo/zod-types": "workspace:*",
     "@trpc/server": "^11.19.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
