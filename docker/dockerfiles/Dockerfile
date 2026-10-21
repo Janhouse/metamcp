@@ -16,7 +16,7 @@ FROM oven/bun:1.4 AS base
 # provides prlimit for per-MCP resource limits (MCP_LIMIT_*).
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash curl ca-certificates gnupg \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends nodejs bubblewrap util-linux \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
