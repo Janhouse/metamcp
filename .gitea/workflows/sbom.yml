@@ -1,0 +1,29 @@
+name: SBOM Generation
+run-name: ${{ gitea.actor }} is generating SBOM 📋
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Builder"]
+    types:
+      - completed
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    # Run on manual trigger OR if the build workflow succeeded
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      # Source SBOM (lockfiles) -> Dependency-Track, then the images this repo
+      # builds and its osv-scanner.toml decisions -> dtrack-panel.
+      - name: SBOM + triage report
+        uses: https://git.janhouse.lv/janhouse/sbom-tools-action/scan@v2
+        with:
+          project: metamcp
+          project-version: latest
+          images: git.janhouse.lv/janhouse/metamcp
+          dtrack-url: ${{ secrets.DEPENDENCY_TRACK_URL }}
+          dtrack-api-key: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
