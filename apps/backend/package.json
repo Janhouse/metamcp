@@ -18,11 +18,11 @@
     "db:migrate:dev": "dotenv -e ../../.env.local -- drizzle-kit migrate"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.32.1",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@repo/trpc": "workspace:*",
     "@repo/zod-types": "workspace:*",
     "@trpc/server": "^11.19.0",
-    "better-auth": "1.7.11",
+    "better-auth": "1.7.13",
     "cors": "^2.8.6",
     "cross-spawn": "^7.0.6",
     "drizzle-orm": "^0.45.4",
