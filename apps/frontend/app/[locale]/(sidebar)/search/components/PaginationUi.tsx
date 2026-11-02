@@ -21,6 +21,59 @@ interface PaginationUiProps {
   onPageChange: (page: number) => void
 }
 
+type LocalizedPaginationLinkProps = {
+  page: number
+} & React.ComponentProps<typeof PaginationLink>
+
+function LocalizedPaginationPrevious({
+  page,
+  ...props
+}: LocalizedPaginationLinkProps) {
+  const { t } = useTranslations()
+
+  return (
+    <PaginationLink
+      aria-label={t("common:pagination.goToPage", { page })}
+      size="default"
+      className="gap-1 px-2.5 sm:pl-2.5"
+      {...props}
+    >
+      <ChevronLeftIcon />
+      <span className="hidden sm:block">{t("common:pagination.previous")}</span>
+    </PaginationLink>
+  )
+}
+
+function LocalizedPaginationNext({
+  page,
+  ...props
+}: LocalizedPaginationLinkProps) {
+  const { t } = useTranslations()
+
+  return (
+    <PaginationLink
+      aria-label={t("common:pagination.goToPage", { page })}
+      size="default"
+      className="gap-1 px-2.5 sm:pr-2.5"
+      {...props}
+    >
+      <span className="hidden sm:block">{t("common:pagination.next")}</span>
+      <ChevronRightIcon />
+    </PaginationLink>
+  )
+}
+
+function LocalizedPaginationEllipsis() {
+  const { t } = useTranslations()
+
+  return (
+    <span aria-hidden className="flex size-9 items-center justify-center">
+      <MoreHorizontalIcon className="size-4" />
+      <span className="sr-only">{t("common:pagination.morePages")}</span>
+    </span>
+  )
+}
+
 export function PaginationUi({
   currentPage,
   totalPages,
@@ -65,52 +118,13 @@ export function PaginationUi({
     return pages
   }
 
-  // Create localized pagination components
-  const LocalizedPaginationPrevious = ({
-    onClick,
-    ...props
-  }: React.ComponentProps<typeof PaginationLink>) => (
-    <PaginationLink
-      aria-label={t("common:pagination.goToPage", { page: currentPage - 1 })}
-      size="default"
-      className="gap-1 px-2.5 sm:pl-2.5"
-      onClick={onClick}
-      {...props}
-    >
-      <ChevronLeftIcon />
-      <span className="hidden sm:block">{t("common:pagination.previous")}</span>
-    </PaginationLink>
-  )
-
-  const LocalizedPaginationNext = ({
-    onClick,
-    ...props
-  }: React.ComponentProps<typeof PaginationLink>) => (
-    <PaginationLink
-      aria-label={t("common:pagination.goToPage", { page: currentPage + 1 })}
-      size="default"
-      className="gap-1 px-2.5 sm:pr-2.5"
-      onClick={onClick}
-      {...props}
-    >
-      <span className="hidden sm:block">{t("common:pagination.next")}</span>
-      <ChevronRightIcon />
-    </PaginationLink>
-  )
-
-  const LocalizedPaginationEllipsis = () => (
-    <span aria-hidden className="flex size-9 items-center justify-center">
-      <MoreHorizontalIcon className="size-4" />
-      <span className="sr-only">{t("common:pagination.morePages")}</span>
-    </span>
-  )
-
   return (
     <Pagination className="justify-center">
       <PaginationContent>
         <PaginationItem>
           <LocalizedPaginationPrevious
             href="#"
+            page={currentPage - 1}
             onClick={(e: React.MouseEvent) => {
               e.preventDefault()
               if (currentPage > 1) onPageChange(currentPage - 1)
@@ -143,6 +157,7 @@ export function PaginationUi({
         <PaginationItem>
           <LocalizedPaginationNext
             href="#"
+            page={currentPage + 1}
             onClick={(e: React.MouseEvent) => {
               e.preventDefault()
               if (currentPage < totalPages) onPageChange(currentPage + 1)
