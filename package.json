@@ -18,7 +18,7 @@
     "test": "turbo run test"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.4",
+    "@biomejs/biome": "^2.6.6",
     "dotenv-cli": "^11.1.0",
     "turbo": "^2.11.10",
     "typescript": "7.0.2"
