@@ -10,6 +10,9 @@
 # ---------------------------------------------------------------------------
 FROM oven/bun:1.4 AS base
 
+# Base images lag Debian security fixes; `apt-get install` never upgrades what is already installed.
+RUN apt-get update && apt-get -y upgrade && rm -rf /var/lib/apt/lists/*
+
 # Node.js (for node/npx-based MCP servers). bash is needed by the NodeSource
 # setup script. ca-certificates/gnupg for the apt repo signing key.
 # bubblewrap = opt-in per-process MCP sandbox (MCP_SANDBOX=bwrap); util-linux
