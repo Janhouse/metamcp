@@ -12,11 +12,20 @@ on:
         description: 'Custom tags for the image (comma-separated, e.g., 0.3.4,0.3)'
         required: false
         type: string
+  # Weekly rebuild of main (Saturday 02:40 UTC): picks up base-image and Debian
+  # security updates. Inputs are empty on schedule, so nothing goes to GitHub.
+  schedule:
+    - cron: '40 2 * * 6'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Weekly rebuild: drop the build cache first, so the image's
+      # `apk/apt upgrade` layer really re-runs (a cached one installs nothing).
+      - name: Clear the build cache (weekly rebuild)
+        if: github.event_name == 'schedule'
+        run: docker builder prune -af
       - name: Check out repository code
         uses: actions/checkout@v4
 
