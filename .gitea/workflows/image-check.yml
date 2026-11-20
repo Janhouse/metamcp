@@ -1,0 +1,38 @@
+name: Image check
+run-name: ${{ gitea.actor }} is checking the MetaMCP image 🚀
+
+# The Builder only runs on dispatch and weekly. PRs that touch the image
+# definition build it here first (no push), so a broken Dockerfile or a bad
+# runtime download (Go, NodeSource, uv) shows up before the Saturday rebuild.
+on:
+  pull_request:
+    paths:
+      - docker/dockerfiles/Dockerfile
+      - docker/docker-entrypoint.sh
+      - .gitea/workflows/image-check.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      IMAGE: metamcp:check-${{ gitea.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: docker build
+        run: docker build --pull -f docker/dockerfiles/Dockerfile -t "$IMAGE" .
+
+      # MCP servers are spawned with these runtimes; each must start as the
+      # image's runtime user.
+      - name: Runtimes in the image
+        run: |
+          set -e
+          docker run --rm --entrypoint sh "$IMAGE" -c \
+            'go version && node --version && uvx --version && bun --version'
+          docker run --rm --entrypoint sh "$IMAGE" -c \
+            'cd "$(mktemp -d)" && printf "package main\nimport \"fmt\"\nfunc main(){fmt.Println(\"go run ok\")}\n" > main.go && go run main.go'
+
+      - name: Clean up
+        if: always()
+        run: docker image rm "$IMAGE" >/dev/null 2>&1 || true

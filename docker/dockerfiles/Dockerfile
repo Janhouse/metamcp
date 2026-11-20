@@ -26,9 +26,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # uv / uvx (for Python-based MCP servers) — static binaries from the official image.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# Go (for Go-based MCP servers run via `go run`).
+# Go (for Go-based MCP servers run via `go run`). Keep this on a release that
+# still gets security fixes (the two newest minors): the toolchain binaries
+# under /usr/local/go are scanned like any other part of the image.
 ARG TARGETARCH
-ENV GO_VERSION=1.23.4
+ENV GO_VERSION=1.27.4
 RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz" -o /tmp/go.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && rm /tmp/go.tar.gz
